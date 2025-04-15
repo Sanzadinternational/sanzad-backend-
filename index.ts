@@ -38,7 +38,7 @@ app.use('/api/V1/payment',PaymentRoute);
 // mongoose.connect(MONGOURI).then((result) => {console.log("success")}).catch((error) => {console.error(error)});
 
 
-app.listen(8000, () => {  
+app.listen(4000, () => {  
     console.clear();
     console.log("Server is running", );
 })
