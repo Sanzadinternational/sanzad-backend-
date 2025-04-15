@@ -5,7 +5,7 @@
   "main": "index.ts",
   "type": "module",
   "scripts": {
-    "start": "node index.ts",
+    "start": "tsx index.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx ./migration.ts"
   },
