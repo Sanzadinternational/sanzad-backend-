@@ -1,7 +1,7 @@
 import { Supplier_price, TransportNode,resetPasswords,ForgetPasswords, CreateVehicles, GetVehiclebyId, CreateZone, createTransfer, updateZone, GetVehicleBySupplierId, GetZoneBySupplierId } from '../controllers/SupplierController';
 import authMiddleware from '../middlewares/authMiddleware';
 import express, {Request, Response, NextFunction, Router} from 'express'; 
-import { CreateSupplier,UpdateVehicleTypes,UpdateVehicleModels,deleteZone,UpdateVehicleBrands,UpdateServiceTypes,DeleteVehicleType,GetSupplier,SurgeCharges,GetVehicleCarDetails,GetAllCarDetails,GetTransferCarDetails,UpdateTransferCar,UpdateExtra,CreateVehicleType,GetVehicleBrand,CreateVehicleBrand,CreateServiceType,CreateVehicleModel,GetVehicleType,
+import { CreateSupplier,UpdateVehicleTypes,UpdateVehicle,UpdateVehicleModels,deleteZone,UpdateVehicleBrands,UpdateServiceTypes,DeleteVehicleType,GetSupplier,SurgeCharges,GetVehicleCarDetails,GetAllCarDetails,GetTransferCarDetails,UpdateTransferCar,UpdateExtra,CreateVehicleType,GetVehicleBrand,CreateVehicleBrand,CreateServiceType,CreateVehicleModel,GetVehicleType,
     GetCarDetails,DeleteSurgeCharges,UpdateSurgeCharges,GetSurgeCharges,GetServiceType,DeleteVehicleModel,DeleteServiceType,DeleteVehicleBrand,CreateExtraSp,UpdatedSignleCarDetails,GetVehicleModel,DeleteSingleCarDetails,CreateTransferCarDetails,suppliersendOtp,supplierverifyOtp,CreateCartDetail,Supplier_details, GetSupplier_details, deleteUserById,  One_Way_Details, CreateSupplierApi, updateTransfer,getTransferById,deleteTransfer,getTransferBySupplierId} from '../controllers'; 
     const multer = require('multer');
     import fs from 'fs';
@@ -41,6 +41,7 @@ router.post('/Createcardetail',CreateCartDetail);
 router.post('/Createvehicle',CreateVehicles); 
 router.get('/getCarDetails/:id',GetCarDetails); 
 router.get('/getVehicle/:id',GetVehiclebyId); 
+router.put('/UpdateVehicle/:id',UpdateVehicle);
 // router.put('/UpdatedSingleCarDetails/:id',UpdatedSingleCarDetails)
 router.put('/UpdatedSignleCarDetails/:id',UpdatedSignleCarDetails)
 router.put('/UpdateExtraSpaces/:id',UpdateExtra)
