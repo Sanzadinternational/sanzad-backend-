@@ -328,7 +328,7 @@ export interface UpdateVehicleType{
 
 export interface VehicleBrand{
   VehicleBrand:string,
-  serviceType:string
+  ServiceType:string
 }
 
 export interface UpdateVehicleBrand{
