@@ -94,6 +94,12 @@ export const transfers_Vehicle = pgTable("Vehicle_transfers", {
   Transfer_info:varchar({length:255}),
   NightTime: varchar({ length: 255 }), 
   NightTime_Price: varchar({ length: 255 }), 
+  vehicleTax: numeric("vehicleTax", { precision: 10, scale: 2 }),
+  vehicleTaxType:varchar({ length: 255 }),
+  parking: numeric("parking", { precision: 10, scale: 2 }),
+  tollTax:numeric("tollTax", { precision: 10, scale: 2 }),
+  driverCharge:numeric("driverCharge", { precision: 10, scale: 2 }),
+  driverTips: numeric("driverTips", { precision: 10, scale: 2 }),
   created_at: timestamp("created_at").defaultNow(),
 });
 
