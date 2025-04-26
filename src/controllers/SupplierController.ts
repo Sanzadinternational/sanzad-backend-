@@ -6,6 +6,8 @@ const { v4: uuidv4 } = require('uuid');
 import { Create_Vehicles } from "../db/schema/SupplierSchema";
 import { CreateVehicle } from "../dto";
 import { AgentTable } from "../db/schema/AgentSchema";
+import { notifications } from "../db/schema/schema";
+import { io } from "../..";
 import { db } from "../db/db"; 
 const { registerTable,SurgeChargeTable, One_WayTable,CreateExtraSpaces,VehicleTypeTable,VehicleBrandTable,ServiceTypeTable,VehicleModelTable,CreateTransferCar,
     supplier_otps,PriceTable,SupplierApidataTable,TransportNodes,SupplierCarDetailsTable} = require('../db/schema/SupplierSchema'); 
@@ -662,6 +664,18 @@ export const CreateSupplierApi = async (req: Request, res: Response, next: NextF
                 Api_Id_Foreign,
             })
             .returning();
+
+            const ApiNotification = await db
+            .insert(notifications).values({
+                role_id: "1",
+                type: "supplier_registered",
+                role: "supplier",
+                message: `New Api has registered.`,
+            });
+
+            io.emit("new_supplier_registered", {
+                message: `new Api has registered.`,
+              });
 
         // Return success response with new supplier details
         return res.status(200).json(newSupplier); 
