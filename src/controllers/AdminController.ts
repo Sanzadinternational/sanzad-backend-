@@ -408,9 +408,9 @@ export const AllGetSuppliers = async(req:Request,res:Response,next:NextFunction)
 export const ChangeSupplierApprovalStatus = async(req:Request,res:Response,next:NextFunction)=>{
     try{ 
         const {id}=req.params;
-        const {IsApproved}=req.body;
+        const {isApproved}=req.body;
         const results = await db.update(registerTable)
-        .set({ IsApproved: IsApproved })
+        .set({ IsApproved: isApproved })
         .where(eq(registerTable.Email,id));
         const result = await db
         .select({
