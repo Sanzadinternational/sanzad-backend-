@@ -1140,10 +1140,10 @@ export const DeleteVehicleType = async(req:Request,res:Response,next:NextFunctio
 
 export const CreateVehicleBrand = async(req:Request,res:Response,next:NextFunction)=>{ 
     try{
-        const {VehicleBrand, serviceType}=<VehicleBrand>req.body;
+        const {VehicleBrand, ServiceType}=<VehicleBrand>req.body;
 
         const NewVehicleBrand = await db.insert(VehicleBrandTable) 
-        .values({VehicleBrand: VehicleBrand, ServiceType: serviceType})
+        .values({VehicleBrand: VehicleBrand, ServiceType: ServiceType})
         .returning()
         return res.status(200).json(NewVehicleBrand); 
     }catch(error){
