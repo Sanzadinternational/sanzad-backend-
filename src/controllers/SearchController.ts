@@ -14,10 +14,49 @@ import { Create_Vehicles } from "../db/schema/SupplierSchema";
  const GOOGLE_MAPS_API_KEY = "AIzaSyAjXkEFU-hA_DSnHYaEjU3_fceVwQra0LI"; // Replace with actual API key
  import * as turf from '@turf/turf'; // Import turf.js for geospatial operations
 
+ const currencyCache: Record<string, Record<string, number>> = {};
+
+ export const getExchangeRate = async (from: string, to: string): Promise<number> => {
+   const key = `${from}_${to}`;
+ 
+   // Check if already in cache
+   if (currencyCache[from]?.[to]) {
+     return currencyCache[from][to];
+   }
+ 
+   try {
+     const res = await axios.get(`https://api.exchangerate.host/latest?base=${from}&symbols=${to}`);
+     const rate = res.data.rates[to];
+ 
+     if (!currencyCache[from]) currencyCache[from] = {};
+     currencyCache[from][to] = rate;
+ 
+     return rate;
+   } catch (error) {
+     console.error(`Error fetching exchange rate from ${from} to ${to}`, error);
+     return 1; // fallback: no conversion
+   }
+ };
+
+
+ export async function convertCurrency(amount: number, from: string, to: string): Promise<number> {
+  try {
+    const res = await axios.get(`https://v6.exchangerate-api.com/v6/5792347d5ad3d4f4281902b1/latest/${from}`);
+    const rate = res.data?.conversion_rates?.[to];
+    if (!rate) throw new Error(`Missing rate for ${to}`);
+    return amount * rate;
+  } catch (err) {
+    console.error(`Error converting from ${from} to ${to}`, err);
+    return amount; // fallback to original
+  }
+}
+ 
+
+
  export const fetchFromDatabase = async (
   pickupLocation: string,
   dropoffLocation: string,
-  providedDistance?: number
+  targetCurrency: string = 'USD'
 ): Promise<{ vehicles: any[]; distance: any; estimatedTime: string}> => {
   // Parse pickup location coordinates
   const [fromLat, fromLng] = pickupLocation.split(",").map(Number);
@@ -31,30 +70,51 @@ import { Create_Vehicles } from "../db/schema/SupplierSchema";
 
     const allZones = zonesResult.rows as any[];
 
-    // Step 2: Filter zones that contain 'From' or 'To' location
-    const zones = allZones.filter(zone => {
-      try {
-        const geojson = typeof zone.geojson === "string" ? JSON.parse(zone.geojson) : zone.geojson;
-    
-        if (!geojson || !geojson.geometry || !Array.isArray(geojson.geometry.coordinates)) {
-          console.warn("Invalid geojson data for zone:", zone.id);
-          return false;
-        }
-    
-        const coordinates = geojson.geometry.coordinates;
-        const polygon = turf.polygon(coordinates);
-        const fromPoint = turf.point([fromLng, fromLat]);
-    
-        return turf.booleanPointInPolygon(fromPoint, polygon); // Only check 'from' inside
-      } catch (error) {
-        console.error("Error processing zone:", zone.id, error);
-        return false;
-      }
-    });
+   // Step 2: Filter zones where 'From' location is inside and group by supplier
+const filteredZonesMap = new Map<string, any>(); // supplierId -> highest priority zone
 
-    if (!zones || zones.length === 0) {
-      throw new Error("No zones found for the selected locations.");
+// Step 2.1: Filter all zones where 'From' is inside
+const matchedZones: any[] = [];
+
+for (const zone of allZones) {
+  try {
+    const geojson = typeof zone.geojson === "string" ? JSON.parse(zone.geojson) : zone.geojson;
+
+    if (!geojson || !geojson.geometry || !Array.isArray(geojson.geometry.coordinates)) {
+      console.warn("Invalid geojson data for zone:", zone.id);
+      continue;
     }
+
+    const polygon = turf.polygon(
+      geojson.geometry.type === "MultiPolygon"
+        ? geojson.geometry.coordinates[0]
+        : geojson.geometry.coordinates
+    );
+
+    const fromPoint = turf.point([fromLng, fromLat]);
+
+    if (turf.booleanPointInPolygon(fromPoint, polygon)) {
+      matchedZones.push(zone);
+    }
+  } catch (error) {
+    console.error("Error processing zone:", zone.id, error);
+  }
+}
+
+// Step 2.2: Sort by smallest radius and pick one zone per supplier
+matchedZones.sort((a, b) => a.radius_km - b.radius_km);
+
+for (const zone of matchedZones) {
+  if (!filteredZonesMap.has(zone.supplier_id)) {
+    filteredZonesMap.set(zone.supplier_id, zone); // pick the smallest-radius zone per supplier
+  }
+}
+
+const zones = Array.from(filteredZonesMap.values());
+
+if (!zones || zones.length === 0) {
+  throw new Error("No zones found for the selected locations.");
+}
 
     // Extract zone IDs
     const zoneIds = zones.map(zone => zone.id);
@@ -70,9 +130,7 @@ import { Create_Vehicles } from "../db/schema/SupplierSchema";
     const transfers = transfersResult.rows as any[];
 
     // Step 4: Calculate Distance
-    let { distance, duration } = providedDistance 
-  ? { distance: providedDistance, duration: "N/A" } 
-  : await getRoadDistance(fromLat, fromLng, toLat, toLng);
+    let { distance, duration } = await getRoadDistance(fromLat, fromLng, toLat, toLng);
 
     // Step 5: Determine if extra pricing applies
     const fromZone = zones.find(zone => {
@@ -115,6 +173,7 @@ import { Create_Vehicles } from "../db/schema/SupplierSchema";
       }
   
       totalPrice = await calculateTotalPrice();
+      const convertedPrice = await convertCurrency(totalPrice, transfer.Currency, targetCurrency);
 
       return {
         vehicleId: transfer.vehicle_id,
@@ -122,11 +181,12 @@ import { Create_Vehicles } from "../db/schema/SupplierSchema";
         brand: transfer.VehicleBrand,
         vehicleName: transfer.name,
         extraPricePerKm: transfer.extra_price_per_mile,
-        price: Number(totalPrice.toFixed(2)),
+        price: Number(convertedPrice.toFixed(2)),
         nightTime: transfer.NightTime,
         passengers: transfer.Passengers,
-        currency: transfer.Currency,
+        currency: targetCurrency,
         mediumBag: transfer.MediumBag,
+        SmallBag: transfer.SmallBag,
         nightTimePrice: transfer.NightTime_Price,
         transferInfo: transfer.Transfer_info,
        supplierId: transfer.SupplierId
@@ -317,7 +377,7 @@ export const getBearerToken = async (
 
 // Search function
 export const Search = async (req: Request, res: Response, next: NextFunction) => {
-  const { date, dropoff, dropoffLocation, pax, pickup, pickupLocation } = req.body;
+  const { date, dropoff, dropoffLocation, pax, pickup, pickupLocation, targetCurrency } = req.body;
 
   try {
     // Fetch data from the database
@@ -344,7 +404,7 @@ export const Search = async (req: Request, res: Response, next: NextFunction) =>
       pickupLocation
     );
 
-    const DatabaseData = await fetchFromDatabase(pickupLocation, dropoffLocation);
+    const DatabaseData = await fetchFromDatabase(pickupLocation, dropoffLocation,targetCurrency);
     const [pickupLat, pickupLon] = pickupLocation.split(",").map(Number);
     const [dropLat, dropLon] = dropoffLocation.split(",").map(Number);
     // Merge database and API data
