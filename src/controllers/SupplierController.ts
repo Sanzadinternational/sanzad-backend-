@@ -1448,7 +1448,7 @@ export const UpdateVehicle = async (req: Request, res: Response, next: NextFunct
         const updateData = req.body;
         
         const updatedVehicle = await db.update(Create_Vehicles)
-            .set({ ...updateData, ExtraSpace: JSON.stringify(updateData.Extraspace) })
+            .set({ ...updateData, ExtraSpace: JSON.stringify(updateData.ExtraSpace) })
             .where(eq(Create_Vehicles.id, id))
             .returning();
 
