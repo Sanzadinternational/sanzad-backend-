@@ -20,6 +20,8 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require("nodemailer"); 
 import * as turf from "@turf/turf";
 import { transfers_Vehicle } from "../db/schema/SupplierSchema";
+import { BookingTable } from "../db/schema/BookingSchema";
+
 export const CreateSupplier = async (req: Request, res: Response, next: NextFunction) => { 
     try {   
         const { 
@@ -1724,3 +1726,14 @@ export const deleteTransfer = async (req: Request, res: Response) => {
         res.status(500).json({ message: "Error deleting transfer", error });
     }
 };
+export const GetBookingBySupplierId = async(req:Request,res:Response,next:NextFunction)=>{
+    try{
+         const { id } = req.params;
+         const result = await db.select()
+         .from(BookingTable)
+         .where(eq(BookingTable.suplier_id,Number(id)))
+         return res.status(200).json({result,message:"Booking fetched Successfully"})
+    }catch(error){
+        next(error)
+    }
+}
