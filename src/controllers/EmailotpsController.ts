@@ -33,14 +33,14 @@ export const Emailotps = async (req: Request, res: Response, next: NextFunction)
         const transporter = nodemailer.createTransport({
             service: 'Gmail', // Replace with your email service provider
             auth: {
-                user: 'jugalkishor556455@gmail.com', // Email address from environment variable
-                pass: 'vhar uhhv gjfy dpes', // Email password from environment variable
+                        user: 'sanzadinternational5@gmail.com', // Email address from environment variable
+                        pass: 'betf euwp oliy tooq', // Email password from environment variable
             },
         });
 
         // Define the email options
         const mailOptions = {
-            from: 'jugalkishor556455@gmail.com',
+            from: 'sanzadinternational5@gmail.com',
             to: email,
             subject: 'Your OTP Code',
             text: `Your OTP code is ${verificationCode}. This code is valid for 10 minutes.`,
@@ -80,14 +80,14 @@ export const AgentMail = async (req: Request, res: Response, next: NextFunction)
         const transporter = nodemailer.createTransport({
             service: 'Gmail', // Replace with your email service provider
             auth: {
-                user: 'jugalkishor556455@gmail.com', // Email address from environment variable
-                pass: 'vhar uhhv gjfy dpes', // Email password from environment variable
+                        user: 'sanzadinternational5@gmail.com', // Email address from environment variable
+                        pass: 'betf euwp oliy tooq', // Email password from environment variable
             },
         });
 
         // Send an email with the retrieved data (decrypted password)
         const info = await transporter.sendMail({
-            from: '"Sanzadinternational" <jugalkishor556455@gmail.com>', // Sender address
+            from: '"Sanzadinternational" <sanzadinternational5@gmail.com>', // Sender address
             to: `${result[0].Email}`, // Receiver address
             subject: "Query from Sanzadinternational", // Subject line
             text: `Details of New Agent Access:\nEmail: ${result[0].Email}\nPassword: ${result[0].Password}`, // Plain text body
@@ -128,14 +128,14 @@ export const SupplierMail = async (req: Request, res: Response, next: NextFuncti
         const transporter = nodemailer.createTransport({
             service: 'Gmail', // Replace with your email service provider
             auth: {
-                user: 'jugalkishor556455@gmail.com', // Email address from environment variable
-                pass: 'vhar uhhv gjfy dpes', // Email password from environment variable
+                        user: 'sanzadinternational5@gmail.com', // Email address from environment variable
+                        pass: 'betf euwp oliy tooq', // Email password from environment variable
             },
         });
       
         // Send an email with the retrieved data (decrypted password)
         const info = await transporter.sendMail({
-            from: '"Sanzadinternational" <jugalkishor556455@gmail.com>', // Sender address
+            from: '"Sanzadinternational" <sanzadinternational5@gmail.com>', // Sender address
             to: `${result[0].Email}`,
             subject: "Query from Sanzadinternational", // Subject line
             text: `Details of New Supplier Access:\nEmail: ${result[0].Email}\nPassword: ${result[0].Password}`, // Plain text body
