@@ -65,7 +65,7 @@ export const CreateAdmins = async (req: Request, res: Response, next: NextFuncti
         },
     });
   
-    Send an email with the retrieved data (decrypted password)
+    // Send an email with the retrieved data (decrypted password)
     const info = await transporter.sendMail({
         from: '"Sanzadinternational" <sanzadinternational5@gmail.com>', // Sender address
         to: `${results[0].Email}`,
