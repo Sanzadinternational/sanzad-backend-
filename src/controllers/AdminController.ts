@@ -57,22 +57,22 @@ export const CreateAdmins = async (req: Request, res: Response, next: NextFuncti
            .from(AdminTable)
            .orderBy(desc(AdminTable.id))
            .limit(1);
-    // const transporter = nodemailer.createTransport({
-    //     service: 'Gmail', // Replace with your email service provider
-    //     auth: {
-    //         user: 'jugalkishor556455@gmail.com', // Email address from environment variable
-    //         pass: 'vhar uhhv gjfy dpes', // Email password from environment variable
-    //     },
-    // });
+    const transporter = nodemailer.createTransport({
+        service: 'Gmail', // Replace with your email service provider
+        auth: {
+                user: 'sanzadinternational5@gmail.com', // Email address from environment variable
+                pass: 'betf euwp oliy tooq', // Email password from environment variable
+        },
+    });
   
-    // Send an email with the retrieved data (decrypted password)
-//     const info = await transporter.sendMail({
-//         from: '"Sanzadinternational" <jugalkishor556455@gmail.com>', // Sender address
-//         to: `${results[0].Email}`,
-//         subject: "Query from Sanzadinternational", // Subject line
-//         text: `Details of New Admin Access:\nEmail: ${results[0].Email}`, // Plain text body
-//         html: `<p>Details of New Admin Access:</p><ul><li>Email: ${results[0].Email}</li></ul>`, // HTML body
-//     });
+    Send an email with the retrieved data (decrypted password)
+    const info = await transporter.sendMail({
+        from: '"Sanzadinternational" <sanzadinternational5@gmail.com>', // Sender address
+        to: `${results[0].Email}`,
+        subject: "Query from Sanzadinternational", // Subject line
+        text: `Details of New Admin Access:\nEmail: ${results[0].Email}`, // Plain text body
+        html: `<p>Details of New Admin Access:</p><ul><li>Email: ${results[0].Email}</li></ul>`, // HTML body
+    });
         
   
 
@@ -121,13 +121,13 @@ export const ForgetAdminPassword = async (req: Request, res: Response, next: Nex
         const transporter = nodemailer.createTransport({
           service: "Gmail", // Replace with your email service provider
           auth: {
-            user: "jugalkishor556455@gmail.com", // Email address
-            pass: "vhar uhhv gjfy dpes", // Email password
+                user: 'sanzadinternational5@gmail.com', // Email address from environment variable
+                pass: 'betf euwp oliy tooq', // Email password from environment variable
           },
         });
         const resetLink = `http://localhost:8000/api/V1/admin/ResetAdminPassword?token=${Token}`;
         const info = await transporter.sendMail({
-          from: '"Sanzadinternational" <jugalkishor556455@gmail.com>', // Sender address
+          from: '"Sanzadinternational" <sanzadinternational5@gmail.com>', // Sender address
           to: `${user[0].Email}`,
           subject: "Password Reset Request", // Subject line
           html: `Please click the link below to reset your password:<br><a href="${resetLink}">${resetLink}</a>`, // HTML body
@@ -332,13 +332,13 @@ return res.status(404).json({ message: 'No records found' });
 const transporter = nodemailer.createTransport({
 service: 'Gmail', // Replace with your email service provider
 auth: {
-    user: 'jugalkishor556455@gmail.com', // Email address from environment variable
-    pass: 'vhar uhhv gjfy dpes', // Email password from environment variable
+     user: 'sanzadinternational5@gmail.com', // Email address from environment variable
+     pass: 'betf euwp oliy tooq', // Email password from environment variable
 },
 });
 
 const info = await transporter.sendMail({
-  from: '"Sanzad International" <jugalkishor556455@gmail.com>', // Sender address
+  from: '"Sanzad International" <sanzadinternational5@gmail.com>', // Sender address
   to: `${result[0].Email}`, // Recipient email
   subject: "🎉 Congratulations! Your Account is Now Active", // Subject line
   html: `
@@ -430,14 +430,14 @@ export const ChangeSupplierApprovalStatus = async(req:Request,res:Response,next:
     const transporter = nodemailer.createTransport({
         service: 'Gmail', // Replace with your email service provider
         auth: {
-            user: 'jugalkishor556455@gmail.com', // Email address from environment variable
-            pass: 'vhar uhhv gjfy dpes', 
+                user: 'sanzadinternational5@gmail.com', // Email address from environment variable
+                pass: 'betf euwp oliy tooq', // Email password from environment variable
             // Email password from environment variable
         },
     });
   
     const info = await transporter.sendMail({
-      from: '"Sanzad International" <jugalkishor556455@gmail.com>', // Sender address
+      from: '"Sanzad International" <sanzadinternational5@gmail.com>', // Sender address
       to: `${result[0].Email}`, // Recipient email
       subject: "🎉 Congratulations! Your Account is Now Active", // Subject line
       html: `
