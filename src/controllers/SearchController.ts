@@ -148,6 +148,17 @@ if (!zones || zones.length === 0) {
     console.log("Final Zone Detection - From Zone:", fromZone ? fromZone.name : "Outside");
     console.log("Final Zone Detection - To Zone:", toZone ? toZone.name : "Outside");
 
+    const marginsResult = await db.execute(
+      sql`SELECT * FROM "Margin"`
+    );
+    const margins = marginsResult.rows as any[];
+    const supplierMargins = new Map<string, number>();
+    for (const margin of margins) {
+      if (margin.supplier_id && margin.MarginPrice) {
+        supplierMargins.set(margin.supplier_id, Number(margin.MarginPrice));
+      }
+    }
+
     // Step 6: Calculate Pricing for Each Vehicle
     const vehiclesWithPricing = await Promise.all(transfers.map(async (transfer) => {
       let totalPrice = Number(transfer.price); // Base price
@@ -174,6 +185,9 @@ if (!zones || zones.length === 0) {
   
       totalPrice = await calculateTotalPrice();
       const convertedPrice = await convertCurrency(totalPrice, transfer.Currency, targetCurrency);
+      const margin = supplierMargins.get(transfer.SupplierId) || 0;
+     const convertedMargin = await convertCurrency(margin, 'INR', targetCurrency);
+  const priceWithMargin = convertedPrice + convertedMargin;
 
       return {
         vehicleId: transfer.vehicle_id,
@@ -182,6 +196,7 @@ if (!zones || zones.length === 0) {
         vehicleName: transfer.name,
         extraPricePerKm: transfer.extra_price_per_mile,
         price: Number(convertedPrice.toFixed(2)),
+        pricewithmargin:  Number(priceWithMargin),
         nightTime: transfer.NightTime,
         passengers: transfer.Passengers,
         currency: targetCurrency,
