@@ -107,14 +107,14 @@ export const CreateSupplier = async (req: Request, res: Response, next: NextFunc
     const transporter = nodemailer.createTransport({
         service: 'Gmail', // Replace with your email service provider
         auth: {
-            user: 'jugalkishor556455@gmail.com', // Email address from environment variable
-            pass: 'vhar uhhv gjfy dpes', // Email password from environment variable
+               user: 'sanzadinternational5@gmail.com', // Email address from environment variable
+               pass: 'betf euwp oliy tooq', // Email password from environment variable
         },
     });
   
 
     const info = await transporter.sendMail({
-        from: '"Sanzadinternational" <jugalkishor556455@gmail.com>', // Sender address
+        from: '"Sanzadinternational" <sanzadinternational5@gmail.com>', // Sender address
         to: `${result[0].Email}`,
         subject: "Your Account Has Been Created", // Updated subject line
         text: `Dear User,\n\nYour account has been successfully created. Once your account is approved, you will be notified.\n\nBest regards,\nSanzadinternational`, // Plain text fallback
@@ -180,14 +180,14 @@ export const ForgetPasswords = async (req: Request, res: Response, next: NextFun
               const transporter = nodemailer.createTransport({
                   service: 'Gmail', // Replace with your email service provider
                   auth: {
-                      user: 'jugalkishor556455@gmail.com', // Email address from environment variable
-                      pass: 'vhar uhhv gjfy dpes', // Email password from environment variable
+                        user: 'sanzadinternational5@gmail.com', // Email address from environment variable
+                        pass: 'betf euwp oliy tooq', // Email password from environment variable
                   },
               });
               const resetLink = `http://localhost:8000/api/V1/supplier/resetpassword?token=${Token}`;
               // Send an email with the retrieved data (decrypted password)
               const info = await transporter.sendMail({
-                  from: '"Sanzadinternational" <jugalkishor556455@gmail.com>', // Sender address
+                  from: '"Sanzadinternational" <sanzadinternational5@gmail.com>', // Sender address
                   to: `${user[0].Email}`,
                   subject: "Query from Sanzadinternational", // Subject line
                   text: `Details of New Agent Access:\nEmail: ${user[0].Email}`, // Plain text body
