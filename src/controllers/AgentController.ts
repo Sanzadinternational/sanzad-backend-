@@ -98,14 +98,14 @@ export const CreateAgent = async(req: Request, res: Response, next: NextFunction
         const transporter = nodemailer.createTransport({
             service: 'Gmail', // Replace with your email service provider
             auth: {
-                user: 'jugalkishor556455@gmail.com', // Email address from environment variable
-                pass: 'vhar uhhv gjfy dpes', // Email password from environment variable
+                user: 'sanzadinternational5@gmail.com', // Email address from environment variable
+                pass: 'betf euwp oliy tooq', // Email password from environment variable
             },
         });
       
         // Send an email with the retrieved data (decrypted password)
         const info = await transporter.sendMail({
-            from: '"Sanzadinternational" <jugalkishor556455@gmail.com>', // Sender address
+            from: '"Sanzadinternational" <sanzadinternational5@gmail.com>', // Sender address
             to: `${result[0].Email}`,
             subject: "Query from Sanzadinternational", // Subject line
             text: `Details of New Agent Access:\nEmail: ${result[0].Email}`, // Plain text body
@@ -155,14 +155,14 @@ export const ForgetPassword = async (req: Request, res: Response, next: NextFunc
             const transporter = nodemailer.createTransport({
                 service: 'Gmail', // Replace with your email service provider
                 auth: {
-                    user: 'jugalkishor556455@gmail.com', // Email address from environment variable
-                    pass: 'vhar uhhv gjfy dpes', // Email password from environment variable
+                user: 'sanzadinternational5@gmail.com', // Email address from environment variable
+                pass: 'betf euwp oliy tooq', // Email password from environment variable
                 },
             });
             const resetLink = `http://localhost:8000/api/V1/agent/ResetPassword?token=${Token}`;
             // Send an email with the retrieved data (decrypted password)
             const info = await transporter.sendMail({
-                from: '"Sanzadinternational" <jugalkishor556455@gmail.com>', // Sender address
+                from: '"Sanzadinternational" <sanzadinternational5@gmail.com>', // Sender address
                 to: `${user[0].Email}`,
                 subject: "Query from Sanzadinternational", // Subject line
                 text: `Details of New Agent Access:\nEmail: ${user[0].Email}`, // Plain text body
@@ -359,8 +359,8 @@ export const GetBill=async(req:Request,res:Response,next:NextFunction)=>{
     let config = {
         service:'gmail',
         auth:{
-            user:'jugalkishor556455@gmail.com',
-            pass:'vhar uhhv gjfy dpes'
+                user: 'sanzadinternational5@gmail.com', // Email address from environment variable
+                pass: 'betf euwp oliy tooq', // Email password from environment variable
         }
     }
     
@@ -396,7 +396,7 @@ export const GetBill=async(req:Request,res:Response,next:NextFunction)=>{
     let mail = MailGenerator.generate(response)
 
     let message={
-        from:"jugalkishor556455@gmail.com",
+        from:"sanzadinternational5@gmail.com",
         to:userEmail,
         subject:"Place order",
         html:mail
@@ -593,14 +593,14 @@ export const QuickEmail = async(req:Request,res:Response,next:NextFunction)=>{
           const transporter = nodemailer.createTransport({
             service: 'Gmail', // Replace with your email service provider
             auth: {
-                user: 'jugalkishor556455@gmail.com', // Email address from environment variable
-                pass: 'vhar uhhv gjfy dpes', // Email password from environment variable
+                user: 'sanzadinternational5@gmail.com', // Email address from environment variable
+                pass: 'betf euwp oliy tooq', // Email password from environment variable
             },
         });
       
         // Send an email with the retrieved data (decrypted password)
         const info = await transporter.sendMail({
-            from: '"Sanzadinternational" <jugalkishor556455@gmail.com>', // Sender address
+            from: '"Sanzadinternational" <sanzadinternational5@gmail.com>', // Sender address
             to: recipient,
             subject: "Query from Sanzadinternational", // Subject line
             text: `${subject}`, // Plain text body
