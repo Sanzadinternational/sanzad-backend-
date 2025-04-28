@@ -10,7 +10,7 @@ const { AgentTable } = require("../db/schema/AgentSchema");
 const nodemailer = require('nodemailer'); 
 import crypto from 'crypto';
 // 
-
+ 
 export const Emailotps = async (req: Request, res: Response, next: NextFunction) => {
     try {
         // Generate a six-digit verification code
