@@ -3,25 +3,32 @@ import authMiddleware from '../middlewares/authMiddleware';
 import express, {Request, Response, NextFunction, Router} from 'express'; 
 import { CreateSupplier,UpdateVehicle,GetBookingBySupplierId,DeleteVehicle,UpdateVehicleTypes,UpdateVehicleModels,deleteZone,UpdateVehicleBrands,UpdateServiceTypes,DeleteVehicleType,GetSupplier,SurgeCharges,GetVehicleCarDetails,GetAllCarDetails,GetTransferCarDetails,UpdateTransferCar,UpdateExtra,CreateVehicleType,GetVehicleBrand,CreateVehicleBrand,CreateServiceType,CreateVehicleModel,GetVehicleType,
     GetCarDetails,DeleteSurgeCharges,UpdateSurgeCharges,GetSurgeCharges,GetServiceType,DeleteVehicleModel,DeleteServiceType,DeleteVehicleBrand,CreateExtraSp,UpdatedSignleCarDetails,GetVehicleModel,DeleteSingleCarDetails,CreateTransferCarDetails,suppliersendOtp,supplierverifyOtp,CreateCartDetail,Supplier_details, GetSupplier_details, deleteUserById,  One_Way_Details, CreateSupplierApi, updateTransfer,getTransferById,deleteTransfer,getTransferBySupplierId} from '../controllers'; 
-    const multer = require('multer');
-    import fs from 'fs';
-    import path from 'path';
-    const uploadDir = path.join(__dirname, '../uploads');
-    if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
+import multer from 'multer';
+import fs from 'fs';
+import path from 'path';
+
+// Absolute path to save uploads outside the app
+const uploadDir = '/home/ubuntu/uploads'; 
+
+// Ensure the uploads folder exists
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Configure Multer
+const storage = multer.diskStorage({
+    destination: (req: Request, file: any, cb: (error: Error | null, destination: string) => void) => {
+        cb(null, uploadDir);
+    },
+    filename: (req: Request, file: any, cb: (error: Error | null, filename: string) => void) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const sanitizedOriginalName = file.originalname.replace(/\s+/g, '-'); // Replace spaces with -
+        cb(null, `${uniqueSuffix}-${sanitizedOriginalName}`);
     }
-    
-    // Configure Multer
-    const storage = multer.diskStorage({
-        destination: (req: Request, file: any, cb: (error: Error | null, destination: string) => void) => {
-            cb(null, uploadDir);
-        },
-        filename: (req: Request, file: any, cb: (error: Error | null, filename: string) => void) => {
-            cb(null, `${Date.now()}-${file.originalname}`);
-        }
-    });
-    
-    const upload = multer({ storage });
+});
+
+const upload = multer({ storage });
+
 const router = express.Router(); 
 
 router.post('/registration',upload.single('Gst_Tax_Certificate'), CreateSupplier); 
