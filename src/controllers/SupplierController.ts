@@ -20,7 +20,7 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require("nodemailer"); 
 import * as turf from "@turf/turf";
 import { transfers_Vehicle } from "../db/schema/SupplierSchema";
-import { BookingTable } from "../db/schema/BookingSchema";
+import { BookingTable,PaymentsTable } from "../db/schema/BookingSchema";
 
 export const CreateSupplier = async (req: Request, res: Response, next: NextFunction) => { 
     try {   
@@ -1732,6 +1732,10 @@ export const GetBookingBySupplierId = async(req:Request,res:Response,next:NextFu
          const result = await db.select()
          .from(BookingTable)
          .where(eq(BookingTable.suplier_id,Number(id)))
+         .fullJoin( 
+            PaymentsTable ,
+            eq(PaymentsTable.booking_id, BookingTable.id)
+          )
          return res.status(200).json({result,message:"Booking fetched Successfully"})
     }catch(error){
         next(error)
