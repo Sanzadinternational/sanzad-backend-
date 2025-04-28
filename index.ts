@@ -52,6 +52,7 @@ app.use('/api/V1/admin', AdminRoute);
 app.use("/api/V1/data", SearchRouter);
 app.use('/api/V1/view', ProfileRoute);
 app.use('/api/V1/payment', PaymentRoute);
+app.use('/uploads', express.static(path.join(__dirname, 'src/uploads')));
 
 // Start Server
 server.listen(4000, () => {
