@@ -38,13 +38,14 @@ export async function sendOTPEmail(recipientEmail: string, otp: string): Promise
   const transporter = nodemailer.createTransport({
     service: 'Gmail', // Or your preferred email service
     auth: {
-      user: 'jugalkishor556455@gmail.com',
-      pass: 'vhar uhhv gjfy dpes',
+                user: 'sanzadinternational5@gmail.com', // Email address from environment variable
+                pass: 'betf euwp oliy tooq', // Email password from environment variable
+
     },
   });
 
   const mailOptions = {
-    from: 'jugalkishor556455@gmail.com',
+    from: 'sanzadinternational5@gmail.com',
     to: recipientEmail,
     subject: 'Your OTP for Registration',
     html: `
