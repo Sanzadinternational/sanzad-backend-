@@ -3,6 +3,7 @@ import bodyParser from "body-parser";
 import http from "http";
 import { Server as SocketIOServer } from "socket.io";
 import cors from "cors";
+import path from 'path';
 
 // Routes
 import { SupplierRoute } from "./src/routes";
