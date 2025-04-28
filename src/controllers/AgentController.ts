@@ -16,7 +16,7 @@ import { registerTable } from "../db/schema/SupplierSchema";
 var Mailgen = require('mailgen'); 
 var randomstring = require("randomstring");
 var passwordHash = require('password-hash');
-import { BookingTable } from "../db/schema/BookingSchema";
+import { BookingTable,PaymentsTable  } from "../db/schema/BookingSchema";
 
 export const CreateAgent = async(req: Request, res: Response, next: NextFunction) => { 
     try {
@@ -619,6 +619,10 @@ export const GetBookingByAgentId = async(req:Request,res:Response,next:NextFunct
          const result = await db.select()
          .from(BookingTable)
          .where(eq(BookingTable.agent_id,Number(id)))
+        .fullJoin( 
+            PaymentsTable ,
+            eq(PaymentsTable .id, BookingTable.id)
+          )
          return res.status(200).json({result,message:"Booking fetched Successfully"})
     }catch(error){
         next(error)
