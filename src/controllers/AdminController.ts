@@ -9,7 +9,7 @@ const bcrypt = require('bcrypt');
 var randomstring = require("randomstring");
 import nodemailer from "nodemailer";
 import { Site_url } from "../config";
-import { BookingTable } from "../db/schema/BookingSchema";
+import { BookingTable,PaymentsTable } from "../db/schema/BookingSchema";
 
 export const CreateAdmins = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -555,7 +555,11 @@ export const DeleteMarginData = async(req:Request,res:Response,next:NextFunction
 export const GetAllBooking = async(req:Request,res:Response,next:NextFunction)=>{
   try{
         const result= await db.select()
-        .from(BookingTable);
+        .from(BookingTable)
+       .fullJoin( 
+            PaymentsTable ,
+            eq(PaymentsTable.booking_id, BookingTable.id)
+          )
         return res.status(200).json({result,message:"Booking all data fetch successfully"})
   }catch(error){
     next(error)
