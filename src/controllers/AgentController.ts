@@ -621,7 +621,7 @@ export const GetBookingByAgentId = async(req:Request,res:Response,next:NextFunct
          .where(eq(BookingTable.agent_id,Number(id)))
         .fullJoin( 
             PaymentsTable ,
-            eq(PaymentsTable .id, BookingTable.id)
+            eq(PaymentsTable.booking_id, BookingTable.id)
           )
          return res.status(200).json({result,message:"Booking fetched Successfully"})
     }catch(error){
