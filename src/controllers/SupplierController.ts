@@ -94,7 +94,7 @@ export const CreateSupplier = async (req: Request, res: Response, next: NextFunc
                 IsApproved: IsApproved || Approval_status.Pending
             })
             .returning(); 
-            res.status(201).json(newSupplier);
+            // res.status(201).json(newSupplier);
     const result = await db
            .select({
                Email: registerTable.Email,
