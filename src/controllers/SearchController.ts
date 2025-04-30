@@ -102,15 +102,7 @@ for (const zone of allZones) {
 }
 
 // Step 2.2: Sort by smallest radius and pick one zone per supplier
-matchedZones.sort((a, b) => a.radius_km - b.radius_km);
-
-for (const zone of matchedZones) {
-  if (!filteredZonesMap.has(zone.supplier_id)) {
-    filteredZonesMap.set(zone.supplier_id, zone); // pick the smallest-radius zone per supplier
-  }
-}
-
-const zones = Array.from(filteredZonesMap.values());
+const zones = matchedZones;
 
 if (!zones || zones.length === 0) {
   throw new Error("No zones found for the selected locations.");
