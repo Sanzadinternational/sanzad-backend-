@@ -1681,7 +1681,7 @@ export const getTransferBySupplierId = async (req: Request, res: Response) => {
             tollTax:transfers_Vehicle.tollTax,
             parking:transfers_Vehicle.parking,
             driverTips: transfers_Vehicle.driverTips,
-            driverCharg:transfers_Vehicle.driverCharg,
+            driverCharge:transfers_Vehicle.driverCharge,
             Zone_name:zones.name,
             VehicleType:Create_Vehicles.VehicleType,
             VehicleBrand:Create_Vehicles.VehicleBrand,
