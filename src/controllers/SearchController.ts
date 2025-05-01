@@ -176,6 +176,12 @@ if (!zones || zones.length === 0) {
       }
   
       totalPrice = await calculateTotalPrice();
+       // Add fixed charges
+  totalPrice += Number(transfer.vehicleTax) || 0;
+  totalPrice += Number(transfer.parking) || 0;
+  totalPrice += Number(transfer.tollTax) || 0;
+  totalPrice += Number(transfer.driverCharge) || 0;
+  totalPrice += Number(transfer.driverTips) || 0;
       const convertedPrice = await convertCurrency(totalPrice, transfer.Currency, targetCurrency);
       const margin = supplierMargins.get(transfer.SupplierId) || 0;
      const convertedMargin = await convertCurrency(margin, 'INR', targetCurrency);
