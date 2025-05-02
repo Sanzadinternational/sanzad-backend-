@@ -56,7 +56,7 @@ import { Create_Vehicles } from "../db/schema/SupplierSchema";
  export const fetchFromDatabase = async (
   pickupLocation: string,
   dropoffLocation: string,
-  targetCurrency: string = 'INR'
+  targetCurrency: string,
 ): Promise<{ vehicles: any[]; distance: any; estimatedTime: string}> => {
   // Parse pickup location coordinates
   const [fromLat, fromLng] = pickupLocation.split(",").map(Number);
