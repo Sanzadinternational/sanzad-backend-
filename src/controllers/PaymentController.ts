@@ -48,7 +48,7 @@ export const PaymentIniciate = async (req: Request, res: Response, next: NextFun
         const encryptedData = encrypt(data, workingKey);
   
         res.json({
-          url: 'https://secure.ccavenue.com/transaction/transaction.do?command=initiateTransaction',
+          url: 'https://test.ccavenue.com/transaction/transaction.do?command=initiateTransaction',
           access_code: accessCode,
           encRequest: encryptedData
         });
