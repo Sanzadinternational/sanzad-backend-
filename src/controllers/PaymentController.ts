@@ -10,9 +10,12 @@ export const PaymentIniciate = async (req: Request, res: Response, next: NextFun
   try {
   const { agent_id, vehicle_id, suplier_id, pickup_location, drop_location, pickup_lat, pickup_lng, drop_lat, drop_lng, distance_miles, price } = req.body;
 
-        const merchantId = process.env.CCAVENUE_MERCHANT_ID!;
-        const accessCode = process.env.CCAVENUE_ACCESS_CODE!;
-        const workingKey = process.env.CCAVENUE_WORKING_KEY!;
+        // const merchantId = process.env.CCAVENUE_MERCHANT_ID!;
+        // const accessCode = process.env.CCAVENUE_ACCESS_CODE!;
+        // const workingKey = process.env.CCAVENUE_WORKING_KEY!;
+    const merchantId = process.env.CCAVENUE_MERCHANT_ID!;
+        const accessCode = 'ATOA68MD68CH89AOHC';
+        const workingKey = 'E93F2108A01D5B39308523A609427484';
         const redirectUrl = "https://api.sanzadinternational.in/api/V1/payment/payment-status-update";
         const cancelUrl = "https://sanzadinternational.in/cancle";
         const customerEmail = "abhinavgu34@gmail.com";
