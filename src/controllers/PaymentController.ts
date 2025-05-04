@@ -47,6 +47,7 @@ export const PaymentIniciate = async (req: Request, res: Response, next: NextFun
 
         // Payment data
         const data = `merchant_id=${merchantId}&order_id=${orderId}&currency=INR&amount=${price}&redirect_url=${redirectUrl}&cancel_url=${cancelUrl}&billing_email=${customerEmail}&billing_tel=${customerPhone}&merchant_param1=${bookingId}`;
+console.log('Raw Payment Data:', data);
 
         const encryptedData = encrypt(data, workingKey);
   
