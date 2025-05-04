@@ -57,6 +57,7 @@ import { Create_Vehicles } from "../db/schema/SupplierSchema";
   pickupLocation: string,
   dropoffLocation: string,
   targetCurrency: string,
+  time: string,
 ): Promise<{ vehicles: any[]; distance: any; estimatedTime: string}> => {
   // Parse pickup location coordinates
   const [fromLat, fromLng] = pickupLocation.split(",").map(Number);
@@ -184,6 +185,17 @@ if (!zones || zones.length === 0) {
   totalPrice += Number(transfer.driverCharge) || 0;
   totalPrice += Number(transfer.driverTips) || 0;
      totalPrice += Number(margin) || 0;
+       // Night time pricing logic
+  const currentTime = time; // "20:35" format
+  const [hour, minute] = currentTime.split(":").map(Number);
+
+  // If time is between 22:00 and 06:00
+  const isNightTime = (hour >= 22 || hour < 6);
+
+  if (isNightTime && transfer.NightTime) {
+    totalPrice += Number(transfer.NightTime);
+    console.log(`Night time detected (${currentTime}) → Adding nightTimePrice: ${transfer.nightTimePrice}`);
+  }
       const convertedPrice = await convertCurrency(totalPrice, transfer.Currency, targetCurrency);
 
       return {
@@ -389,7 +401,7 @@ export const getBearerToken = async (
 
 // Search function
 export const Search = async (req: Request, res: Response, next: NextFunction) => {
-  const { date, dropoff, dropoffLocation, pax, pickup, pickupLocation, targetCurrency } = req.body;
+  const { date, dropoff, dropoffLocation, pax, pickup, pickupLocation, targetCurrency, time } = req.body;
 
   try {
     // Fetch data from the database
@@ -416,7 +428,7 @@ export const Search = async (req: Request, res: Response, next: NextFunction) =>
       pickupLocation
     );
 
-    const DatabaseData = await fetchFromDatabase(pickupLocation, dropoffLocation,targetCurrency);
+    const DatabaseData = await fetchFromDatabase(pickupLocation, dropoffLocation,targetCurrency,time);
     const [pickupLat, pickupLon] = pickupLocation.split(",").map(Number);
     const [dropLat, dropLon] = dropoffLocation.split(",").map(Number);
     // Merge database and API data
