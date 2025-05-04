@@ -194,7 +194,7 @@ if (!zones || zones.length === 0) {
 
   if (isNightTime && transfer.NightTime) {
     totalPrice += Number(transfer.NightTime);
-    console.log(`Night time detected (${currentTime}) → Adding nightTimePrice: ${transfer.nightTimePrice}`);
+    console.log(`Night time detected (${currentTime}) → Adding nightTimePrice: ${transfer.NightTime}`);
   }
       const convertedPrice = await convertCurrency(totalPrice, transfer.Currency, targetCurrency);
 
