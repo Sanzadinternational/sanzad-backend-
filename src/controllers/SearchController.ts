@@ -192,9 +192,9 @@ if (!zones || zones.length === 0) {
   // If time is between 22:00 and 06:00
   const isNightTime = (hour >= 22 || hour < 6);
 
-  if (isNightTime && transfer.NightTime) {
-    totalPrice += Number(transfer.NightTime);
-    console.log(`Night time detected (${currentTime}) → Adding nightTimePrice: ${transfer.NightTime}`);
+  if (isNightTime && transfer.NightTime_Price) {
+    totalPrice += Number(transfer.NightTime_Price);
+    console.log(`Night time detected (${currentTime}) → Adding nightTimePrice: ${transfer.NightTime_Price}`);
   }
       const convertedPrice = await convertCurrency(totalPrice, transfer.Currency, targetCurrency);
 
