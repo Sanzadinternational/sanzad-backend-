@@ -67,7 +67,7 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
     console.log('Payment Status Update');
     const encResp = req.body.encResp;
     console.log(encResp);
-    const workingKey = process.env.CCAVENUE_WORKING_KEY!;
+    const workingKey = 'E93F2108A01D5B39308523A609427484';
     
     const decryptedResponse = decrypt(encResp, workingKey);
     const responseData = new URLSearchParams(decryptedResponse);
