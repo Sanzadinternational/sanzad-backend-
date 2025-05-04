@@ -108,9 +108,9 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
     //   .set({ status: bookingStatus })
     //   .where(sql`${BookingTable.id} = ${bookingId}`);
 
-    return res.redirect(
-      `${process.env.FRONTEND_URL}/payment-${paymentStatus}?orderId=${orderId}&transactionId=${transactionId}&amount=${amount}&paymentMode=${paymentMode}`
-    );
+  return res.status(200).json({
+  redirectUrl: `${process.env.FRONTEND_URL}/payment-${paymentStatus}?orderId=${orderId}&transactionId=${transactionId}&amount=${amount}&paymentMode=${paymentMode}`
+});
   } catch (error) {
     console.error('Payment callback error:', error);
     res.status(500).json({ error: 'Payment processing failed' });
