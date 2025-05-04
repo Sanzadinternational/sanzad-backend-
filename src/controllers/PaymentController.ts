@@ -67,6 +67,9 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
   try {
     console.log('Payment Status Update');
     const encResp = req.body.encResp;
+   if (!encResp) {
+  return res.status(400).json({ error: 'Missing encrypted response (encResp)' });
+}
     console.log(encResp);
     const workingKey = 'E93F2108A01D5B39308523A609427484';
     
