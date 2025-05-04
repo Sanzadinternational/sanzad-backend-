@@ -67,6 +67,8 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
   try {
     console.log('Payment Status Update');
     const encResp = req.body.encResp;
+   console.log(req.body.encResp); // Check if encResp exists
+
    if (!encResp) {
   // return res.status(400).json({ error: 'Missing encrypted response (encResp)' });
     console.log('Missing encrypted response (encResp)');
