@@ -37,10 +37,9 @@ io.on("connection", (socket) => {
 
 // Middleware
 app.use(cors({
-  origin: "https://sanzadinternational.in",
-  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true
+  origin: '*',
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.options("*", cors());
 app.use(bodyParser.json());
