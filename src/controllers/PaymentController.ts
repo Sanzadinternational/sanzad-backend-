@@ -206,7 +206,7 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
   };
    export const ChangePaymentStatusByBookingId = async (req: Request, res: Response) => {
     try {
-      const bookingId = req.params.id;
+      const bookingId = req.params.id; 
       const payment_status = req.body.payment_status; 
   
       if (!['pending', 'successful', 'failed', 'refunded'].includes(payment_status)) {
