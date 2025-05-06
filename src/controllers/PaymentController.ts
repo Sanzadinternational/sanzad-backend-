@@ -210,7 +210,7 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
       const bookingId = req.params.id;
       const payment_status = req.body.payment_status; 
   
-      if (!['pending', 'successful', 'failed', 'refunded'].includes(payment_status)) {
+      if (!['pending', 'completed', 'failed', 'refunded'].includes(payment_status)) {
         return res.status(400).json({ message: 'Invalid status value' });
       }
       
