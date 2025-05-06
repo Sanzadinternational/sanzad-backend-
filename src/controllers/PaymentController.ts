@@ -5,6 +5,8 @@ import { sql } from "drizzle-orm";
 import { db } from "../db/db";// Ensure your Drizzle DB config is imported
 import { PaymentsTable, BookingTable
  } from "../db/schema/BookingSchema";
+import { notifications } from "../db/schema/schema";
+import { io } from "../..";
 
 export const PaymentIniciate = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -178,6 +180,18 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
         reference_number: reference_number, // Not needed for CCAvenue
         amount: (parseFloat(price || "0")).toFixed(2),
       });
+
+     const ApiNotification = await db
+            .insert(notifications).values({
+                role_id: agent_id,
+                type: "New_order",
+                role: "Agent",
+                message: `New Order`,
+            });
+
+            io.emit("Order", {
+                message: `New Order`,
+              });
   
       return res.status(201).json({
         message: 'Payment info saved successfully',
