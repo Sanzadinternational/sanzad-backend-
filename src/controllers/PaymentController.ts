@@ -204,4 +204,22 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
       next(error);
     }
   };
+   export const ChangePaymentStatusByBookingId = async (req: Request, res: Response) => {
+    try {
+      const bookingId = req.params.id;
+      const payment_status = req.body.payment_status; 
   
+      if (!['pending', 'successful', 'failed', 'refunded'].includes(payment_status)) {
+        return res.status(400).json({ message: 'Invalid status value' });
+      }
+      
+      const result = await db.update(PaymentsTable) 
+        .set({ payment_status: payment_status }) 
+        .where(eq(PaymentsTable.booking_id, bookingId)); 
+      
+      return res.status(200).json({ message: 'Payment status updated successfully' });
+    } catch (error) {
+      console.error('Error updating payment status:', error);
+      return res.status(404).json({ message: 'Internal server error' });
+    }
+  };
