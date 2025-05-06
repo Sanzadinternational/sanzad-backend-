@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { encrypt, decrypt } from "../utils/ccavenueUtils";
 import crypto from "crypto";
 import { sql } from "drizzle-orm";
+import { and,desc, eq } from "drizzle-orm";
 import { db } from "../db/db";// Ensure your Drizzle DB config is imported
 import { PaymentsTable, BookingTable
  } from "../db/schema/BookingSchema";
