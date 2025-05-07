@@ -1747,3 +1747,23 @@ export const GetBookingBySupplierId = async(req:Request,res:Response,next:NextFu
         next(error)
     }
 }
+
+export const ChangeBookingStatusByBookingId = async (req: Request, res: Response) => { 
+    try { 
+      const Id = req.params.id; 
+      const status = req.body.status; 
+                                            
+      if (!['pending', 'approved', 'rejected', 'refunded'].includes(status)) {
+        return res.status(400).json({ message: 'Invalid status value' });
+      } 
+      
+      const result = await db.update(BookingTable) 
+        .set({ status: status }) 
+        .where(eq(BookingTable.id, Id)); 
+      
+      return res.status(200).json({ message: 'Booking status updated successfully' });
+    } catch (error) {
+      console.error('Error updating payment status:', error);
+      return res.status(404).json({ message: 'Internal server error' });
+    }  
+  };
