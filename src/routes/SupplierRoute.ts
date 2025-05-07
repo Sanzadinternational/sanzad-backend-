@@ -1,7 +1,7 @@
 import { Supplier_price, TransportNode,resetPasswords,ForgetPasswords, CreateVehicles, GetVehiclebyId, CreateZone, createTransfer, updateZone, GetVehicleBySupplierId, GetZoneBySupplierId } from '../controllers/SupplierController';
 import authMiddleware from '../middlewares/authMiddleware';
 import express, {Request, Response, NextFunction, Router} from 'express'; 
-import { CreateSupplier,UpdateVehicle,GetBookingBySupplierId,DeleteVehicle,UpdateVehicleTypes,UpdateVehicleModels,deleteZone,UpdateVehicleBrands,UpdateServiceTypes,DeleteVehicleType,GetSupplier,SurgeCharges,GetVehicleCarDetails,GetAllCarDetails,GetTransferCarDetails,UpdateTransferCar,UpdateExtra,CreateVehicleType,GetVehicleBrand,CreateVehicleBrand,CreateServiceType,CreateVehicleModel,GetVehicleType,
+import { CreateSupplier,UpdateVehicle,ChangeBookingStatusByBookingId,GetBookingBySupplierId,DeleteVehicle,UpdateVehicleTypes,UpdateVehicleModels,deleteZone,UpdateVehicleBrands,UpdateServiceTypes,DeleteVehicleType,GetSupplier,SurgeCharges,GetVehicleCarDetails,GetAllCarDetails,GetTransferCarDetails,UpdateTransferCar,UpdateExtra,CreateVehicleType,GetVehicleBrand,CreateVehicleBrand,CreateServiceType,CreateVehicleModel,GetVehicleType,
     GetCarDetails,DeleteSurgeCharges,UpdateSurgeCharges,GetSurgeCharges,GetServiceType,DeleteVehicleModel,DeleteServiceType,DeleteVehicleBrand,CreateExtraSp,UpdatedSignleCarDetails,GetVehicleModel,DeleteSingleCarDetails,CreateTransferCarDetails,suppliersendOtp,supplierverifyOtp,CreateCartDetail,Supplier_details, GetSupplier_details, deleteUserById,  One_Way_Details, CreateSupplierApi, updateTransfer,getTransferById,deleteTransfer,getTransferBySupplierId} from '../controllers'; 
 import multer from 'multer';
 import fs from 'fs';
@@ -93,6 +93,7 @@ router.delete('/deleteTransfer/:id',deleteTransfer);
 router.put('/UpdateVehicle/:id',UpdateVehicle);
 router.delete('/DeleteVehicle/:id',DeleteVehicle);
 router.get('/GetBookingBySupplierId/:id',GetBookingBySupplierId);
+router.put('/ChangeBookingStatusByBookingId/:id',ChangeBookingStatusByBookingId);
 // router.get('/products', GetProducts); 
 // router.get('/product/:id', GetProductById);
 // router.get('/product/:Keyword', SearchProduct); 
