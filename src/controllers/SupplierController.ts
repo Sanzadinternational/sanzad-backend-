@@ -1761,6 +1761,35 @@ export const ChangeBookingStatusByBookingId = async (req: Request, res: Response
         .set({ status: status }) 
         .where(eq(BookingTable.id, Id)); 
       
+        const results = await db.select({
+        id: BookingTable.id,
+        status: BookingTable.status,
+        agent_id: BookingTable.agent_id,
+        email: AgentTable.Email
+    })
+    .from(BookingTable)
+    .innerJoin(AgentTable,eq(AgentTable.id, BookingTable.agent_id))
+
+         
+        const transporter = nodemailer.createTransport({ 
+            service: 'Gmail', // Replace with your email service provider 
+            auth: { 
+                        user: 'sanzadinternational5@gmail.com', // Email address from environment variable 
+                        pass: 'betf euwp oliy tooq', // Email password from environment variable 
+            }, 
+        }); 
+        
+        // Define the email options
+        const mailOptions = {
+            from: 'sanzadinternational5@gmail.com',
+            to: results[0].email,
+            subject: 'Your status by sanzadinternational',
+            text: `Your query is <strong> ${results[0].status}</strong> by the Sanzadinternational.`,
+            html: `Your query is <strong> ${results[0].status}</strong> by the Sanzadinternational.`,
+        };
+
+        // Send the email
+        await transporter.sendMail(mailOptions);
       return res.status(200).json({ message: 'Booking status updated successfully' });
     } catch (error) {
       console.error('Error updating payment status:', error);
