@@ -8,6 +8,7 @@ import { PaymentsTable, BookingTable
  } from "../db/schema/BookingSchema";
 import { notifications } from "../db/schema/schema";
 import { io } from "../..";
+const nodemailer = require("nodemailer"); 
 
 export const PaymentIniciate = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -217,7 +218,39 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
       const result = await db.update(PaymentsTable) 
         .set({ payment_status: payment_status }) 
         .where(eq(PaymentsTable.booking_id, bookingId)); 
+  const results = await db.select({ 
+              id: PaymentsTable.id, 
+              payment_status: PaymentsTable.payment_status, 
+              agent_id: BookingTable.agent_id, 
+              booking_id:PaymentsTable.booking_id, 
+              email: AgentTable.Email 
+          })
+          .from(PaymentsTable)
+          .innerJoin(BookingTable,eq(BookingTable.id, PaymentsTable.booking_id))
+          .innerJoin(AgentTable,eq(AgentTable.id,BookingTable.agent_id)); 
       
+               
+              const transporter = nodemailer.createTransport({ 
+                  service: 'Gmail', // Replace with your email service provider 
+                  auth: { 
+                              user: 'sanzadinternational5@gmail.com', // Email address from environment variable 
+                              pass: 'betf euwp oliy tooq', // Email password from environment variable 
+                  }, 
+              }); 
+              
+              // Define the email options
+              const mailOptions = {
+                  from: 'sanzadinternational5@gmail.com',
+                  to: results[0].email,
+                  subject: 'Your status by sanzadinternational',
+                  text: `Your query is <strong> ${results[0].payment_status}</strong> by the Sanzadinternational.`,
+                  html: `Your query is <strong> ${results[0].payment_status}</strong> by the Sanzadinternational.`,
+              };
+      
+              // Send the email
+              await transporter.sendMail(mailOptions);
+
+     
       return res.status(200).json({ message: 'Payment status updated successfully' });
     } catch (error) {
       console.error('Error updating payment status:', error);
