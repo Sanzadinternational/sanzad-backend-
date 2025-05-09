@@ -8,6 +8,7 @@ import { PaymentsTable, BookingTable
  } from "../db/schema/BookingSchema";
 import { notifications } from "../db/schema/schema";
 import { io } from "../..";
+import { AgentTable } from "../db/schema/AgentSchema";
 const nodemailer = require("nodemailer"); 
 
 export const PaymentIniciate = async (req: Request, res: Response, next: NextFunction) => {
