@@ -264,53 +264,103 @@ export const downloadInvoice = async (req: Request, res: Response) => {
   try {
     const bookingId = req.params.id;
 
-    const [booking] = await db.select().from(BookingTable).where(eq(BookingTable.id, bookingId)).limit(1);
-    if (!booking) return res.status(404).json({ message: 'Booking not found' });
+    const [booking] = await db.select()
+      .from(BookingTable)
+      .where(eq(BookingTable.id, bookingId))
+      .limit(1);
+
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=invoice_${booking.id}.pdf`);
 
-    const doc = new PDFDocument({ size: 'A4', margin: 50 });
+    const doc = new PDFDocument({ margin: 50 });
+
     doc.pipe(res);
 
-    // Header
-    doc.fontSize(20).text('PROFORMA INVOICE', { align: 'center' });
-    doc.moveDown();
-    doc.fontSize(12).text(`From Invoice# ${booking.id}`);
-    doc.text(`Date: ${new Date().toLocaleDateString('en-GB', { dateStyle: 'full' })}`);
-    doc.moveDown();
+    // === HEADER BAR ===
+    doc
+      .rect(0, 0, doc.page.width, 60)
+      .fill('#004aad');
 
-    // From
-    doc.fontSize(10).text(`GETTRANSFER LTD`);
-    doc.text(`57 Spyrou Kyprianou, Bybloserve Business Center, 2nd floor, 6051, Larnaca, Cyprus`);
-    doc.text(`Registration number 359294`);
-    doc.text(`IBAN: LT203250004086906044`);
-    doc.text(`BIC: REVOLT21`);
-    doc.text(`Bank: Revolut Bank UAB`);
-    doc.text(`Bank Address: Konstitucijos ave. 21B, 08130, Vilnius, Lithuania`);
-    doc.moveDown();
+    doc
+      .fillColor('white')
+      .fontSize(22)
+      .text('Sanzad International', 50, 20, { align: 'left' });
 
-    // To
-    doc.fontSize(12).text(`To`);
-    doc.text(`Sanzad International LLC`);
-    doc.moveDown();
+    doc.moveDown(3);
 
-    // Service Rendered
-    doc.fontSize(12).text('Services rendered', { underline: true });
-    doc.moveDown(0.5);
-    doc.text(`Ride ${booking.id} from ${booking.pickup_location} to ${booking.drop_location}`);
-    doc.text(`Status: ${booking.status}`);
-    doc.moveDown();
-    doc.text(`€${booking.price}`, { align: 'right' });
+    // === INVOICE TITLE ===
+    doc
+      .fillColor('#004aad')
+      .fontSize(20)
+      .text('Booking Invoice', { align: 'center' })
+      .moveDown(1);
 
-    // Total
-    doc.moveDown(2);
-    doc.fontSize(12).text(`Total paid: €${booking.price}`, { align: 'right' });
+    // === INVOICE BOX ===
+    doc
+      .roundedRect(50, doc.y, doc.page.width - 100, 110)
+      .fillAndStroke('#f0f4ff', '#004aad');
+
+    doc
+      .fillColor('#000')
+      .fontSize(12)
+      .text(`Invoice ID: ${booking.id}`, 60, doc.y + 10)
+      .text(`Status: ${booking.status}`, 60)
+      .text(`Date: ${new Date().toLocaleDateString()}`, 60)
+      .moveDown(3);
+
+    // === LOCATIONS ===
+    doc
+      .fillColor('#004aad')
+      .font('Helvetica-Bold')
+      .text('Pickup Location:')
+      .fillColor('black')
+      .font('Helvetica')
+      .text(booking.pickup_location)
+      .moveDown();
+
+    doc
+      .fillColor('#004aad')
+      .font('Helvetica-Bold')
+      .text('Drop Location:')
+      .fillColor('black')
+      .font('Helvetica')
+      .text(booking.drop_location)
+      .moveDown();
+
+    // === DISTANCE & PRICE ===
+    doc
+      .fillColor('#004aad')
+      .font('Helvetica-Bold')
+      .text('Distance:')
+      .fillColor('black')
+      .text(`${booking.distance_miles} miles`)
+      .moveDown();
+
+    doc
+      .fillColor('#004aad')
+      .font('Helvetica-Bold')
+      .text('Price:')
+      .fillColor('black')
+      .text(`$${booking.price}`)
+      .moveDown(2);
+
+    // === FOOTER ===
+    doc
+      .moveDown()
+      .fontSize(10)
+      .fillColor('gray')
+      .text('Thank you for choosing Sanzad International.', { align: 'center' });
 
     doc.end();
 
   } catch (error) {
     console.error('PDF generation failed:', error);
-    if (!res.headersSent) res.status(500).json({ message: 'Failed to generate invoice' });
+    if (!res.headersSent) {
+      res.status(500).json({ message: 'Failed to generate invoice' });
+    }
   }
 };
