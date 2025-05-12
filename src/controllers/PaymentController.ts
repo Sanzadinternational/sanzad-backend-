@@ -264,45 +264,53 @@ export const downloadInvoice = async (req: Request, res: Response) => {
   try {
     const bookingId = req.params.id;
 
-    // Fetch booking data
-    const [booking] = await db.select()
-      .from(BookingTable)
-      .where(eq(BookingTable.id, bookingId))
-      .limit(1);
+    const [booking] = await db.select().from(BookingTable).where(eq(BookingTable.id, bookingId)).limit(1);
+    if (!booking) return res.status(404).json({ message: 'Booking not found' });
 
-    if (!booking) {
-      return res.status(404).json({ message: 'Booking not found' });
-    }
-
-    // Set headers to tell browser to download PDF
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=invoice_${booking.id}.pdf`);
 
-    // Generate PDF
-    const doc = new PDFDocument();
-
-    // When PDF generation is done, end response
-    doc.on('end', () => {
-      console.log('PDF successfully generated and sent.');
-     console.log('Raw booking result:', booking);
-
-    });
-
+    const doc = new PDFDocument({ size: 'A4', margin: 50 });
     doc.pipe(res);
 
-    doc.fontSize(20).text('Invoice', { align: 'center' });
+    // Header
+    doc.fontSize(20).text('PROFORMA INVOICE', { align: 'center' });
     doc.moveDown();
-    doc.text(`Booking ID: ${booking.id}`);
-    doc.text(`Pickup Location: ${booking.pickup_location}`);
-    doc.text(`Drop Location: ${booking.drop_location}`);
-    doc.text(`Status: ${booking.status}`);
+    doc.fontSize(12).text(`From Invoice# ${booking.id}`);
+    doc.text(`Date: ${new Date().toLocaleDateString('en-GB', { dateStyle: 'full' })}`);
+    doc.moveDown();
 
-    doc.end(); // Important: signals that you're done writing PDF content
+    // From
+    doc.fontSize(10).text(`GETTRANSFER LTD`);
+    doc.text(`57 Spyrou Kyprianou, Bybloserve Business Center, 2nd floor, 6051, Larnaca, Cyprus`);
+    doc.text(`Registration number 359294`);
+    doc.text(`IBAN: LT203250004086906044`);
+    doc.text(`BIC: REVOLT21`);
+    doc.text(`Bank: Revolut Bank UAB`);
+    doc.text(`Bank Address: Konstitucijos ave. 21B, 08130, Vilnius, Lithuania`);
+    doc.moveDown();
+
+    // To
+    doc.fontSize(12).text(`To`);
+    doc.text(`Sanzad International LLC`);
+    doc.moveDown();
+
+    // Service Rendered
+    doc.fontSize(12).text('Services rendered', { underline: true });
+    doc.moveDown(0.5);
+    doc.text(`Ride ${booking.id} from ${booking.pickup_location} to ${booking.drop_location}`);
+    doc.text(`Status: ${booking.status}`);
+    doc.moveDown();
+    doc.text(`€${booking.price}`, { align: 'right' });
+
+    // Total
+    doc.moveDown(2);
+    doc.fontSize(12).text(`Total paid: €${booking.price}`, { align: 'right' });
+
+    doc.end();
 
   } catch (error) {
     console.error('PDF generation failed:', error);
-    if (!res.headersSent) {
-      res.status(500).json({ message: 'Failed to generate invoice' });
-    }
+    if (!res.headersSent) res.status(500).json({ message: 'Failed to generate invoice' });
   }
 };
