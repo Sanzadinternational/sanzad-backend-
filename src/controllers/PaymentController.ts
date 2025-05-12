@@ -42,6 +42,9 @@ export const PaymentIniciate = async (req: Request, res: Response, next: NextFun
       drop_lng: drop_lng,
       distance_miles: distance_miles,
       price,
+     customer_name: 'Abhinav',
+     customer_email: customerEmail,
+     customer_mobile: customerPhone,
       status: 'pending',
     })
     .returning({ id: BookingTable.id });
@@ -151,7 +154,9 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
       if (!agent_id || !vehicle_id || !suplier_id || !pickup_location || !drop_location || !price || !reference_number) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
-  
+
+      const customerEmail = "abhinavgu34@gmail.com";
+        const customerPhone = "8433169822";
       // Insert booking and get the generated ID
       const [booking] = await db.insert(BookingTable).values({
         agent_id,
@@ -165,6 +170,9 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
         drop_lng,
         distance_miles,
         price,
+       customer_name: 'Abhinav',
+     customer_email: customerEmail,
+     customer_mobile: customerPhone,
         status: 'pending',
       }).returning({ id: BookingTable.id });
   
