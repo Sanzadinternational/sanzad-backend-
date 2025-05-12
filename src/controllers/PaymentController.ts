@@ -268,7 +268,7 @@ export const downloadInvoice = async (req: Request, res: Response) => {
     const booking = await db.select()
       .from(BookingTable)
       .where(eq(BookingTable.id, bookingId))
-      .first();
+      .limit(1);
 
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
