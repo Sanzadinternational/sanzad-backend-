@@ -419,7 +419,7 @@ export const getBearerToken = async (
 
 // Search function
 export const Search = async (req: Request, res: Response, next: NextFunction) => {
-  const { date, dropoff, dropoffLocation, pax, pickup, pickupLocation, targetCurrency, time, date } = req.body;
+  const { date, dropoff, dropoffLocation, pax, pickup, pickupLocation, targetCurrency, time } = req.body;
 
   try {
     // Fetch data from the database
