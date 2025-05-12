@@ -58,6 +58,7 @@ import { Create_Vehicles } from "../db/schema/SupplierSchema";
   dropoffLocation: string,
   targetCurrency: string,
   time: string,
+  date: string,
 ): Promise<{ vehicles: any[]; distance: any; estimatedTime: string}> => {
   // Parse pickup location coordinates
   const [fromLat, fromLng] = pickupLocation.split(",").map(Number);
@@ -152,6 +153,11 @@ if (!zones || zones.length === 0) {
       }
     }
 
+   const surgeChargesResult = await db.execute(
+  sql`SELECT * FROM "SurgeCharge" WHERE "From" <= ${date}::date AND "To" >= ${date}::date`
+);
+const surgeCharges = surgeChargesResult.rows as any[];
+
     // Step 6: Calculate Pricing for Each Vehicle
     const vehiclesWithPricing = await Promise.all(transfers.map(async (transfer) => {
       let totalPrice = Number(transfer.price); // Base price
@@ -196,6 +202,18 @@ if (!zones || zones.length === 0) {
     totalPrice += Number(transfer.NightTime_Price);
     console.log(`Night time detected (${currentTime}) → Adding nightTimePrice: ${transfer.NightTime_Price}`);
   }
+     // Check if surge charge applies
+const vehicleSurge = surgeCharges.find(surge =>
+  surge.vehicle_id === transfer.vehicle_id &&
+  surge.supplier_id === transfer.SupplierId
+);
+
+if (vehicleSurge && vehicleSurge.SurgeChargePrice) {
+  const surgeAmount = Number(vehicleSurge.SurgeChargePrice);
+  totalPrice += surgeAmount;
+  console.log(`Surge pricing applied → Vehicle ID: ${transfer.vehicle_id} | Surge: ${surgeAmount}`);
+}
+
       const convertedPrice = await convertCurrency(totalPrice, transfer.Currency, targetCurrency);
 
       return {
