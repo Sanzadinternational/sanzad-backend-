@@ -26,6 +26,9 @@ export const BookingTable = pgTable('booking', {
     drop_lng: decimal('drop_lng', { precision: 9, scale: 6 }).notNull(),
     distance_miles: decimal('distance_miles', { precision: 10, scale: 2 }).notNull(),
     price: decimal('price', { precision: 10, scale: 2 }).notNull(),
+    customer_name: varchar('customer_name', { length: 255 }).notNull(),
+    customer_email: varchar('customer_email', { length: 255 }).notNull(),
+    customer_mobile: varchar('customer_mobile', { length: 20 }).notNull()
     status: varchar('status', { length: 50 })
         .default('pending')
         .$type<'pending' | 'confirmed' | 'completed' | 'cancelled'>(),
