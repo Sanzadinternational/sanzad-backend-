@@ -285,8 +285,8 @@ export const downloadInvoice = async (req: Request, res: Response) => {
     doc.fontSize(20).text('Invoice', { align: 'center' });
     doc.moveDown();
     doc.text(`Booking ID: ${booking.id}`);
-    doc.text(`Customer: ${booking.customer_name}`);
-    doc.text(`Amount: $${booking.amount}`);
+    doc.text(`PickUp Location: ${booking.pickup_location}`);
+    doc.text(`Drop Location: $${booking.drop_location}`);
     doc.text(`Status: ${booking.status}`);
     doc.end();
 
