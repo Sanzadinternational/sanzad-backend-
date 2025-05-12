@@ -265,7 +265,7 @@ export const downloadInvoice = async (req: Request, res: Response) => {
     const bookingId = req.params.id;
 
     // Fetch booking data
-    const booking = await db.select()
+    const [booking] = await db.select()
       .from(BookingTable)
       .where(eq(BookingTable.id, bookingId))
       .limit(1);
