@@ -419,7 +419,7 @@ export const getBearerToken = async (
 
 // Search function
 export const Search = async (req: Request, res: Response, next: NextFunction) => {
-  const { date, dropoff, dropoffLocation, pax, pickup, pickupLocation, targetCurrency, time } = req.body;
+  const { date, dropoff, dropoffLocation, pax, pickup, pickupLocation, targetCurrency, time, date } = req.body;
 
   try {
     // Fetch data from the database
@@ -446,7 +446,7 @@ export const Search = async (req: Request, res: Response, next: NextFunction) =>
       pickupLocation
     );
 
-    const DatabaseData = await fetchFromDatabase(pickupLocation, dropoffLocation,targetCurrency,time);
+    const DatabaseData = await fetchFromDatabase(pickupLocation, dropoffLocation,targetCurrency,time, date);
     const [pickupLat, pickupLon] = pickupLocation.split(",").map(Number);
     const [dropLat, dropLon] = dropoffLocation.split(",").map(Number);
     // Merge database and API data
