@@ -284,6 +284,8 @@ export const downloadInvoice = async (req: Request, res: Response) => {
     // When PDF generation is done, end response
     doc.on('end', () => {
       console.log('PDF successfully generated and sent.');
+     console.log('Raw booking result:', booking);
+
     });
 
     doc.pipe(res);
