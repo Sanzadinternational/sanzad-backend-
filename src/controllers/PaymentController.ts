@@ -274,24 +274,33 @@ export const downloadInvoice = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Booking not found' });
     }
 
-    // Set headers to download
+    // Set headers to tell browser to download PDF
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=invoice_${booking.id}.pdf`);
 
-    // Generate PDF directly to response stream
+    // Generate PDF
     const doc = new PDFDocument();
+
+    // When PDF generation is done, end response
+    doc.on('end', () => {
+      console.log('PDF successfully generated and sent.');
+    });
+
     doc.pipe(res);
 
     doc.fontSize(20).text('Invoice', { align: 'center' });
     doc.moveDown();
     doc.text(`Booking ID: ${booking.id}`);
-    doc.text(`PickUp Location: ${booking.pickup_location}`);
-    doc.text(`Drop Location: $${booking.drop_location}`);
+    doc.text(`Pickup Location: ${booking.pickup_location}`);
+    doc.text(`Drop Location: ${booking.drop_location}`);
     doc.text(`Status: ${booking.status}`);
-    doc.end();
+
+    doc.end(); // Important: signals that you're done writing PDF content
 
   } catch (error) {
     console.error('PDF generation failed:', error);
-    res.status(500).json({ message: 'Failed to generate invoice' });
+    if (!res.headersSent) {
+      res.status(500).json({ message: 'Failed to generate invoice' });
+    }
   }
 };
