@@ -7,5 +7,5 @@ router.post('/payment-iniciate', PaymentIniciate);
 router.post('/payment-status-update', PaymentStatusUpdate);
 router.post('/referencePayment', PaymentWithReferenceNo);
 router.put('/ChangePaymentStatusByBookingId/:id', ChangePaymentStatusByBookingId);
-router.get('invoices/:id/download', downloadInvoice);
+router.get('/invoices/:id/download', downloadInvoice);
 export {router as PaymentRoute}; 
