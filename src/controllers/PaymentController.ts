@@ -10,7 +10,7 @@ import { notifications } from "../db/schema/schema";
 import { io } from "../..";
 import { AgentTable } from "../db/schema/AgentSchema";
 const nodemailer = require("nodemailer"); 
-// import PDFDocument from 'pdfkit';
+import PDFDocument from 'pdfkit';
 
 export const PaymentIniciate = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -260,38 +260,38 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
     }
   };
 
-// export const downloadInvoice = async (req: Request, res: Response) => {
-//   try {
-//     const bookingId = req.params.id;
+export const downloadInvoice = async (req: Request, res: Response) => {
+  try {
+    const bookingId = req.params.id;
 
-//     // Fetch booking data
-//     const booking = await db.select()
-//       .from(BookingTable)
-//       .where(eq(BookingTable.id, bookingId))
-//       .first();
+    // Fetch booking data
+    const booking = await db.select()
+      .from(BookingTable)
+      .where(eq(BookingTable.id, bookingId))
+      .first();
 
-//     if (!booking) {
-//       return res.status(404).json({ message: 'Booking not found' });
-//     }
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
 
-//     // Set headers to download
-//     res.setHeader('Content-Type', 'application/pdf');
-//     res.setHeader('Content-Disposition', `attachment; filename=invoice_${booking.id}.pdf`);
+    // Set headers to download
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=invoice_${booking.id}.pdf`);
 
-//     // Generate PDF directly to response stream
-//     const doc = new PDFDocument();
-//     doc.pipe(res);
+    // Generate PDF directly to response stream
+    const doc = new PDFDocument();
+    doc.pipe(res);
 
-//     doc.fontSize(20).text('Invoice', { align: 'center' });
-//     doc.moveDown();
-//     doc.text(`Booking ID: ${booking.id}`);
-//     doc.text(`Customer: ${booking.customer_name}`);
-//     doc.text(`Amount: $${booking.amount}`);
-//     doc.text(`Status: ${booking.status}`);
-//     doc.end();
+    doc.fontSize(20).text('Invoice', { align: 'center' });
+    doc.moveDown();
+    doc.text(`Booking ID: ${booking.id}`);
+    doc.text(`Customer: ${booking.customer_name}`);
+    doc.text(`Amount: $${booking.amount}`);
+    doc.text(`Status: ${booking.status}`);
+    doc.end();
 
-//   } catch (error) {
-//     console.error('PDF generation failed:', error);
-//     res.status(500).json({ message: 'Failed to generate invoice' });
-//   }
-// };
+  } catch (error) {
+    console.error('PDF generation failed:', error);
+    res.status(500).json({ message: 'Failed to generate invoice' });
+  }
+};
