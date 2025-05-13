@@ -14,7 +14,7 @@ import PDFDocument from 'pdfkit';
 
 export const PaymentIniciate = async (req: Request, res: Response, next: NextFunction) => {
   try {
-  const { agent_id, vehicle_id, suplier_id, pickup_location, drop_location, pickup_lat, pickup_lng, drop_lat, drop_lng, distance_miles, price } = req.body;
+  const { agent_id, vehicle_id, suplier_id, pickup_location, drop_location, pickup_lat, pickup_lng, drop_lat, drop_lng, distance_miles, price, passenger_email, passenger_name, passenger_phone, currency } = req.body;
 
         // const merchantId = process.env.CCAVENUE_MERCHANT_ID!;
         // const accessCode = process.env.CCAVENUE_ACCESS_CODE!;
@@ -42,9 +42,10 @@ export const PaymentIniciate = async (req: Request, res: Response, next: NextFun
       drop_lng: drop_lng,
       distance_miles: distance_miles,
       price,
-     customer_name: 'Abhinav',
-     customer_email: customerEmail,
-     customer_mobile: customerPhone,
+     customer_name: passenger_name,
+     customer_email: passenger_email,
+     customer_mobile: passenger_phone,
+     currency,
       status: 'pending',
     })
     .returning({ id: BookingTable.id });
@@ -148,7 +149,11 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
         drop_lng,
         distance_miles,
         price,
-        reference_number
+        reference_number,
+       passenger_email, 
+       passenger_name, 
+       passenger_phone, 
+       currency
       } = req.body;
   
       if (!agent_id || !vehicle_id || !suplier_id || !pickup_location || !drop_location || !price || !reference_number) {
@@ -170,9 +175,10 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
         drop_lng,
         distance_miles,
         price,
-       customer_name: 'Abhinav',
-     customer_email: customerEmail,
-     customer_mobile: customerPhone,
+        customer_name: passenger_name,
+     customer_email: passenger_email,
+     customer_mobile: passenger_phone,
+     currency,
         status: 'pending',
       }).returning({ id: BookingTable.id });
   
