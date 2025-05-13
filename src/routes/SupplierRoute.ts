@@ -95,7 +95,7 @@ router.delete('/DeleteVehicle/:id',DeleteVehicle);
 router.get('/GetBookingBySupplierId/:id',GetBookingBySupplierId);
 router.put('/ChangeBookingStatusByBookingId/:id',ChangeBookingStatusByBookingId);
 router.post('/CreateDriver',CreateDriver);
-router.get('/GetDriver',GetDriver);
+router.get('/GetDriver/:id',GetDriver);
 router.delete('/DeleteDriver/:id',DeleteDriver);
 router.put('/UpdateDriver/:id',UpdateDriver);
 // router.get('/products', GetProducts); 
