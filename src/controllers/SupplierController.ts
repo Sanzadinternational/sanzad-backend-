@@ -1811,16 +1811,20 @@ export const ChangeBookingStatusByBookingId = async (req: Request, res: Response
     } 
   } 
 
-  export const GetDriver = async(req:Request,res:Response,next:NextFunction)=>{
-    try{
-        const result = await db.select()
+  export const GetDriver = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      
+      const result = await db
+        .select()
         .from(DriversTable)
-        return res.status(200).json(result); 
-    }catch(error)
-    {
-        next(error)
+        .where(eq(DriversTable.id, id));
+  
+      return res.status(200).json(result);
+    } catch (error) {
+      next(error);
     }
-  }
+  };
 
   export const DeleteDriver = async(req:Request,res:Response,next:NextFunction)=>{
    try{
