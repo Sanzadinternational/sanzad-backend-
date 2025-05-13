@@ -1818,7 +1818,7 @@ export const ChangeBookingStatusByBookingId = async (req: Request, res: Response
       const result = await db
         .select()
         .from(DriversTable)
-        .where(eq(DriversTable.id, id));
+        .where(eq(DriversTable.SupplierId, id));
   
       return res.status(200).json(result);
     } catch (error) {
