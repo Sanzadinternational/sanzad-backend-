@@ -14,7 +14,7 @@ import PDFDocument from 'pdfkit';
 
 export const PaymentIniciate = async (req: Request, res: Response, next: NextFunction) => {
   try {
-  const { agent_id, vehicle_id, suplier_id, pickup_location, drop_location, pickup_lat, pickup_lng, drop_lat, drop_lng, distance_miles, price } = req.body;
+  const { agent_id, vehicle_id,currency, suplier_id, pickup_location, drop_location, pickup_lat, pickup_lng, drop_lat, drop_lng, distance_miles, price } = req.body;
 
         // const merchantId = process.env.CCAVENUE_MERCHANT_ID!;
         // const accessCode = process.env.CCAVENUE_ACCESS_CODE!;
@@ -42,6 +42,7 @@ export const PaymentIniciate = async (req: Request, res: Response, next: NextFun
       drop_lng: drop_lng,
       distance_miles: distance_miles,
       price,
+     currency,
      customer_name: 'Abhinav',
      customer_email: customerEmail,
      customer_mobile: customerPhone,
@@ -148,6 +149,7 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
         drop_lng,
         distance_miles,
         price,
+       currency,
         reference_number
       } = req.body;
   
@@ -170,6 +172,7 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
         drop_lng,
         distance_miles,
         price,
+       currency,
        customer_name: 'Abhinav',
      customer_email: customerEmail,
      customer_mobile: customerPhone,
