@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express"; 
 import { CreateSupplierInput,UpdateVehicleType,UpdateVehicleModel,UpdateServiceType,UpdateVehicleBrand,VehicleType,SurgeCharge,VehicleBrand,ServiceType,UpdateTransferCars,VehicleModel,CreateTransferCars,UpdateCreateCartDetails,
-    CreateCartDetails,CreateSupplierDetailServicesInput,CreateExtraSpace,UpdateExtraSpace,CreateTransportNodesInput,SupplierPriceInput, CreateSupplierOneWayInput,CreateSupplierApidata } from "../dto";
+    CreateCartDetails,CreateSupplierDetailServicesInput,CreateExtraSpace,UpdateExtraSpace,CreateTransportNodesInput,SupplierPriceInput, CreateSupplierOneWayInput,CreateSupplierApidata,DriversModel } from "../dto";
 import { and,desc, eq } from "drizzle-orm"; 
 const { v4: uuidv4 } = require('uuid'); 
 import { Create_Vehicles } from "../db/schema/SupplierSchema";
@@ -9,7 +9,7 @@ import { AgentTable } from "../db/schema/AgentSchema";
 import { notifications } from "../db/schema/schema";
 import { io } from "../..";
 import { db } from "../db/db"; 
-const { registerTable,SurgeChargeTable, One_WayTable,CreateExtraSpaces,VehicleTypeTable,VehicleBrandTable,ServiceTypeTable,VehicleModelTable,CreateTransferCar,
+const { registerTable,SurgeChargeTable,DriversTable, One_WayTable,CreateExtraSpaces,VehicleTypeTable,VehicleBrandTable,ServiceTypeTable,VehicleModelTable,CreateTransferCar,
     supplier_otps,PriceTable,SupplierApidataTable,TransportNodes,SupplierCarDetailsTable} = require('../db/schema/SupplierSchema'); 
 import { zones } from "../db/schema/SupplierSchema";
 import { generateOTP, sendOTPEmail } from "../utils"; 
@@ -1796,3 +1796,54 @@ export const ChangeBookingStatusByBookingId = async (req: Request, res: Response
       return res.status(404).json({ message: 'Internal server error' });
     }  
   };
+
+  export const CreateDriver = async(req:Request,res:Response,next:NextFunction)=>{
+    try{
+        const { DriverName, DriverContact, DriverCarInfo, SupplierId } = req.body as DriversModel; 
+
+        const result = await db.insert(DriversTable).values({
+            DriverName, DriverContact, DriverCarInfo, SupplierId     
+        })
+        return res.status(200).json({result,message:'Driver Created Successfully'})
+    }catch(error) 
+    { 
+        next(error); 
+    } 
+  } 
+
+  export const GetDriver = async(req:Request,res:Response,next:NextFunction)=>{
+    try{
+        const result = await db.select()
+        .from(DriversTable)
+        return res.status(200).json(result); 
+    }catch(error)
+    {
+        next(error)
+    }
+  }
+
+  export const DeleteDriver = async(req:Request,res:Response,next:NextFunction)=>{
+   try{
+    const {id} = req.params;
+    const result = await db.delete(DriversTable)
+    .where(eq(DriversTable.id,id));
+     return res.status(200).json({message:"Driver Details Deleted Successfully"})
+   }catch(error)
+  {
+    next(error)
+  }
+  }
+
+  export const UpdateDriver = async(req:Request,res:Response,next:NextFunction)=>{
+    try{
+        const {id} = req.params;
+        const { DriverName, DriverContact, DriverCarInfo, SupplierId } = req.body as DriversModel; 
+        const result = await db.update(DriversTable).set({
+            DriverName, DriverContact, DriverCarInfo, SupplierId 
+        })
+        .where(eq(DriversTable.id,id)); 
+        return res.status(200).json({message:"Driver Details Updated Successfully"});
+    }catch(error){
+        next(error)
+    }
+  }
