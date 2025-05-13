@@ -279,4 +279,10 @@ export const VehicleModelTable=pgTable('VehicleModel',{
 function datetime(arg0: string): any {
   throw new Error('Function not implemented.');
 }
-
+export const DriversTable = pgTable('Drivers',{
+  id: integer('id').primaryKey().generatedAlwaysAsIdentity(), 
+  DriverName:varchar({length:255}), 
+  DriverContact:varchar({length:255}), 
+  DriverCarInfo:varchar({length:255}), 
+  SupplierId:varchar({length:255})      
+})
