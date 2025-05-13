@@ -9,6 +9,7 @@ export interface CreateBooking{
     return_time:string,
     estimated_trip_time:string,
     distance:string,
+    currency:string,
     vehicle_name:string,
     passengers_no:string,
     medium_bags:string,
