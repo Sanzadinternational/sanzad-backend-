@@ -351,3 +351,9 @@ export interface VehicleModel{
 export interface UpdateVehicleModel{
   VehicleModel:string
 }
+export interface DriversModel{ 
+  DriverName:string, 
+  DriverContact:string, 
+  DriverCarInfo:string, 
+  SupplierId:string      
+}
