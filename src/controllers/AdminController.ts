@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
-import { CreateAdmin,CreateMargin } from "../dto/Admin.dto";
-import { AdminTable,MarginTable } from "../db/schema/adminSchema";
+import { CreateAdmin,CreateMargin,AgentMargin } from "../dto/Admin.dto";
+import { AdminTable,MarginTable,AgentMarginTable } from "../db/schema/adminSchema";
 import { db } from "../db/db";
 import { and,desc, eq } from "drizzle-orm";
 const { AgentTable,OneWayTripTable,RoundTripTable } = require('../db/schema/AgentSchema'); 
@@ -563,5 +563,75 @@ export const GetAllBooking = async(req:Request,res:Response,next:NextFunction)=>
         return res.status(200).json({result,message:"Booking all data fetch successfully"})
   }catch(error){
     next(error)
+  }
+}
+export const CreateAgentMargin = async(req:Request,res:Response,next:NextFunction)=>{
+  try{
+         const {
+               Company_name,
+               Currency,
+               MarginPrice,
+               agent_id,
+               Agentregisterforeign
+         }=<AgentMargin>req.body;
+        
+         const result = await db.insert(AgentMarginTable).values({
+          Company_name,
+          Currency,
+          MarginPrice,
+          agent_id,
+          Agentregisterforeign
+         })
+        return res.status(200).json({result}); 
+  }catch(error)
+  {
+    next(error)
+  }
+}
+
+export const GetAgentMargin = async(req:Request,res:Response,next:NextFunction)=>{
+  try{
+
+        const result = await db.select()
+        .from(AgentMarginTable);
+        return res.status(200).json(result);
+  }catch(error){
+    next(error)
+  }
+}
+
+export const DeleteAgentMargin = async(req:Request,res:Response,next:NextFunction)=>{
+  try{
+       const {id}= req.params;
+       const result = await db.delete(AgentMarginTable)
+       .where(eq(AgentMarginTable.id,Number(id))); 
+       return res.status(200).json({result,message:"Agent Margin Deleted Successfully"})
+  }catch(error){
+    next(error)
+  }
+}
+
+export const UpdateAgentMargin = async(req:Request,res:Response,next:NextFunction)=>{
+  try{
+    const {id}= req.params;
+    const {
+      Company_name,
+      Currency,
+      MarginPrice,
+      agent_id,
+      Agentregisterforeign
+}=<AgentMargin>req.body;
+    const result = await db.update(AgentMarginTable)
+    .set({
+      Company_name,
+      Currency,
+      MarginPrice,
+      agent_id,
+      Agentregisterforeign
+    })
+    .where(eq(AgentMarginTable.id,Number(id)));
+    return res.status(200).json({message:"Updated Successfully",result});
+  }catch(error){
+    next(error);
   }
 }
