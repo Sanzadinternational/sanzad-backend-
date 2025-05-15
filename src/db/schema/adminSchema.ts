@@ -30,4 +30,12 @@ export const MarginTable = pgTable('Margin',{
     Supplierregisterforeign: integer('Supplierregisterforeign')
         .references(() => registerTable.id, { onDelete: "cascade" }),
     created_at: timestamp("created_at").defaultNow(),
+});
+export const AgentMarginTable = pgTable('AgentMargin',{
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    Company_name:varchar({length:255}),
+    Currency:varchar({length:255}),
+    MarginPrice:varchar({length:255}),
+    agent_id: varchar({length:255}),
+    Agentregisterforeign:integer('Agent_Id').references(() => AgentTable.id),
 })
