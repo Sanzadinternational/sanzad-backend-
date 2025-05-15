@@ -22,4 +22,12 @@ export interface CreateMargin{
         supplier_id: string,
         Supplierregisterforeign:number
 }
+export interface AgentMargin{
+      Company_name:string,
+        Currency:string,
+        MarginPrice:string,
+        agent_id: string,
+        Agentregisterforeign:number,
+}
+
  
