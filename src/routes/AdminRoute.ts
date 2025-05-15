@@ -1,5 +1,5 @@
 import express, {Request, Response, NextFunction, Router} from 'express'; 
-import {AllGetSuppliers,UpdateMarginData,GetAllBooking,GetMarginData,DeleteMarginData,CreateMargindata,AllAgentRecords,SupplierSingleView,ResetAdminPassword,AgentSingleView,DestroyAdmin,ForgetAdminPassword,ChangeSupplierApprovalStatus,ChangeAgentApprovalStatus, AllAdminRecords,CreateAdmins } from "../controllers/AdminController";
+import {AllGetSuppliers,UpdateAgentMargin,DeleteAgentMargin,GetAgentMargin,CreateAgentMargin,UpdateMarginData,GetAllBooking,GetMarginData,DeleteMarginData,CreateMargindata,AllAgentRecords,SupplierSingleView,ResetAdminPassword,AgentSingleView,DestroyAdmin,ForgetAdminPassword,ChangeSupplierApprovalStatus,ChangeAgentApprovalStatus, AllAdminRecords,CreateAdmins } from "../controllers/AdminController";
 import { AgentMail } from "../controllers/EmailotpsController"; 
 import {SupplierMail} from "../controllers/EmailotpsController";
 const router = express.Router(); 
@@ -21,6 +21,10 @@ router.post('/CreateMargindata',CreateMargindata);
 router.get('/GetMarginData',GetMarginData);
 router.put('/UpdateMarginData/:id',UpdateMarginData);
 router.delete('/DeleteMarginData/:id',DeleteMarginData);
+router.post('/CreateAgentMargin',CreateAgentMargin);
+router.get('/GetAgentMargin',GetAgentMargin);
+router.delete('/DeleteAgentMargin/:id',DeleteAgentMargin);
+router.put('/UpdateAgentMargin/:id',UpdateAgentMargin);
 router.get("/GetAllBooking",GetAllBooking); 
 export {router as AdminRoute };  
 
