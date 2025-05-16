@@ -85,7 +85,7 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
     console.log('Missing encrypted response (encResp)');
 }
     console.log(encResp);
-    const workingKey = 'E93F2108A01D5B39308523A609427484';
+    const workingKey = '0CF068BF3116484E4A4ABEE416E0D777';
     
     const decryptedResponse = decrypt(encResp, workingKey);
     const responseData = new URLSearchParams(decryptedResponse);
