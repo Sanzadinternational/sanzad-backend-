@@ -22,7 +22,7 @@ export const PaymentIniciate = async (req: Request, res: Response, next: NextFun
     const merchantId = '4188798';
         const accessCode = 'AVMS59MC67AY12SMYA';
         const workingKey = '7CC535003255F05320B01928F507B447';
-        const redirectUrl = "https://sanzadinternational.in";
+        const redirectUrl = "https://api.sanzadinternational.in/api/V1/payment/payment-iniciate";
         const cancelUrl = "https://sanzadinternational.in/cancle";
         const customerEmail = "abhinavgu34@gmail.com";
         const customerPhone = "8433169822";
@@ -56,7 +56,7 @@ export const PaymentIniciate = async (req: Request, res: Response, next: NextFun
   const orderId = `BOOK${bookingId}${Date.now()}`;
 
         // Payment data
-        const data = `merchant_id=${merchantId}&order_id=${orderId}&currency=INR&amount=${price}&redirect_url=${redirectUrl}&cancel_url=${cancelUrl}&billing_email=${customerEmail}&billing_tel=${customerPhone}&merchant_param1=${bookingId}`;
+        const data = `merchant_id=${merchantId}&order_id=${orderId}&currency=INR&amount=1&redirect_url=${redirectUrl}&cancel_url=${cancelUrl}&billing_email=${customerEmail}&billing_tel=${customerPhone}&merchant_param1=${bookingId}`;
 console.log('Raw Payment Data:', data);
 
         const encryptedData = encrypt(data, workingKey);
