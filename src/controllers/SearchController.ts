@@ -222,6 +222,7 @@ if (vehicleSurge && vehicleSurge.SurgeChargePrice) {
         brand: transfer.VehicleBrand,
         vehicleName: transfer.name,
         parking: transfer.parking,
+       vehicleTax: transfer.vehicleTax,
         tollTax: transfer.tollTax,
        driverTips: transfer.driverTips,
        driverCharge: transfer.driverCharge,
