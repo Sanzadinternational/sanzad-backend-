@@ -53,7 +53,8 @@ export const PaymentIniciate = async (req: Request, res: Response, next: NextFun
   const bookingId = booking.id;
 
   // Step 2: Generate Order ID for CCAvenue
-  const orderId = `BOOK${bookingId}${Date.now()}`;
+const orderId = `BOOK-${bookingId.slice(0, 8)}-${Date.now().toString().slice(-4)}`;
+
 
         // Payment data
         const data = `merchant_id=${merchantId}&order_id=${orderId}&currency=INR&amount=1&redirect_url=${redirectUrl}&cancel_url=${cancelUrl}&billing_email=${customerEmail}&billing_tel=${customerPhone}&merchant_param1=${bookingId}`;
