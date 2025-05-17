@@ -20,8 +20,8 @@ export const PaymentIniciate = async (req: Request, res: Response, next: NextFun
         // const accessCode = process.env.CCAVENUE_ACCESS_CODE!;
         // const workingKey = process.env.CCAVENUE_WORKING_KEY!;
     const merchantId = '4188798';
-        const accessCode = 'AVMS59MC67AY12SMYA';
-        const workingKey = '0CF068BF3116484E4A4ABEE416E0D777';
+        const accessCode = 'ATOA68MD68CH89AOHC';
+        const workingKey = 'E93F2108A01D5B39308523A609427484';
         const redirectUrl = "https://api.sanzadinternational.in/api/V1/payment/payment-iniciate";
         const cancelUrl = "https://sanzadinternational.in/cancle";
         const customerEmail = "abhinavgu34@gmail.com";
@@ -85,7 +85,7 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
     console.log('Missing encrypted response (encResp)');
 }
     console.log(encResp);
-    const workingKey = '0CF068BF3116484E4A4ABEE416E0D777';
+    const workingKey = 'E93F2108A01D5B39308523A609427484';
     
     const decryptedResponse = decrypt(encResp, workingKey);
     const responseData = new URLSearchParams(decryptedResponse);
