@@ -83,6 +83,40 @@ export const CreateAdmins = async (req: Request, res: Response, next: NextFuncti
     }
 };
 
+export const UpdateAdmin = async(req:Request,res:Response,next:NextFunction)=>{
+  try{
+    const {id}= req.params;
+    const { Email, Password,Agent_product,Supplier_product,Company_name,IsApproved, Agent_account,Agent_operation, Supplier_operation, Supplier_account } =<CreateAdmin>req.body;
+    const hashedPassword = await bcrypt.hash(Password, 10); 
+    const Approval_status = {
+        Pending: 0, // Default
+        Approved: 1,
+        Canceled: 2,
+    };
+    const result = await db
+            .update(AdminTable) 
+            .set({ 
+                Email,
+                Company_name,
+                Password:hashedPassword,
+                Agent_account:Agent_account ||false,
+                Agent_operation:Agent_operation || false,
+                Supplier_account:Supplier_account || false,
+                Supplier_operation:Supplier_operation || false,
+                Role:'admin',
+                Agent_product:Agent_product || false,
+                Supplier_product:Supplier_product || false,
+           
+                IsApproved:  IsApproved || Approval_status.Approved
+            }) 
+            .where(eq(AdminTable.id,Number(id)));
+            return res.status(200).json({message:"Admin Updated Successfully",result});
+  }catch(error)
+  {
+    next(error)
+  }
+}
+
 export const ForgetAdminPassword = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { Email, Role } = req.body;
