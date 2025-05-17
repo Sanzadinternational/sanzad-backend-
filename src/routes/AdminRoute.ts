@@ -1,10 +1,11 @@
 import express, {Request, Response, NextFunction, Router} from 'express'; 
-import {AllGetSuppliers,UpdateAgentMargin,DeleteAgentMargin,GetAgentMargin,CreateAgentMargin,UpdateMarginData,GetAllBooking,GetMarginData,DeleteMarginData,CreateMargindata,AllAgentRecords,SupplierSingleView,ResetAdminPassword,AgentSingleView,DestroyAdmin,ForgetAdminPassword,ChangeSupplierApprovalStatus,ChangeAgentApprovalStatus, AllAdminRecords,CreateAdmins } from "../controllers/AdminController";
+import {AllGetSuppliers,UpdateAdmin,UpdateAgentMargin,DeleteAgentMargin,GetAgentMargin,CreateAgentMargin,UpdateMarginData,GetAllBooking,GetMarginData,DeleteMarginData,CreateMargindata,AllAgentRecords,SupplierSingleView,ResetAdminPassword,AgentSingleView,DestroyAdmin,ForgetAdminPassword,ChangeSupplierApprovalStatus,ChangeAgentApprovalStatus, AllAdminRecords,CreateAdmins } from "../controllers/AdminController";
 import { AgentMail } from "../controllers/EmailotpsController"; 
 import {SupplierMail} from "../controllers/EmailotpsController";
 const router = express.Router(); 
 
 router.post('/create',CreateAdmins); 
+router.put('/UpdateAdmin/:id',UpdateAdmin);
 router.post('/ResetAdminPassword',ResetAdminPassword);
 router.post('/ForgetAdminPassword',ForgetAdminPassword);
 router.get('/AllAgentRecords',AllAgentRecords);
