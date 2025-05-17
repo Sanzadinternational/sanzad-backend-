@@ -6,7 +6,7 @@ import { and,desc, eq } from "drizzle-orm";
 const { AgentTable,OneWayTripTable,RoundTripTable } = require('../db/schema/AgentSchema'); 
 import { registerTable } from "../db/schema/SupplierSchema";
 const bcrypt = require('bcrypt'); 
-var randomstring = require("randomstring");
+var randomstring = require("randomstring"); 
 import nodemailer from "nodemailer"; 
 import { Site_url } from "../config";
 import { BookingTable,PaymentsTable } from "../db/schema/BookingSchema";
