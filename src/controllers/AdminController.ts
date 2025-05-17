@@ -594,14 +594,14 @@ export const GetAllBooking = async(req:Request,res:Response,next:NextFunction)=>
             PaymentsTable ,
             eq(PaymentsTable.booking_id, BookingTable.id)
           )
-        .fullJoin( 
-            AgentTable ,
-            eq(AgentTable.id, BookingTable.agent_id)
-          )
-           .fullJoin( 
-            registerTable ,
-            eq(registerTable.id, BookingTable.suplier_id)
-          )
+        // .fullJoin( 
+        //     AgentTable ,
+        //     eq(AgentTable.id, BookingTable.agent_id)
+        //   )
+        //    .fullJoin( 
+        //     registerTable ,
+        //     eq(registerTable.id, BookingTable.suplier_id)
+        //   )
         return res.status(200).json({result,message:"Booking all data fetch successfully"})
   }catch(error){
     next(error)
