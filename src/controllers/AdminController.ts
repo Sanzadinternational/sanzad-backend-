@@ -7,7 +7,7 @@ const { AgentTable,OneWayTripTable,RoundTripTable } = require('../db/schema/Agen
 import { registerTable } from "../db/schema/SupplierSchema";
 const bcrypt = require('bcrypt'); 
 var randomstring = require("randomstring");
-import nodemailer from "nodemailer";
+import nodemailer from "nodemailer"; 
 import { Site_url } from "../config";
 import { BookingTable,PaymentsTable } from "../db/schema/BookingSchema";
 
