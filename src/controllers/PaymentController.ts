@@ -63,7 +63,7 @@ console.log('Raw Payment Data:', data);
         const encryptedData = encrypt(data, workingKey);
   
         res.json({
-          url: 'https://secure.ccavenue.com/transaction/transaction.do?command=initiateTransaction',
+          url: 'https://secure.ccavenue.com/transaction/transaction.do?command=initiateTransaction&request_type=XML&response_type=XML&version=1.1',
           access_code: accessCode,
           encRequest: encryptedData
         });
