@@ -122,7 +122,7 @@ export const CreateAgent = async(req: Request, res: Response, next: NextFunction
                 <p style="font-size: 16px; color: #555;">Best regards,</p>
                 <p style="font-size: 16px; color: #555;"><strong>Sanzadinternational Team</strong></p>
             </div>
-        `,, // HTML body
+        ` // HTML body
         });
             
         console.log("Message sent: %s", info.messageId);
