@@ -57,7 +57,7 @@ const orderId = `BOOK-${bookingId.slice(0, 8)}-${Date.now().toString().slice(-4)
 
 
         // Payment data
-        const data = `merchant_id=${merchantId}&order_id=1234&currency=INR&amount=1&redirect_url=${redirectUrl}&cancel_url=${cancelUrl}&billing_email=${customerEmail}&billing_tel=${customerPhone}&merchant_param1=${bookingId}&language=EN`;
+        const data = `merchant_id=${merchantId}&order_id=${orderId}&currency=INR&amount=1&redirect_url=${redirectUrl}&cancel_url=${cancelUrl}&billing_email=${customerEmail}&billing_tel=${customerPhone}&merchant_param1=${bookingId}&language=EN`;
 console.log('Raw Payment Data:', data);
 
         const encryptedData = encrypt(data, workingKey);
