@@ -297,10 +297,10 @@ export const downloadInvoice = async (req: Request, res: Response) => {
 
     doc.fillColor('white')
        .fontSize(20)
-       .text('GetTransfer.com', 50, 20, { align: 'left' });
+       .text('GetTransfer.com', 50, 20);
 
     // === INVOICE TITLE ===
-    doc.moveDown(3.5);
+    doc.moveDown(3);
     doc.fillColor('#004aad')
        .fontSize(18)
        .text('PROFORMA INVOICE', { align: 'center' });
@@ -308,55 +308,78 @@ export const downloadInvoice = async (req: Request, res: Response) => {
     // === COMPANY DETAILS ===
     const fromDetails = [
       'GETTRANSFER LTD',
-      '57 Spyrou Kyprianou, Bybloserve Business Center, 2nd floor, 6051, Lamaca, Cyprus',
-      `Registration number 359294`,
-      `IBAN: LT203250004086906044`,
-      `BIC: REVOLT21`,
-      `Bank: Revolut Bank UAB`,
-      `Konstitucijos ave. 21B, 08130, Vilnius, Lithuania`
+      '57 Spyrou Kyprianou, Bybloserve Business Center, 2nd floor,',
+      '6051, Lamaca, Cyprus',
+      'Registration number 359294',
+      'IBAN: LT203250004086906044',
+      'BIC: REVOLT21',
+      'Bank: Revolut Bank UAB',
+      'Konstitucijos ave. 21B, 08130, Vilnius, Lithuania'
     ];
 
-    // === INVOICE METADATA ===
-    const invoiceData = {
-      number: booking.id,
-      date: new Date(booking.created_at).toLocaleDateString('en-GB', { 
-        weekday: 'short', 
-        day: 'numeric', 
-        month: 'long', 
-        year: 'numeric'
-      })
-    };
+    // === DATE FORMATTING ===
+    const invoiceDate = new Date(booking.created_at);
+    const formattedDate = isNaN(invoiceDate.getTime()) 
+      ? 'Invalid Date'
+      : invoiceDate.toLocaleDateString('en-GB', {
+          weekday: 'short',
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric'
+        });
 
-    // === FROM/TO SECTION ===
-    doc.moveDown(1.5);
-    doc.font('Helvetica-Bold').text('From:', 50, 140);
-    doc.font('Helvetica').text(fromDetails.join('\n'), 50, 160);
+    // === FROM/TO COLUMNS ===
+    const startY = 140;
     
-    doc.font('Helvetica-Bold').text('To:', 300, 140);
-    doc.font('Helvetica').text('Sanzad International LLC', 300, 160);
+    // Left Column (From)
+    doc.font('Helvetica-Bold').text('From:', 50, startY);
+    doc.font('Helvetica')
+       .text(fromDetails.join('\n'), 50, startY + 20, {
+         width: 250,
+         lineGap: 4
+       });
 
-    doc.font('Helvetica-Bold').text(`Invoice#: ${invoiceData.number}`, 50, 240);
-    doc.font('Helvetica-Bold').text(`Date: ${invoiceData.date}`, 300, 240);
+    // Right Column (To)
+    doc.font('Helvetica-Bold').text('To:', 350, startY);
+    doc.font('Helvetica')
+       .text('Sanzad International LLC', 350, startY + 20, {
+         width: 200,
+         lineGap: 4
+       });
+
+    // === INVOICE METADATA ===
+    const metaY = Math.max(startY + 20 + fromDetails.length * 15, startY + 60);
+    doc.font('Helvetica-Bold')
+       .text(`Invoice#: ${booking.id}`, 50, metaY);
+    doc.font('Helvetica-Bold')
+       .text(`Date: ${formattedDate}`, 350, metaY);
 
     // === SERVICE DETAILS ===
-    doc.moveDown(5);
-    doc.font('Helvetica-Bold').text('Services rendered', 50, doc.y);
-    doc.moveDown(0.5);
-    
-    const serviceDescription = [
-      `Ride ${booking.id} rendered by Nouni family €${booking.price}`,
+    const serviceStartY = metaY + 30;
+    doc.font('Helvetica-Bold')
+       .text('Services rendered', 50, serviceStartY);
+
+    const serviceText = [
+      `Ride ${booking.id} rendered by Nouni family €${booking.price.toFixed(2)}`,
       `from ${booking.pickup_location}`,
       `to ${booking.drop_location}`,
-      `on ${invoiceData.date} ${booking.time}`
+      `on ${formattedDate} ${booking.time || ''}`.trim()
     ].join(' ');
 
-    doc.font('Helvetica').text(serviceDescription, 50, doc.y, { width: 500 });
+    doc.font('Helvetica')
+       .text(serviceText, 50, serviceStartY + 20, {
+         width: 500,
+         lineGap: 4,
+         paragraphGap: 8
+       });
 
-    // === TOTAL ===
-    doc.moveDown(2);
+    // === TOTAL SECTION ===
+    const totalY = serviceStartY + 20 + (serviceText.length / 70) * 20;
     doc.font('Helvetica-Bold')
        .fontSize(14)
-       .text(`Total paid   €${booking.price}`, 400, doc.y, { align: 'right' });
+       .text(`Total paid   €${booking.price.toFixed(2)}`, 400, totalY, {
+         align: 'right'
+       });
 
     doc.end();
   } catch (error) {
