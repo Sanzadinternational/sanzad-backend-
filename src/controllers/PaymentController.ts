@@ -57,8 +57,7 @@ const orderId = `BOOK-${bookingId.slice(0, 8)}-${Date.now().toString().slice(-4)
 
 
         // Payment data
-        // const data = `merchant_id=${merchantId}&order_id=${orderId}&currency=INR&amount=1&redirect_url=${redirectUrl}&cancel_url=${cancelUrl}&billing_email=${customerEmail}&billing_tel=${customerPhone}&merchant_param1=${bookingId}&language=EN`;
-const data = `merchant_id=4188798&order_id=BOOK-970ca638-4637&currency=INR&amount=1&redirect_url=https://www.sanzadinternational.in/process&cancel_url=https://www.sanzadinternational.in/cancel&billing_email=abhinavgu34@gmail.com&billing_tel=8433169822&merchant_param1=970ca638-5799-4cf5-b759-2b205914e294&language=EN`;
+        const data = `merchant_id=${merchantId}&order_id=${orderId}&currency=INR&amount=1&redirect_url=${redirectUrl}&cancel_url=${cancelUrl}&billing_email=${customerEmail}&billing_tel=${customerPhone}&language=EN`;
    console.log('Raw Payment Data:', data);
 
         const encryptedData = encrypt(data, workingKey);
