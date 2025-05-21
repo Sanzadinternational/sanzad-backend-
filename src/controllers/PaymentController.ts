@@ -21,8 +21,8 @@ export const PaymentIniciate = async (req: Request, res: Response, next: NextFun
         // const workingKey = process.env.CCAVENUE_WORKING_KEY!;
     const merchantId = 	'4188798';
         const accessCode = 'ATOA68MD68CH89AOHC';
-        const workingKey = 'E93F2108A01D5B39308523A609427484';
-        const redirectUrl = "https://www.sanzadinternational.in";
+        const workingKey = '0CF068BF3116484E4A4ABEE416E0D777';
+        const redirectUrl = "https://www.sanzadinternational.in/process";
         const cancelUrl = "https://www.sanzadinternational.in/cancle";
         const customerEmail = "abhinavgu34@gmail.com";
         const customerPhone = "8433169822";
@@ -63,7 +63,7 @@ console.log('Raw Payment Data:', data);
         const encryptedData = encrypt(data, workingKey);
   
         res.json({
-          url: 'https://test.ccavenue.com/transaction/transaction.do?command=initiateTransaction',
+          url: 'https://secure.ccavenue.com/transaction/transaction.do?command=initiateTransaction',
           access_code: accessCode,
           encRequest: encryptedData
         });
