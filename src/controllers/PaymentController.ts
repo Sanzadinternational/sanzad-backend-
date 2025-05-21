@@ -285,27 +285,31 @@ export const downloadInvoice = async (req: Request, res: Response) => {
 
     if (!booking) return res.status(404).json({ message: 'Booking not found' });
 
+    // Set headers early
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=invoice_${booking.id}.pdf`);
 
     const doc = new PDFDocument({ margin: 50 });
+
+    // Handle PDF stream errors
+    doc.on('error', (err) => {
+      console.error('PDF generation error:', err);
+      if (!res.headersSent) {
+        res.status(500).json({ message: 'Failed to generate invoice' });
+      } else {
+        res.end(); // In case headers are already sent, forcibly end response
+      }
+    });
+
+    // Pipe PDF to response
     doc.pipe(res);
 
-    // === HEADER ===
-    doc.rect(0, 0, doc.page.width, 60)
-       .fill('#004aad');
-
-    doc.fillColor('white')
-       .fontSize(20)
-       .text('GetTransfer.com', 50, 20);
-
-    // === INVOICE TITLE ===
+    // === PDF Content Here ===
+    doc.rect(0, 0, doc.page.width, 60).fill('#004aad');
+    doc.fillColor('white').fontSize(20).text('GetTransfer.com', 50, 20);
     doc.moveDown(3);
-    doc.fillColor('#004aad')
-       .fontSize(18)
-       .text('PROFORMA INVOICE', { align: 'center' });
+    doc.fillColor('#004aad').fontSize(18).text('PROFORMA INVOICE', { align: 'center' });
 
-    // === COMPANY DETAILS ===
     const fromDetails = [
       'GETTRANSFER LTD',
       '57 Spyrou Kyprianou, Bybloserve Business Center, 2nd floor,',
@@ -317,7 +321,6 @@ export const downloadInvoice = async (req: Request, res: Response) => {
       'Konstitucijos ave. 21B, 08130, Vilnius, Lithuania'
     ];
 
-    // === DATE FORMATTING ===
     const invoiceDate = new Date(booking.created_at);
     const formattedDate = isNaN(invoiceDate.getTime()) 
       ? 'Invalid Date'
@@ -328,36 +331,22 @@ export const downloadInvoice = async (req: Request, res: Response) => {
           year: 'numeric'
         });
 
-    // === FROM/TO COLUMNS ===
     const startY = 140;
-    
-    // Left Column (From)
     doc.font('Helvetica-Bold').text('From:', 50, startY);
-    doc.font('Helvetica')
-       .text(fromDetails.join('\n'), 50, startY + 20, {
-         width: 250,
-         lineGap: 4
-       });
-
-    // Right Column (To)
+    doc.font('Helvetica').text(fromDetails.join('\n'), 50, startY + 20, {
+      width: 250, lineGap: 4
+    });
     doc.font('Helvetica-Bold').text('To:', 350, startY);
-    doc.font('Helvetica')
-       .text('Sanzad International LLC', 350, startY + 20, {
-         width: 200,
-         lineGap: 4
-       });
+    doc.font('Helvetica').text('Sanzad International LLC', 350, startY + 20, {
+      width: 200, lineGap: 4
+    });
 
-    // === INVOICE METADATA ===
     const metaY = Math.max(startY + 20 + fromDetails.length * 15, startY + 60);
-    doc.font('Helvetica-Bold')
-       .text(`Invoice#: ${booking.id}`, 50, metaY);
-    doc.font('Helvetica-Bold')
-       .text(`Date: ${formattedDate}`, 350, metaY);
+    doc.font('Helvetica-Bold').text(`Invoice#: ${booking.id}`, 50, metaY);
+    doc.font('Helvetica-Bold').text(`Date: ${formattedDate}`, 350, metaY);
 
-    // === SERVICE DETAILS ===
     const serviceStartY = metaY + 30;
-    doc.font('Helvetica-Bold')
-       .text('Services rendered', 50, serviceStartY);
+    doc.font('Helvetica-Bold').text('Services rendered', 50, serviceStartY);
 
     const serviceText = [
       `Ride ${booking.id} rendered by Nouni family €${booking.price}`,
@@ -366,24 +355,22 @@ export const downloadInvoice = async (req: Request, res: Response) => {
       `on ${formattedDate} ${booking.time || ''}`.trim()
     ].join(' ');
 
-    doc.font('Helvetica')
-       .text(serviceText, 50, serviceStartY + 20, {
-         width: 500,
-         lineGap: 4,
-         paragraphGap: 8
-       });
+    doc.font('Helvetica').text(serviceText, 50, serviceStartY + 20, {
+      width: 500,
+      lineGap: 4,
+      paragraphGap: 8
+    });
 
-    // === TOTAL SECTION ===
     const totalY = serviceStartY + 20 + (serviceText.length / 70) * 20;
-    doc.font('Helvetica-Bold')
-       .fontSize(14)
-       .text(`Total paid   €${booking.price.toFixed(2)}`, 400, totalY, {
-         align: 'right'
-       });
+    doc.font('Helvetica-Bold').fontSize(14)
+       .text(`Total paid   €${booking.price.toFixed(2)}`, 400, totalY, { align: 'right' });
 
+    // Finalize the PDF
     doc.end();
+
   } catch (error) {
-    console.error('PDF generation failed:', error);
+    console.error('Unexpected error during invoice download:', error);
     if (!res.headersSent) res.status(500).json({ message: 'Failed to generate invoice' });
   }
 };
+
