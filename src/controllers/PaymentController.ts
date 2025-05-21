@@ -360,7 +360,7 @@ export const downloadInvoice = async (req: Request, res: Response) => {
        .text('Services rendered', 50, serviceStartY);
 
     const serviceText = [
-      `Ride ${booking.id} rendered by Nouni family €${booking.price.toFixed(2)}`,
+      `Ride ${booking.id} rendered by Nouni family €${booking.price}`,
       `from ${booking.pickup_location}`,
       `to ${booking.drop_location}`,
       `on ${formattedDate} ${booking.time || ''}`.trim()
