@@ -20,10 +20,10 @@ export const PaymentIniciate = async (req: Request, res: Response, next: NextFun
         // const accessCode = process.env.CCAVENUE_ACCESS_CODE!;
         // const workingKey = process.env.CCAVENUE_WORKING_KEY!;
     const merchantId = 	'4188798';
-        const accessCode = 'ATOA68MD68CH89AOHC';
+        const accessCode = 'AVOA68MD68CH89AOHC';
         const workingKey = '0CF068BF3116484E4A4ABEE416E0D777';
-        const redirectUrl = "https://www.sanzadinternational.in/process";
-        const cancelUrl = "https://www.sanzadinternational.in/cancle";
+        const redirectUrl = "https://sanzadinternational.in/process";
+        const cancelUrl = "https://sanzadinternational.in/cancle";
         const customerEmail = "abhinavgu34@gmail.com";
         const customerPhone = "8433169822";
 
@@ -57,7 +57,7 @@ const orderId = `BOOK-${bookingId.slice(0, 8)}-${Date.now().toString().slice(-4)
 
 
         // Payment data
-        const data = `merchant_id=${merchantId}&order_id=${orderId}&currency=INR&amount=1&redirect_url=${redirectUrl}&cancel_url=${cancelUrl}&billing_email=${customerEmail}&billing_tel=${customerPhone}&language=EN`;
+        const data = `merchant_id=${merchantId}&order_id=${orderId}&currency=INR&amount=1&redirect_url=${redirectUrl}&cancel_url=${cancelUrl}&billing_email=${customerEmail}&billing_tel=${customerPhone}&merchant_param1=${bookingId}&language=EN`;
    console.log('Raw Payment Data:', data);
 
         const encryptedData = encrypt(data, workingKey);
