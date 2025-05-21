@@ -317,8 +317,28 @@ export const ForgetPassword = async (req: Request, res: Response, next: NextFunc
                 to: `${suppliers[0]?.Email} || ${user[0]?.Email} || ${admin[0]?.Email} || ${superadmin[0]?.Email}`,
                 subject: "Query from Sanzadinternational", // Subject line
                 text: `Details of New Agent Access:\nEmail: ${suppliers[0]?.Email}`, // Plain text body
-                html: `Please click below link then reset your password
-                <br>Link: <a href="${resetLink}">${resetLink}</a>`, // HTML body,
+                // html: `Please click below link then reset your password
+                // <br>Link: <a href="${resetLink}">${resetLink}</a>`, // HTML body,
+              html: `
+    <div style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+      <div style="max-width: 600px; margin: auto; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+        <div style="background-color: #004080; color: #ffffff; padding: 20px; text-align: center;">
+          <h2>Sanzad International</h2>
+        </div>
+        <div style="padding: 30px;">
+          <p style="font-size: 16px;">Hello,</p>
+          <p style="font-size: 16px;">You have been granted access. Please click the button below to reset your password and activate your account:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetLink}" style="background-color: #007bff; color: #ffffff; padding: 12px 25px; text-decoration: none; font-size: 16px; border-radius: 5px;">Reset Password</a>
+          </div>
+          <p style="font-size: 14px; color: #555;">If the button above does not work, please copy and paste the following link into your browser:</p>
+          <p style="font-size: 14px; color: #555;"><a href="${resetLink}" style="color: #007bff;">${resetLink}</a></p>
+          <hr style="margin-top: 30px;">
+          <p style="font-size: 12px; color: #999; text-align: center;">© ${new Date().getFullYear()} Sanzad International. All rights reserved.</p>
+        </div>
+      </div>
+    </div>
+  `,
             });
     
             console.log("Message sent: %s", info.messageId);
