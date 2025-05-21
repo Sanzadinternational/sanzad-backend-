@@ -22,8 +22,8 @@ export const PaymentIniciate = async (req: Request, res: Response, next: NextFun
     const merchantId = 	'4188798';
         const accessCode = 'AVOA68MD68CH89AOHC';
         const workingKey = '0CF068BF3116484E4A4ABEE416E0D777';
-        const redirectUrl = "https://www.sanzadinternational.in/process";
-        const cancelUrl = "https://www.sanzadinternational.in/cancle";
+        const redirectUrl = "www.sanzadinternational.in/process";
+        const cancelUrl = "www.sanzadinternational.in/cancle";
         const customerEmail = "abhinavgu34@gmail.com";
         const customerPhone = "8433169822";
 
