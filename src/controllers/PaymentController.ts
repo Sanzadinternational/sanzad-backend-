@@ -278,104 +278,89 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
 export const downloadInvoice = async (req: Request, res: Response) => {
   try {
     const bookingId = req.params.id;
-
     const [booking] = await db.select()
       .from(BookingTable)
       .where(eq(BookingTable.id, bookingId))
       .limit(1);
 
-    if (!booking) {
-      return res.status(404).json({ message: 'Booking not found' });
-    }
+    if (!booking) return res.status(404).json({ message: 'Booking not found' });
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=invoice_${booking.id}.pdf`);
 
     const doc = new PDFDocument({ margin: 50 });
-
     doc.pipe(res);
 
-    // === HEADER BAR ===
-    doc
-      .rect(0, 0, doc.page.width, 60)
-      .fill('#004aad');
+    // === HEADER ===
+    doc.rect(0, 0, doc.page.width, 60)
+       .fill('#004aad');
 
-    doc
-      .fillColor('white')
-      .fontSize(22)
-      .text('Sanzad International', 50, 20, { align: 'left' });
-
-    doc.moveDown(3);
+    doc.fillColor('white')
+       .fontSize(20)
+       .text('GetTransfer.com', 50, 20, { align: 'left' });
 
     // === INVOICE TITLE ===
-    doc
-      .fillColor('#004aad')
-      .fontSize(20)
-      .text('Booking Invoice', { align: 'center' })
-      .moveDown(1);
+    doc.moveDown(3.5);
+    doc.fillColor('#004aad')
+       .fontSize(18)
+       .text('PROFORMA INVOICE', { align: 'center' });
 
-    // === INVOICE BOX ===
-    doc
-      .roundedRect(50, doc.y, doc.page.width - 100, 110)
-      .fillAndStroke('#f0f4ff', '#004aad');
+    // === COMPANY DETAILS ===
+    const fromDetails = [
+      'GETTRANSFER LTD',
+      '57 Spyrou Kyprianou, Bybloserve Business Center, 2nd floor, 6051, Lamaca, Cyprus',
+      `Registration number 359294`,
+      `IBAN: LT203250004086906044`,
+      `BIC: REVOLT21`,
+      `Bank: Revolut Bank UAB`,
+      `Konstitucijos ave. 21B, 08130, Vilnius, Lithuania`
+    ];
 
-    doc
-      .fillColor('#000')
-      .fontSize(12)
-      .text(`Invoice ID: ${booking.id}`, 60, doc.y + 10)
-      .text(`Status: ${booking.status}`, 60)
-      .text(`Date: ${new Date().toLocaleDateString()}`, 60)
-      .moveDown(3);
+    // === INVOICE METADATA ===
+    const invoiceData = {
+      number: booking.id,
+      date: new Date(booking.created_at).toLocaleDateString('en-GB', { 
+        weekday: 'short', 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric'
+      })
+    };
 
-    // === LOCATIONS ===
-    doc
-      .fillColor('#004aad')
-      .font('Helvetica-Bold')
-      .text('Pickup Location:')
-      .fillColor('black')
-      .font('Helvetica')
-      .text(booking.pickup_location)
-      .moveDown();
+    // === FROM/TO SECTION ===
+    doc.moveDown(1.5);
+    doc.font('Helvetica-Bold').text('From:', 50, 140);
+    doc.font('Helvetica').text(fromDetails.join('\n'), 50, 160);
+    
+    doc.font('Helvetica-Bold').text('To:', 300, 140);
+    doc.font('Helvetica').text('Sanzad International LLC', 300, 160);
 
-    doc
-      .fillColor('#004aad')
-      .font('Helvetica-Bold')
-      .text('Drop Location:')
-      .fillColor('black')
-      .font('Helvetica')
-      .text(booking.drop_location)
-      .moveDown();
+    doc.font('Helvetica-Bold').text(`Invoice#: ${invoiceData.number}`, 50, 240);
+    doc.font('Helvetica-Bold').text(`Date: ${invoiceData.date}`, 300, 240);
 
-    // === DISTANCE & PRICE ===
-    doc
-      .fillColor('#004aad')
-      .font('Helvetica-Bold')
-      .text('Distance:')
-      .fillColor('black')
-      .text(`${booking.distance_miles} miles`)
-      .moveDown();
+    // === SERVICE DETAILS ===
+    doc.moveDown(5);
+    doc.font('Helvetica-Bold').text('Services rendered', 50, doc.y);
+    doc.moveDown(0.5);
+    
+    const serviceDescription = [
+      `Ride ${booking.id} rendered by Nouni family €${booking.price}`,
+      `from ${booking.pickup_location}`,
+      `to ${booking.drop_location}`,
+      `on ${invoiceData.date} ${booking.time}`
+    ].join(' ');
 
-    doc
-      .fillColor('#004aad')
-      .font('Helvetica-Bold')
-      .text('Price:')
-      .fillColor('black')
-      .text(`$${booking.price}`)
-      .moveDown(2);
+    doc.font('Helvetica').text(serviceDescription, 50, doc.y, { width: 500 });
 
-    // === FOOTER ===
-    doc
-      .moveDown()
-      .fontSize(10)
-      .fillColor('gray')
-      .text('Thank you for choosing Sanzad International.', { align: 'center' });
+    // === TOTAL ===
+    doc.moveDown(2);
+    doc.font('Helvetica-Bold')
+       .fontSize(14)
+       .text(`Total paid   €${booking.price}`, 400, doc.y, { align: 'right' });
 
     doc.end();
-
   } catch (error) {
     console.error('PDF generation failed:', error);
-    if (!res.headersSent) {
-      res.status(500).json({ message: 'Failed to generate invoice' });
-    }
+    if (!res.headersSent) res.status(500).json({ message: 'Failed to generate invoice' });
   }
 };
