@@ -363,7 +363,7 @@ export const downloadInvoice = async (req: Request, res: Response) => {
 
     const totalY = serviceStartY + 20 + (serviceText.length / 70) * 20;
     doc.font('Helvetica-Bold').fontSize(14)
-       .text(`Total paid   €${booking.price.toFixed(2)}`, 400, totalY, { align: 'right' });
+       .text(`Total paid   €${booking.price}`, 400, totalY, { align: 'right' });
 
     // Finalize the PDF
     doc.end();
