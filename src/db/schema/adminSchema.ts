@@ -1,6 +1,7 @@
 import { integer, pgTable, varchar,timestamp, text, PgTable, date, boolean, pgEnum } from 'drizzle-orm/pg-core'; 
 export const RoleEnum = pgEnum('role', ['admin', 'superadmin']); 
 import {registerTable} from '../schema/SupplierSchema'; 
+import { AgentTable } from "../schema/AgentSchema";
 
 export const AdminTable = pgTable('admin',{ 
     id: integer().primaryKey().generatedAlwaysAsIdentity(), 
