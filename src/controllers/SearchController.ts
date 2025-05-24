@@ -382,7 +382,7 @@ export const getBearerToken = async (
   
   // Function to fetch and normalize data from third-party APIs
   export const fetchFromThirdPartyApis = async (
-    apiDetails: { url: string; username: string; password: string }[],
+    apiDetails: { url: string; username: string; password: string, supplier_id:string }[],
     dropoffLocation: string,
     pickupLocation: string
   ): Promise<any[]> => {
@@ -410,6 +410,7 @@ export const getBearerToken = async (
             passengers: item.car_class?.capacity || 0,
             mediumBag: item.car_class?.luggage_capacity || 0,
             source: "api",
+           supplierId: supplier_id,
           }));
 
         } catch (error: any) {
@@ -436,13 +437,14 @@ export const Search = async (req: Request, res: Response, next: NextFunction) =>
         url: SupplierApidataTable.Api,
         username: SupplierApidataTable.Api_User,
         password: SupplierApidataTable.Api_Password,
+       supplier_id: SupplierApidataTable.Api_Id_Foreign,
       })
       .from(SupplierApidataTable);
 
     // Filter out entries with null URL
     const validApiDetails = apiDetails.filter(
       (detail) => detail.url !== null
-    ) as { url: string; username: string; password: string }[];
+    ) as { url: string; username: string; password: string, supplier_id: string }[];
 
     // Fetch data from third-party APIs
     const apiData = await fetchFromThirdPartyApis(
