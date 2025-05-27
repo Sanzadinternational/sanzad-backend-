@@ -190,7 +190,6 @@ const surgeCharges = surgeChargesResult.rows as any[];
   totalPrice += Number(transfer.tollTax) || 0;
   totalPrice += Number(transfer.driverCharge) || 0;
   totalPrice += Number(transfer.driverTips) || 0;
-     totalPrice += Number(margin) || 0;
        // Night time pricing logic
   const currentTime = time; // "20:35" format
   const [hour, minute] = currentTime.split(":").map(Number);
@@ -213,6 +212,7 @@ if (vehicleSurge && vehicleSurge.SurgeChargePrice) {
   totalPrice += surgeAmount;
   console.log(`Surge pricing applied → Vehicle ID: ${transfer.vehicle_id} | Surge: ${surgeAmount}`);
 }
+       totalPrice += totalPrice * (Number(margin) / 100 || 0);
 
       const convertedPrice = await convertCurrency(totalPrice, transfer.Currency, targetCurrency);
 
