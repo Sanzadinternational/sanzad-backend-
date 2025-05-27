@@ -212,7 +212,7 @@ if (vehicleSurge && vehicleSurge.SurgeChargePrice) {
   totalPrice += surgeAmount;
   console.log(`Surge pricing applied → Vehicle ID: ${transfer.vehicle_id} | Surge: ${surgeAmount}`);
 }
-       totalPrice += totalPrice * (Number(margin) / 100 || 0);
+       totalPrice += transfer.price * (Number(margin) / 100 || 0);
 
       const convertedPrice = await convertCurrency(totalPrice, transfer.Currency, targetCurrency);
 
