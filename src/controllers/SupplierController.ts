@@ -1689,7 +1689,6 @@ export const getTransferBySupplierId = async (req: Request, res: Response) => {
             parking:transfers_Vehicle.parking,
             driverTips: transfers_Vehicle.driverTips,
             driverCharge:transfers_Vehicle.driverCharge,
-            // Distance:transfers_Vehicle.Distance,
             Zone_name:zones.name,
             VehicleType:Create_Vehicles.VehicleType,
             VehicleBrand:Create_Vehicles.VehicleBrand,
