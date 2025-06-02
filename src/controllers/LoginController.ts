@@ -34,7 +34,7 @@ const authenticateUser = async (email: string, password: string, userTable: any)
   const isPasswordValid = await bcrypt.compare(password, user.Password);
   if (!isPasswordValid) return null;
 
-  const accessToken = jwt.sign({ id: user.Id, email: user.Email, role: user.role }, JWT_SECRET, { expiresIn: '30m' });
+  const accessToken = jwt.sign({ id: user.Id, email: user.Email, role: user.role }, JWT_SECRET, { expiresIn: '10h' });
   return { accessToken, user };
 };
 
