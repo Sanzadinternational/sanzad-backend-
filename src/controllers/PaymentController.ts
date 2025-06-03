@@ -306,7 +306,7 @@ export const downloadInvoice = async (req: Request, res: Response) => {
 
     // === HEADER ===
     doc.rect(0, 0, doc.page.width, 60).fill('#004aad');
-    doc.fillColor('white').font('Helvetica-Bold').fontSize(18).text('GetTransfer.com', 50, 20);
+    doc.fillColor('white').font('Helvetica-Bold').fontSize(18).text('sanzadinternational.in', 50, 20);
 
     doc.moveDown(3);
     doc.fillColor('#004aad').fontSize(16).text('PROFORMA INVOICE', {
