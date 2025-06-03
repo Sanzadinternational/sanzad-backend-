@@ -291,7 +291,7 @@ export const downloadInvoice = async (req: Request, res: Response) => {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=invoice_${booking.id}.pdf`);
 
-    const doc = new PDFDocument({ margin: 50 });
+    const doc = new PDFDocument({ size: 'A4', margin: 50 });
 
     doc.on('error', (err) => {
       console.error('PDF generation error:', err);
@@ -307,50 +307,59 @@ export const downloadInvoice = async (req: Request, res: Response) => {
     // === HEADER ===
     doc.rect(0, 0, doc.page.width, 60).fill('#004aad');
     doc.fillColor('white').font('Helvetica-Bold').fontSize(18).text('GetTransfer.com', 50, 20);
-    doc.moveDown(2);
+
+    doc.moveDown(3);
     doc.fillColor('#004aad').fontSize(16).text('PROFORMA INVOICE', {
       align: 'center',
-      underline: true
+      underline: true,
     });
 
     // === FROM & TO SECTION ===
     doc.moveDown(2);
-    const startY = doc.y;
 
-    doc.font('Helvetica-Bold').fillColor('#000').fontSize(10).text('From:', 50, startY);
-    doc.font('Helvetica').fontSize(10).text(
-      `GETTRANSFER LTD\n57 Spyrou Kyprianou, Bybloserve Business Center, 2nd floor,\n6051, Lamaca, Cyprus\nRegistration number: 359294\nIBAN: LT203250004086906044\nBIC: REVOLT21\nBank: Revolut Bank UAB\nKonstitucijos ave. 21B, 08130, Vilnius, Lithuania`,
-      50,
-      startY + 15,
-      { width: 220, lineGap: 3 }
-    );
+    const fromDetails = `GETTRANSFER LTD
+57 Spyrou Kyprianou, Bybloserve Business Center, 2nd floor,
+6051, Lamaca, Cyprus
+Registration number: 359294
+IBAN: LT203250004086906044
+BIC: REVOLT21
+Bank: Revolut Bank UAB
+Konstitucijos ave. 21B, 08130, Vilnius, Lithuania`;
 
-    doc.font('Helvetica-Bold').text('To:', 350, startY);
-    doc.font('Helvetica').fontSize(10).text('Sanzad International LLC', 350, startY + 15, {
+    doc.font('Helvetica-Bold').fillColor('black').fontSize(10).text('From:', { continued: false });
+    doc.font('Helvetica').fontSize(10).text(fromDetails, {
+      width: 250,
+      lineGap: 2,
+    });
+
+    const toY = doc.y + 10;
+    doc.font('Helvetica-Bold').text('To:', 350, toY);
+    doc.font('Helvetica').text('Sanzad International LLC', 350, doc.y + 5, {
       width: 200,
-      lineGap: 3,
+      lineGap: 2,
     });
 
     // === INVOICE INFO ===
-    const date = new Date(booking.created_at);
-    const formattedDate = isNaN(date.getTime())
+    doc.moveDown(2);
+    const invoiceDate = new Date(booking.created_at);
+    const formattedDate = isNaN(invoiceDate.getTime())
       ? 'Invalid Date'
-      : date.toLocaleDateString('en-GB', {
+      : invoiceDate.toLocaleDateString('en-GB', {
           weekday: 'short',
           day: 'numeric',
           month: 'short',
           year: 'numeric',
         });
 
-    doc.moveDown(2);
     doc.font('Helvetica-Bold').text(`Invoice #: ${booking.id}`, 50);
     doc.font('Helvetica-Bold').text(`Date: ${formattedDate}`, 350);
 
-    // === SERVICES ===
+    // === SERVICE DETAILS ===
     doc.moveDown(2);
-    doc.roundedRect(50, doc.y, 500, 100).stroke('#004aad');
+    doc.font('Helvetica-Bold').fontSize(12).fillColor('#004aad').text('Service Details');
 
-    doc.font('Helvetica-Bold').fontSize(11).fillColor('#004aad').text('Service Details', 60, doc.y + 10);
+    doc.moveDown(1);
+    doc.font('Helvetica').fontSize(10).fillColor('black');
 
     const details = [
       `Service ID: ${booking.id}`,
@@ -358,24 +367,22 @@ export const downloadInvoice = async (req: Request, res: Response) => {
       `To: ${booking.drop_location}`,
       `Date & Time: ${formattedDate} ${booking.time || ''}`.trim(),
       `Provider: Nouni family`,
-      `Amount: €${booking.price}`,
     ];
 
-    doc.font('Helvetica').fillColor('#000').fontSize(10).list(details, 60, doc.y + 20, {
-      bulletRadius: 2,
-      lineGap: 3,
+    details.forEach((line) => {
+      doc.text(line, { lineGap: 2 });
     });
 
-    // === TOTAL ===
-    doc.moveDown(6);
+    // === AMOUNT / TOTAL ===
+    doc.moveDown(2);
     doc.font('Helvetica-Bold').fontSize(12).fillColor('#000').text(`Total Paid: €${booking.price}`, {
       align: 'right',
     });
 
     // === FOOTER ===
-    doc.moveDown(2);
+    doc.moveDown(4);
     doc.font('Helvetica-Oblique').fontSize(9).fillColor('gray')
-       .text('Thank you for your business!', { align: 'center' });
+      .text('Thank you for your business!', { align: 'center' });
 
     doc.end();
   } catch (error) {
