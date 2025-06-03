@@ -278,38 +278,43 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
 export const downloadInvoice = async (req: Request, res: Response) => {
   try {
     const bookingId = req.params.id;
-    const [booking] = await db.select()
+    const [booking] = await db
+      .select()
       .from(BookingTable)
       .where(eq(BookingTable.id, bookingId))
       .limit(1);
 
-    if (!booking) return res.status(404).json({ message: 'Booking not found' });
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
 
-    // Set headers early
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=invoice_${booking.id}.pdf`);
 
     const doc = new PDFDocument({ margin: 50 });
 
-    // Handle PDF stream errors
     doc.on('error', (err) => {
       console.error('PDF generation error:', err);
       if (!res.headersSent) {
         res.status(500).json({ message: 'Failed to generate invoice' });
       } else {
-        res.end(); // In case headers are already sent, forcibly end response
+        res.end();
       }
     });
 
-    // Pipe PDF to response
     doc.pipe(res);
 
-    // === PDF Content Here ===
+    // === HEADER BAR ===
     doc.rect(0, 0, doc.page.width, 60).fill('#004aad');
-    doc.fillColor('white').fontSize(20).text('GetTransfer.com', 50, 20);
-    doc.moveDown(3);
-    doc.fillColor('#004aad').fontSize(18).text('PROFORMA INVOICE', { align: 'center' });
+    doc.fillColor('white').fontSize(16).text('GetTransfer.com', 50, 20);
 
+    // === TITLE ===
+    doc.moveDown(2);
+    doc.fillColor('#004aad').fontSize(14).text('PROFORMA INVOICE', {
+      align: 'center',
+    });
+
+    // === FROM / TO DETAILS ===
     const fromDetails = [
       'GETTRANSFER LTD',
       '57 Spyrou Kyprianou, Bybloserve Business Center, 2nd floor,',
@@ -318,59 +323,67 @@ export const downloadInvoice = async (req: Request, res: Response) => {
       'IBAN: LT203250004086906044',
       'BIC: REVOLT21',
       'Bank: Revolut Bank UAB',
-      'Konstitucijos ave. 21B, 08130, Vilnius, Lithuania'
+      'Konstitucijos ave. 21B, 08130, Vilnius, Lithuania',
     ];
 
     const invoiceDate = new Date(booking.created_at);
-    const formattedDate = isNaN(invoiceDate.getTime()) 
+    const formattedDate = isNaN(invoiceDate.getTime())
       ? 'Invalid Date'
       : invoiceDate.toLocaleDateString('en-GB', {
           weekday: 'short',
           day: 'numeric',
           month: 'short',
-          year: 'numeric'
+          year: 'numeric',
         });
 
-    const startY = 140;
-    doc.font('Helvetica-Bold').text('From:', 50, startY);
-    doc.font('Helvetica').text(fromDetails.join('\n'), 50, startY + 20, {
-      width: 250, lineGap: 4
-    });
-    doc.font('Helvetica-Bold').text('To:', 350, startY);
-    doc.font('Helvetica').text('Sanzad International LLC', 350, startY + 20, {
-      width: 200, lineGap: 4
+    doc.moveDown(2);
+    doc.font('Helvetica-Bold').text('From:');
+    doc.font('Helvetica').fontSize(10).text(fromDetails.join('\n'), {
+      width: 250,
+      lineGap: 2,
     });
 
-    const metaY = Math.max(startY + 20 + fromDetails.length * 15, startY + 60);
-    doc.font('Helvetica-Bold').text(`Invoice#: ${booking.id}`, 50, metaY);
-    doc.font('Helvetica-Bold').text(`Date: ${formattedDate}`, 350, metaY);
+    doc.moveUp(fromDetails.length + 1); // move up to place "To:" next to "From:"
+    doc.font('Helvetica-Bold').text('To:', 350);
+    doc.font('Helvetica').fontSize(10).text('Sanzad International LLC', 350, doc.y, {
+      width: 200,
+      lineGap: 2,
+    });
 
-    const serviceStartY = metaY + 30;
-    doc.font('Helvetica-Bold').text('Services rendered', 50, serviceStartY);
+    doc.moveDown(2);
+    doc.font('Helvetica-Bold').fontSize(10).text(`Invoice#: ${booking.id}`, 50);
+    doc.font('Helvetica-Bold').fontSize(10).text(`Date: ${formattedDate}`, 350);
 
-    const serviceText = [
-      `Ride ${booking.id} rendered by Nouni family €${booking.price}`,
-      `from ${booking.pickup_location}`,
-      `to ${booking.drop_location}`,
-      `on ${formattedDate} ${booking.time || ''}`.trim()
-    ].join(' ');
+    // === SERVICE DESCRIPTION ===
+    doc.moveDown(2);
+    doc.font('Helvetica-Bold').fontSize(12).text('Services rendered');
+    doc.moveDown(0.5);
 
-    doc.font('Helvetica').text(serviceText, 50, serviceStartY + 20, {
-      width: 500,
+    const serviceLines = [
+      `Ride ${booking.id} rendered by Nouni family`,
+      `From: ${booking.pickup_location}`,
+      `To: ${booking.drop_location}`,
+      `Date & Time: ${formattedDate} ${booking.time || ''}`.trim(),
+      `Amount: €${booking.price}`,
+    ];
+
+    doc.font('Helvetica').fontSize(10).list(serviceLines, {
+      bulletRadius: 1.5,
+      textIndent: 10,
       lineGap: 4,
-      paragraphGap: 8
     });
 
-    const totalY = serviceStartY + 20 + (serviceText.length / 70) * 20;
-    doc.font('Helvetica-Bold').fontSize(14)
-       .text(`Total paid   €${booking.price}`, 400, totalY, { align: 'right' });
+    // === TOTAL ===
+    doc.moveDown(2);
+    doc.font('Helvetica-Bold').fontSize(12).text(`Total paid: €${booking.price}`, {
+      align: 'right',
+    });
 
-    // Finalize the PDF
     doc.end();
-
   } catch (error) {
     console.error('Unexpected error during invoice download:', error);
-    if (!res.headersSent) res.status(500).json({ message: 'Failed to generate invoice' });
+    if (!res.headersSent) {
+      res.status(500).json({ message: 'Failed to generate invoice' });
+    }
   }
 };
-
