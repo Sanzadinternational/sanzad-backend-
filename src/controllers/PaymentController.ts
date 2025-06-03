@@ -316,81 +316,51 @@ export const downloadInvoice = async (req: Request, res: Response) => {
 
     // === FROM & TO SECTION ===
     doc.moveDown(2);
+    doc.font('Helvetica-Bold').fillColor('black').fontSize(10).text('From:');
+    doc.font('Helvetica').fontSize(10).text(
+      `GETTRANSFER LTD\n57 Spyrou Kyprianou, Bybloserve Business Center, 2nd floor,\n6051, Lamaca, Cyprus\nRegistration number: 359294\nIBAN: LT203250004086906044\nBIC: REVOLT21\nBank: Revolut Bank UAB\nKonstitucijos ave. 21B, 08130, Vilnius, Lithuania`,
+      { lineGap: 2 }
+    );
 
-    const fromDetails = `GETTRANSFER LTD
-57 Spyrou Kyprianou, Bybloserve Business Center, 2nd floor,
-6051, Lamaca, Cyprus
-Registration number: 359294
-IBAN: LT203250004086906044
-BIC: REVOLT21
-Bank: Revolut Bank UAB
-Konstitucijos ave. 21B, 08130, Vilnius, Lithuania`;
-
-    doc.font('Helvetica-Bold').fillColor('black').fontSize(10).text('From:', { continued: false });
-    doc.font('Helvetica').fontSize(10).text(fromDetails, {
-      width: 250,
-      lineGap: 2,
-    });
-
-    const toY = doc.y + 10;
-    doc.font('Helvetica-Bold').text('To:', 350, toY);
-    doc.font('Helvetica').text('Sanzad International LLC', 350, doc.y + 5, {
-      width: 200,
-      lineGap: 2,
-    });
+    doc.moveDown(1);
+    doc.font('Helvetica-Bold').text('To:');
+    doc.font('Helvetica').fontSize(10).text('Sanzad International LLC');
 
     // === INVOICE INFO ===
-    doc.moveDown(2);
+    doc.moveDown(1);
     const createdAt = booking.created_at ? new Date(booking.created_at) : null;
-const formattedDate = createdAt && !isNaN(createdAt.getTime())
-  ? createdAt.toLocaleDateString('en-GB', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    })
-  : 'N/A';
+    const formattedDate = createdAt && !isNaN(createdAt.getTime())
+      ? createdAt.toLocaleDateString('en-GB', {
+          weekday: 'short',
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        })
+      : 'N/A';
 
-doc.rect(0, 0, doc.page.width, 60).fill('#004aad');
-doc.fillColor('white').font('Helvetica-Bold').fontSize(18).text('GetTransfer.com', 50, 20);
+    doc.font('Helvetica-Bold').text(`Invoice #: ${booking.id}`);
+    doc.font('Helvetica-Bold').text(`Date: ${formattedDate}`);
 
-doc.moveDown(2);
-doc.fillColor('#004aad').fontSize(16).text('PROFORMA INVOICE', { align: 'center' });
+    // === SERVICE DETAILS ===
+    doc.moveDown(1.5);
+    doc.font('Helvetica-Bold').fontSize(12).fillColor('#004aad').text('Service Details');
+    doc.moveDown(0.5);
+    doc.font('Helvetica').fillColor('black').fontSize(10);
+    doc.text(`Service ID: ${booking.id}`);
+    doc.text(`From: ${booking.pickup_location}`);
+    doc.text(`To: ${booking.drop_location}`);
+    doc.text(`Date & Time: ${formattedDate} ${booking.time || ''}`);
+    doc.text(`Provider: Nouni family`);
 
-doc.moveDown(1.5);
-doc.font('Helvetica-Bold').fontSize(10).fillColor('black').text('From:');
-doc.font('Helvetica').fontSize(10).text(
-  `GETTRANSFER LTD\n57 Spyrou Kyprianou, Bybloserve Business Center, 2nd floor,\n6051, Lamaca, Cyprus\nRegistration number: 359294\nIBAN: LT203250004086906044\nBIC: REVOLT21\nBank: Revolut Bank UAB\nKonstitucijos ave. 21B, 08130, Vilnius, Lithuania`,
-  { lineGap: 2 }
-);
+    // === TOTAL ===
+    doc.moveDown(2);
+    doc.font('Helvetica-Bold').fontSize(12).fillColor('black')
+      .text(`Total Paid: €${booking.price}`, { align: 'right' });
 
-doc.moveDown(1);
-doc.font('Helvetica-Bold').text('To:');
-doc.font('Helvetica').fontSize(10).text('Sanzad International LLC');
-
-doc.moveDown(1);
-doc.font('Helvetica-Bold').text(`Invoice #: ${booking.id}`);
-doc.font('Helvetica-Bold').text(`Date: ${formattedDate}`);
-
-doc.moveDown(1.5);
-doc.font('Helvetica-Bold').fontSize(12).fillColor('#004aad').text('Service Details');
-doc.moveDown(0.5);
-
-doc.font('Helvetica').fillColor('black').fontSize(10);
-doc.text(`Service ID: ${booking.id}`);
-doc.text(`From: ${booking.pickup_location}`);
-doc.text(`To: ${booking.drop_location}`);
-doc.text(`Date & Time: ${formattedDate} ${booking.time || ''}`);
-doc.text(`Provider: Nouni family`);
-
-doc.moveDown(2);
-doc.font('Helvetica-Bold').fontSize(12).fillColor('black')
-   .text(`Total Paid: €${booking.price}`, { align: 'right' });
-
-doc.moveDown(2);
-doc.font('Helvetica-Oblique').fontSize(9).fillColor('gray')
-   .text('Thank you for your business!', { align: 'center' });
-
+    // === FOOTER ===
+    doc.moveDown(2);
+    doc.font('Helvetica-Oblique').fontSize(9).fillColor('gray')
+      .text('Thank you for your business!', { align: 'center' });
 
     doc.end();
   } catch (error) {
