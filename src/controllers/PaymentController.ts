@@ -306,7 +306,7 @@ export const downloadInvoice = async (req: Request, res: Response) => {
 
     // === HEADER BAR ===
     doc.rect(0, 0, doc.page.width, 60).fill('#004aad');
-    doc.fillColor('white').fontSize(16).text('GetTransfer.com', 50, 20);
+    doc.fillColor('white').fontSize(16).text('sanzadinternational.in', 50, 20);
 
     // === TITLE ===
     doc.moveDown(2);
