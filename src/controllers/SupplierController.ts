@@ -1620,14 +1620,14 @@ export const createTransfer = async (req: Request, res: Response) => {
         }
 
         const newTransfers = await db.insert(transfers_Vehicle).values(
-            rows.map(({ uniqueId,supplier_id, SelectZone, Price, Extra_Price, Currency, TransferInfo,  NightTime = null,
-                NightTime_Price = null,
-                vehicleTax = null,
-                vehicleTaxType = null,
-                tollTax = null,
-                parking = null,
-                driverTips = null,
-                driverCharge = null }) => ({
+            rows.map(({ uniqueId,supplier_id, SelectZone, Price, Extra_Price, Currency, TransferInfo,  NightTime,
+                NightTime_Price,
+                vehicleTax,
+                vehicleTaxType,
+                tollTax,
+                parking,
+                driverTips,
+                driverCharge }) => ({
                 vehicle_id: uniqueId,
                 zone_id: SelectZone,
                 price: Price,
