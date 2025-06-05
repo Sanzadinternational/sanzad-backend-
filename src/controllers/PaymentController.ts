@@ -318,7 +318,7 @@ export const downloadInvoice = async (req: Request, res: Response) => {
     doc.moveDown(2);
     doc.font('Helvetica-Bold').fillColor('black').fontSize(10).text('From:');
     doc.font('Helvetica').fontSize(10).text(
-      `GETTRANSFER LTD\n57 Spyrou Kyprianou, Bybloserve Business Center, 2nd floor,\n6051, Lamaca, Cyprus\nRegistration number: 359294\nIBAN: LT203250004086906044\nBIC: REVOLT21\nBank: Revolut Bank UAB\nKonstitucijos ave. 21B, 08130, Vilnius, Lithuania`,
+      `office No: 5, 1st Floor, H-53, Sector 63 Rd, A Block, Sector 65, Noida, Uttar Pradesh 201301`,
       { lineGap: 2 }
     );
 
