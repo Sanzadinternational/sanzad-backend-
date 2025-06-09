@@ -1713,20 +1713,54 @@ export const getTransferBySupplierId = async (req: Request, res: Response) => {
 // Update Transfer
 export const updateTransfer = async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
+        const { id } = req.params; // This is the DB primary key (UUID)
         const updateData = req.body;
-        console.log(updateData);
-        
-        const updatedTransfer = await db.update(transfers_Vehicle).set(updateData).where(eq(transfers_Vehicle.id, id)).returning();
-        
-        if (!updatedTransfer) {
+
+        // Map frontend field names to DB column names
+        const fieldMapping: Record<string, string> = {
+            SelectZone: "zone_id",
+            Price: "price",
+            Extra_Price: "extra_price_per_mile",
+            Currency: "Currency",
+            TransferInfo: "Transfer_info",
+            NightTime: "NightTime",
+            NightTime_Price: "NightTime_Price",
+            uniqueId: "vehicle_id", // optional, only if you want to allow this to be updated
+            vehicleTax: "vehicleTax",
+            vehicleTaxType: "vehicleTaxType",
+            parking: "parking",
+            tollTax: "tollTax",
+            driverCharge: "driverCharge",
+            driverTips: "driverTips",
+            supplier_id: "supplier_id",
+        };
+
+        // Transform frontend data into DB format
+        const transformedData: Record<string, any> = {};
+        for (const key in updateData) {
+            const dbField = fieldMapping[key];
+            if (dbField) {
+                transformedData[dbField] = updateData[key];
+            }
+        }
+
+        const updatedTransfer = await db
+            .update(transfers_Vehicle)
+            .set(transformedData)
+            .where(eq(transfers_Vehicle.id, id)) // ✅ using primary key `id`
+            .returning();
+
+        if (!updatedTransfer || updatedTransfer.length === 0) {
             return res.status(404).json({ message: "Transfer not found" });
         }
+
         res.json({ message: "Transfer updated successfully", transfer: updatedTransfer });
     } catch (error) {
+        console.error("Update error:", error);
         res.status(500).json({ message: "Error updating transfer", error });
     }
 };
+
 
 // Delete Transfer
 export const deleteTransfer = async (req: Request, res: Response) => {
