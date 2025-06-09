@@ -1715,6 +1715,7 @@ export const updateTransfer = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const updateData = req.body;
+        console.log(updateData);
         
         const updatedTransfer = await db.update(transfers_Vehicle).set(updateData).where(eq(transfers_Vehicle.id, id)).returning();
         
