@@ -62,8 +62,7 @@ export const CreateSupplier = async (req: Request, res: Response, next: NextFunc
       
         return res.status(400).json({
             success: false,
-            message: "We find out email id used one does not work again. So we used different email id and recd
-OTP. Reason can be displayed as this email id is already registered. Use new email id"
+            message: "We find out email id used one does not work again. So we used different email id and recd OTP. Reason can be displayed as this email id is already registered. Use new email id"
             // message: "Email is already registered in the system." 
         });
     }
