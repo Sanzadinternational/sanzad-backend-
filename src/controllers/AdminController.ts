@@ -383,7 +383,7 @@ const info = await transporter.sendMail({
       
       <p>To log in, click the button below:</p>
       <p style="text-align: center;">
-        <a href="http://localhost:3000/login" style="background: #007bff; color: #fff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block; font-size: 16px; font-weight: bold;">
+        <a href="https://sanzadinternational.in/login" style="background: #007bff; color: #fff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block; font-size: 16px; font-weight: bold;">
           Login Now
         </a>
       </p>
