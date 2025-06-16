@@ -113,26 +113,37 @@ export const CreateSupplier = async (req: Request, res: Response, next: NextFunc
     });
   
 
-    const info = await transporter.sendMail({
-        from: '"Sanzadinternational" <sanzadinternational5@gmail.com>', // Sender address
-        to: `${result[0].Email}`,
-        subject: "Your Account Has Been Created", // Updated subject line
-        text: `Dear User,\n\nYour account has been successfully created. Once your account is approved, you will be notified.\n\nBest regards,\nSanzadinternational`, // Plain text fallback
-        html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
-                <h2 style="color: #2c3e50;">Welcome to Sanzadinternational!</h2>
-                <p style="font-size: 16px; color: #555;">Dear User,</p>
-                <p style="font-size: 16px; color: #555;">
-                    Your account has been successfully created. Once your account is approved, you will receive a notification.
-                </p>
-                <div style="margin: 20px 0; padding: 10px; background: #f4f4f4; border-radius: 5px;">
-                    <p style="font-size: 16px; color: #333;"><strong>Email:</strong> ${result[0].Email}</p>
-                </div>
-                <p style="font-size: 16px; color: #555;">Best regards,</p>
-                <p style="font-size: 16px; color: #555;"><strong>Sanzadinternational Team</strong></p>
-            </div>
-        `, // Professional HTML email body
-    });
+const info = await transporter.sendMail({
+    from: '"Sanzadinternational" <sanzadinternational5@gmail.com>', // Sender address
+    to: `${result[0].Email}`, // Recipient address
+    subject: "Account Approval & Next Steps", // Updated subject line
+    text: `Dear User,
+
+Email with credentials will be received once approved by Sanzad International.
+• This process will be completed in the next 2 hours.
+• Thereafter, the website can be browsed from your end and we are happy to take your bookings.
+• Happy Selling!
+
+Best regards,
+Sanzadinternational Team`,
+    html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+            <h2 style="color: #2c3e50;">Account Update from Sanzadinternational</h2>
+            <p style="font-size: 16px; color: #555;">Dear User,</p>
+            <p style="font-size: 16px; color: #555;">
+                Email with credentials will be received once approved by <strong>Sanzad International</strong>.
+            </p>
+            <ul style="font-size: 16px; color: #555; padding-left: 20px;">
+                <li>This process will be completed in the next 2 hours.</li>
+                <li>Thereafter, the website can be browsed from your end and we are happy to take your bookings.</li>
+                <li>Happy Selling!</li>
+            </ul>
+            <p style="font-size: 16px; color: #555;">Best regards,</p>
+            <p style="font-size: 16px; color: #555;"><strong>Sanzadinternational Team</strong></p>
+        </div>
+    `,
+});
+
     
     
         
