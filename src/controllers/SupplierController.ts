@@ -136,7 +136,17 @@ const info = await transporter.sendMail({
 });
 
     
-    
+        const ApiNotification = await db
+            .insert(notifications).values({
+                role_id: 1,
+                type: "New_supplier",
+                role: "supplier",
+                message: `${Company_name} Transfer is successfully registered`,
+            });
+
+            io.emit("Order", {
+                message: `New_supplier`,
+              });
         
     console.log("Message sent: %s", info.messageId);
 
