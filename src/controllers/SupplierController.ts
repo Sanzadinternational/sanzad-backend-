@@ -117,15 +117,6 @@ const info = await transporter.sendMail({
     from: '"Sanzadinternational" <sanzadinternational5@gmail.com>', // Sender address
     to: `${result[0].Email}`, // Recipient address
     subject: "Account Approval & Next Steps", // Updated subject line
-    text: `Dear User,
-
-Email with credentials will be received once approved by Sanzad International.
-• This process will be completed in the next 2 hours.
-• Thereafter, the website can be browsed from your end and we are happy to take your bookings.
-• Happy Selling!
-
-Best regards,
-Sanzadinternational Team`,
     html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
             <h2 style="color: #2c3e50;">Account Update from Sanzadinternational</h2>
