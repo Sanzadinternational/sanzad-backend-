@@ -6,6 +6,7 @@ const { v4: uuidv4 } = require('uuid');
 import { Create_Vehicles } from "../db/schema/SupplierSchema";
 import { CreateVehicle } from "../dto";
 import { AgentTable } from "../db/schema/AgentSchema";
+import {AdminTable} from "../db/schema/adminSchema";
 import { notifications } from "../db/schema/schema";
 import { io } from "../..";
 import { db } from "../db/db"; 
@@ -128,6 +129,42 @@ const info = await transporter.sendMail({
                 <li>This process will be completed in the next 2 hours.</li>
                 <li>Thereafter, the website can be browsed from your end and we are happy to take your bookings.</li>
                 <li>Happy Selling!</li>
+            </ul>
+            <p style="font-size: 16px; color: #555;">Best regards,</p>
+            <p style="font-size: 16px; color: #555;"><strong>Sanzadinternational Team</strong></p>
+        </div>
+    `,
+});
+        
+        const AdminMessage = await db.select({
+            Email:AdminTable.Email
+        })
+        .from(AdminTable)
+        .where(eq(AdminTable.Email, Email))
+
+  const transporters = nodemailer.createTransport({
+        service: 'Gmail', // Replace with your email service provider
+        auth: {
+               user: 'sanzadinternational5@gmail.com', // Email address from environment variable
+               pass: 'betf euwp oliy tooq', // Email password from environment variable
+        },
+    });
+  
+
+const infos = await transporters.sendMail({
+    from: '"Sanzadinternational" <sanzadinternational5@gmail.com>', // Sender address
+    to: `${AdminMessage[0].Email}`, // Recipient address
+    subject: "England transfer is registered , and for approval for same will reflect on Super Admin ", // Updated subject line
+    html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+            <h2 style="color: #2c3e50;">Here below is Super admin</h2>
+            <p style="font-size: 16px; color: #555;">Dear Super admin,</p>
+            <p style="font-size: 16px; color: #555;">
+                Email with credentials will be received once approved by <strong>Sanzad International</strong>.
+            </p>
+            <ul style="font-size: 16px; color: #555; padding-left: 20px;">
+                <li>This is missing , please check on it. </li>
+                <li>Also there will be one email of sanzad on which we receive such email of notification, from where we can note and check Super admin for such messages to approve</li>
             </ul>
             <p style="font-size: 16px; color: #555;">Best regards,</p>
             <p style="font-size: 16px; color: #555;"><strong>Sanzadinternational Team</strong></p>
