@@ -122,9 +122,6 @@ const info = await transporter.sendMail({
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
             <h2 style="color: #2c3e50;">Account Update from Sanzadinternational</h2>
             <p style="font-size: 16px; color: #555;">Dear User,</p>
-            <p style="font-size: 16px; color: #555;">
-                Email with credentials will be received once approved by <strong>Sanzad International</strong>.
-            </p>
             <ul style="font-size: 16px; color: #555; padding-left: 20px;">
                 <li>This process will be completed in the next 2 hours.</li>
                 <li>Thereafter, the website can be browsed from your end and we are happy to take your bookings.</li>
@@ -155,17 +152,13 @@ const infos = await transporters.sendMail({
     from: '"Sanzadinternational" <sanzadinternational5@gmail.com>', // Sender address
     // to: `${AdminMessage[0].Email}`, // Recipient address
     to:`sanzadinternational5@gmail.com`,
-    subject: "England transfer is registered , and for approval for same will reflect on Super Admin ", // Updated subject line
+    subject: "New Supplier Registration ", // Updated subject line
     html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
-            <h2 style="color: #2c3e50;">Here below is Super admin</h2>
-            <p style="font-size: 16px; color: #555;">Dear Super admin,</p>
-            <p style="font-size: 16px; color: #555;">
-                Email with credentials will be received once approved by <strong>Sanzad International</strong>.
-            </p>
+            <p style="font-size: 16px; color: #555;">Dear Admin,</p>
             <ul style="font-size: 16px; color: #555; padding-left: 20px;">
-                <li>This is missing , please check on it. </li>
-                <li>Also there will be one email of sanzad on which we receive such email of notification, from where we can note and check Super admin for such messages to approve</li>
+                <li>The New Supplier is registered in the Sanzad International. </li>
+                <li>Please checked and Approved of this Supplier.</li>
             </ul>
             <p style="font-size: 16px; color: #555;">Best regards,</p>
             <p style="font-size: 16px; color: #555;"><strong>Sanzadinternational Team</strong></p>
