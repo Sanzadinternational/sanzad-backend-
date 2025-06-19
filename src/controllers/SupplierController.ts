@@ -120,7 +120,7 @@ const info = await transporter.sendMail({
     subject: "Account Approval & Next Steps", // Updated subject line
     html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
-            <h2 style="color: #2c3e50;">Account Update from Sanzadinternational</h2>
+            <h2 style="color: #2c3e50;">Account Update from Sanzad International</h2>
             <p style="font-size: 16px; color: #555;">Dear User,</p>
             <ul style="font-size: 16px; color: #555; padding-left: 20px;">
                 <li>This process will be completed in the next 2 hours.</li>
@@ -128,7 +128,7 @@ const info = await transporter.sendMail({
                 <li>Happy Selling!</li>
             </ul>
             <p style="font-size: 16px; color: #555;">Best regards,</p>
-            <p style="font-size: 16px; color: #555;"><strong>Sanzadinternational Team</strong></p>
+            <p style="font-size: 16px; color: #555;"><strong>Sanzad International Team</strong></p>
         </div>
     `,
 });
