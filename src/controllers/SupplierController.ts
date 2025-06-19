@@ -153,7 +153,8 @@ const info = await transporter.sendMail({
 
 const infos = await transporters.sendMail({
     from: '"Sanzadinternational" <sanzadinternational5@gmail.com>', // Sender address
-    to: `${AdminMessage[0].Email}`, // Recipient address
+    // to: `${AdminMessage[0].Email}`, // Recipient address
+    to:`sanzadinternational5@gmail.com`,
     subject: "England transfer is registered , and for approval for same will reflect on Super Admin ", // Updated subject line
     html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
