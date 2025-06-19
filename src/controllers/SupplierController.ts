@@ -646,7 +646,7 @@ export const suppliersendOtp= async(req:Request,res:Response,next:NextFunction)=
 
 if (existingSupplier.length > 0 || existingAgent.length>0) {
     // If email exists in either table, return a conflict response
-    return res.status(400).json({
+    return res.status(406).json({
         success: false,
         message: "Email is already registered in the system." 
     });
