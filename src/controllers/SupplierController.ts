@@ -157,11 +157,11 @@ const infos = await transporters.sendMail({
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
             <p style="font-size: 16px; color: #555;">Dear Admin,</p>
             <ul style="font-size: 16px; color: #555; padding-left: 20px;">
-                <li>The New Supplier is registered in the Sanzad International. </li>
-                <li>Please checked and Approved of this Supplier.</li>
+                <li>There is a new supplier registration in Sanzad International. </li>
+                <li>Please check and approve of this supplier.</li>
             </ul>
             <p style="font-size: 16px; color: #555;">Best regards,</p>
-            <p style="font-size: 16px; color: #555;"><strong>Sanzadinternational Team</strong></p>
+            <p style="font-size: 16px; color: #555;"><strong>Sanzad International Team</strong></p>
         </div>
     `,
 });
