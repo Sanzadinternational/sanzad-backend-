@@ -644,10 +644,10 @@ export const suppliersendOtp= async(req:Request,res:Response,next:NextFunction)=
 
     const existingAgent= await db.select().from(AgentTable).where(eq(AgentTable.Email, email))
 
-if (existingSupplier.length > 0 || existingAgent.length>0) {
+if (existingSupplier.length > 0 || existingAgent.length > 0) {
     // If email exists in either table, return a conflict response
-    return res.status(406).json({
-        success: false,
+    return res.status(400).json({
+        success: true,
         message: "Email is already registered in the system." 
     });
 }else{
