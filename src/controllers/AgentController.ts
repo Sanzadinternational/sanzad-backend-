@@ -17,6 +17,7 @@ var Mailgen = require('mailgen');
 var randomstring = require("randomstring");
 var passwordHash = require('password-hash');
 import { BookingTable,PaymentsTable  } from "../db/schema/BookingSchema";
+import {AdminTable} from "../db/schema/adminSchema";
 
 export const CreateAgent = async(req: Request, res: Response, next: NextFunction) => { 
     try {
