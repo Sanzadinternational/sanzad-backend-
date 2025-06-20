@@ -117,7 +117,7 @@ export const CreateSupplier = async (req: Request, res: Response, next: NextFunc
 const info = await transporter.sendMail({
     from: '"Sanzadinternational" <sanzadinternational5@gmail.com>', // Sender address
     to: `${result[0].Email}`, // Recipient address
-    subject: "Account Approval & Next Steps", // Updated subject line
+    subject: "Your Account Has Been Created.", // Updated subject line
     html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
             <h2 style="color: #2c3e50;">Account Update from Sanzad International</h2>
