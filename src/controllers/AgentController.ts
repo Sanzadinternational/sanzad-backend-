@@ -120,11 +120,44 @@ export const CreateAgent = async(req: Request, res: Response, next: NextFunction
                     <p style="font-size: 16px; color: #333;"><strong>Email:</strong> ${result[0].Email}</p>
                 </div>
                 <p style="font-size: 16px; color: #555;">Best regards,</p>
-                <p style="font-size: 16px; color: #555;"><strong>Sanzadinternational Team</strong></p>
+                <p style="font-size: 16px; color: #555;"><strong>Sanzad International Team</strong></p>
             </div>
         ` // HTML body
         });
-            
+
+             const AdminMessage = await db.select({
+            Email:AdminTable.Email
+        })
+        .from(AdminTable)
+        .where(eq(AdminTable.Email, Email))
+
+  const transporters = nodemailer.createTransport({
+        service: 'Gmail', // Replace with your email service provider
+        auth: {
+               user: 'sanzadinternational5@gmail.com', // Email address from environment variable
+               pass: 'betf euwp oliy tooq', // Email password from environment variable
+        },
+    });
+  
+
+const infos = await transporters.sendMail({
+    from: '"Sanzadinternational" <sanzadinternational5@gmail.com>', // Sender address
+    // to: `${AdminMessage[0].Email}`, // Recipient address
+    to:`sanzadinternational5@gmail.com`,
+    subject: "New Agent Registration ", // Updated subject line
+    html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+            <p style="font-size: 16px; color: #555;">Dear Admin,</p>
+            <ul style="font-size: 16px; color: #555; padding-left: 20px;">
+                <li>There is a new Agent registration in Sanzad International. </li>
+                <li>Please check and approve of this supplier.</li>
+            </ul>
+            <p style="font-size: 16px; color: #555;">Best regards,</p>
+            <p style="font-size: 16px; color: #555;"><strong>Sanzad International Team</strong></p>
+        </div>
+    `,
+});
+        
         console.log("Message sent: %s", info.messageId);
     
             return res.status(200).json({message:"New Agent is Created Successfully",result})
