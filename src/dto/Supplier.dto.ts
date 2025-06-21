@@ -10,7 +10,10 @@ export interface CreateSupplierInput {
   Office_number: string,
   Email: string,
   Contact_Person: string,
-
+  State:string,
+  Alternate_email:string,
+  Alternate_phone:string,
+  Legal_company:string,
   Mobile_number: string,
   Gst_Vat_Tax_number: string, 
   PAN_number: string, 
