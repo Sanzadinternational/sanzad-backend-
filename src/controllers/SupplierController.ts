@@ -181,8 +181,8 @@ const infos = await transporters.sendMail({
                 message: `${Company_name} Transfer is successfully registered`,
             });
 
-            io.emit("Order", {
-                message: `New_supplier`,
+            io.emit("new_supplier_registered", {
+                message: `${Company_name} Transfer is successfully registered`,
               });
         
     console.log("Message sent: %s", info.messageId);
