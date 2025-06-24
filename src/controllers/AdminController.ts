@@ -524,9 +524,9 @@ export const ChangeSupplierApprovalStatus = async(req:Request,res:Response,next:
 
     console.log("Message sent: %s", info.messageId);
 
-        res.status(403).json({message:"Supplier Status is Rejected",result,results})
+        res.status(200).json({message:"Supplier Status is Rejected",result,results})
   }else{
-          return res.status(202).json("Supplier Status is Pending");
+          return res.status(200).json("Supplier Status is Pending");
   }
     // const transporter = nodemailer.createTransport({
     //     service: 'Gmail', // Replace with your email service provider
