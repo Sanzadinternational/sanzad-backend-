@@ -446,9 +446,6 @@ export const ChangeSupplierApprovalStatus = async(req:Request,res:Response,next:
         const results = await db.update(registerTable)
         .set({ IsApproved: isApproved })
         .where(eq(registerTable.Email,id));
-      if (parseInt(isApproved) === 2) {
-      return res.status(200).json("Status is cancelled");
-      }
         const result = await db
         .select({
             Email: registerTable.Email,
@@ -463,8 +460,7 @@ export const ChangeSupplierApprovalStatus = async(req:Request,res:Response,next:
     if (result.length === 0) {
         return res.status(404).json({ message: 'No records found' });
     }
-
-    const transporter = nodemailer.createTransport({
+  const transporter = nodemailer.createTransport({
         service: 'Gmail', // Replace with your email service provider
         auth: {
                 user: 'sanzadinternational5@gmail.com', // Email address from environment variable
@@ -472,7 +468,7 @@ export const ChangeSupplierApprovalStatus = async(req:Request,res:Response,next:
             // Email password from environment variable
         },
     });
-  
+ if (parseInt(isApproved) === 1) {
     const info = await transporter.sendMail({
       from: '"Sanzad International" <sanzadinternational5@gmail.com>', // Sender address
       to: `${result[0].Email}`, // Recipient email
@@ -500,6 +496,74 @@ export const ChangeSupplierApprovalStatus = async(req:Request,res:Response,next:
     console.log("Message sent: %s", info.messageId);
 
         res.status(200).json({message:"Supplier Status is updated Successfully",result,results})
+  }else if(parseInt(isApproved) === 2)
+    {
+    const info = await transporter.sendMail({
+      from: '"Sanzad International" <sanzadinternational5@gmail.com>', // Sender address
+      to: `${result[0].Email}`, // Recipient email
+      subject: "Your Account was not Actived", // Subject line
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 20px; border-radius: 8px;">
+          <h2 style="color: #007bff;">Welcome to Sanzad International!</h2>
+          <p>Dear <strong>${result[0].CompanyName}</strong>,</p>
+          <p>We are excited to inform you that your account has not activated. You can now not log in and start using our services.</p>
+          
+          <p>To log in, click the button below:</p>
+          <p style="text-align: center;">
+            <a href="https://sanzadinternational.in/login" style="background: #007bff; color: #fff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block; font-size: 16px; font-weight: bold;">
+              Login Now
+            </a>
+          </p>
+    
+          <p>If you have any questions, feel free to contact our support team.</p>
+          <p>Best regards,</p>
+          <p><strong>Sanzad International Team</strong></p>
+        </div>
+      `,
+    });
+
+    console.log("Message sent: %s", info.messageId);
+
+        res.status(403).json({message:"Supplier Status is Rejected",result,results})
+  }else{
+          return res.status(202).json("Supplier Status is Pending");
+  }
+    // const transporter = nodemailer.createTransport({
+    //     service: 'Gmail', // Replace with your email service provider
+    //     auth: {
+    //             user: 'sanzadinternational5@gmail.com', // Email address from environment variable
+    //             pass: 'betf euwp oliy tooq', // Email password from environment variable
+    //         // Email password from environment variable
+    //     },
+    // });
+  
+    // const info = await transporter.sendMail({
+    //   from: '"Sanzad International" <sanzadinternational5@gmail.com>', // Sender address
+    //   to: `${result[0].Email}`, // Recipient email
+    //   subject: "🎉 Congratulations! Your Account is Now Active", // Subject line
+    //   html: `
+    //     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 20px; border-radius: 8px;">
+    //       <h2 style="color: #007bff;">Welcome to Sanzad International!</h2>
+    //       <p>Dear <strong>${result[0].CompanyName}</strong>,</p>
+    //       <p>We are excited to inform you that your account has been successfully activated. You can now log in and start using our services.</p>
+          
+    //       <p>To log in, click the button below:</p>
+    //       <p style="text-align: center;">
+    //         <a href="https://sanzadinternational.in/login" style="background: #007bff; color: #fff; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block; font-size: 16px; font-weight: bold;">
+    //           Login Now
+    //         </a>
+    //       </p>
+    
+    //       <p>If you have any questions, feel free to contact our support team.</p>
+    //       <p>Best regards,</p>
+    //       <p><strong>Sanzad International Team</strong></p>
+    //     </div>
+    //   `,
+    // });
+
+    // console.log("Message sent: %s", info.messageId);
+
+    //     res.status(200).json({message:"Supplier Status is updated Successfully",result,results})
     }catch(error){
         next(error)
     }
