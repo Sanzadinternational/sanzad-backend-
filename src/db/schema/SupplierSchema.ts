@@ -26,6 +26,7 @@ export const registerTable = pgTable('supplier', {
   IsApproved:integer(), 
   Token:varchar({length:255}), 
   ResetTokenExpiry: varchar({length:255}), 
+  RejectionReason:varchar({length:755}),
 }); 
     
 export const One_WayTable = pgTable('One_Way_Service_Details',{
