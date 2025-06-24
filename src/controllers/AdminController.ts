@@ -454,6 +454,7 @@ export const ChangeSupplierApprovalStatus = async(req:Request,res:Response,next:
             // IV: AgentTable.IV, // IV used for encryption
         })
         .from(registerTable)
+        .where(eq(registerTable.Email,id));
         .orderBy(desc(registerTable.id))
         .limit(1);
 
