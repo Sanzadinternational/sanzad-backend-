@@ -446,6 +446,9 @@ export const ChangeSupplierApprovalStatus = async(req:Request,res:Response,next:
         const results = await db.update(registerTable)
         .set({ IsApproved: isApproved })
         .where(eq(registerTable.Email,id));
+      if (parseInt(isApproved) === 2) {
+      return res.status(200).json("Status is cancelled");
+      }
         const result = await db
         .select({
             Email: registerTable.Email,
