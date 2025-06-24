@@ -499,6 +499,15 @@ export const ChangeSupplierApprovalStatus = async(req:Request,res:Response,next:
         res.status(200).json({message:"Supplier Status is updated Successfully",result,results})
   }else if(parseInt(isApproved) === 2)
     {
+         const { Email, RejectionReason } = req.body;
+
+        const result = await db.update(registerTable)
+        .set({ RejectionReason })
+        .where(eq(registerTable.Email, Email)) // or use `.id` if you're using ID
+        .returning();
+
+        res.status(200).json({message:"Supplier is Rejected Successfully",result});
+        
     const info = await transporter.sendMail({
       from: '"Sanzad International" <sanzadinternational5@gmail.com>', // Sender address
       to: `${result[0].Email}`, // Recipient email
