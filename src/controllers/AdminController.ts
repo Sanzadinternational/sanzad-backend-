@@ -347,6 +347,18 @@ export const ChangeAgentApprovalStatus = async (req: Request, res: Response, nex
                 error: 'Agent not found or no changes were made.' 
             });
         }
+
+         if(parseInt(isApproved) === 2)
+        {
+          const { RejectionReason } = req.body;
+
+        const result = await db.update(AgentTable)
+        .set({ RejectionReason })
+        .where(eq(AgentTable.Email, id)) // or use `.id` if you're using ID
+        .returning();
+
+        res.status(200).json({message:"Agent is Rejected Successfully",result});
+        }
 // Fetch the last inserted record
 const result = await db
 .select({
