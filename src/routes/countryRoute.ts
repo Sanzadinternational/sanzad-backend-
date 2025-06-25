@@ -4,4 +4,4 @@ const router = express.Router();
 
 router.get('/GetCountryData',getAllCountryData);
 
-export {router as countryRoute }; 
+export {router as CountryRoute }; 
