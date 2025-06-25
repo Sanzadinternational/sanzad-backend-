@@ -11,7 +11,7 @@ export const AgentTable = pgTable('Agent_registration', {
   Gst_Vat_Tax_number: varchar({ length: 255 }).notNull(),
   Contact_Person: varchar({ length: 255 }).notNull(),
   Email: varchar({ length: 255 }).notNull(),
-
+  State: varchar({length:255}),
   Password: varchar({ length: 255 }).notNull(),
   Office_number: varchar({ length: 255 }).notNull(),
   Mobile_number: varchar({ length: 255 }).notNull(),
