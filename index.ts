@@ -13,6 +13,7 @@ import { LoginRoute } from "./src/routes/LoginRoute";
 import { SearchRouter } from "./src/routes/SearchRoute";
 import { ProfileRoute } from "./src/routes/ProfileRoute";
 import { PaymentRoute } from "./src/routes/PaymentRoute";
+import { countryRoute } from "./src/routes/countryRoute";
 
 const app = express();
 const server = http.createServer(app);
@@ -54,6 +55,7 @@ app.use('/api/V1/admin', AdminRoute);
 app.use("/api/V1/data", SearchRouter);
 app.use('/api/V1/view', ProfileRoute);
 app.use('/api/V1/payment', PaymentRoute);
+app.use('api/V1', countryRoute);
 app.use('/uploads', express.static('/home/ubuntu/uploads'));
 
 // Start Server
