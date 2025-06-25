@@ -7,5 +7,6 @@ const data = JSON.parse(raw);
 
 
 export const getAllCountryData = async (req: Request, res: Response, next: NextFunction) => {
-res.json(data);
+// res.json(data);
+  res.json({ message:'Hello from country route'});
 }
