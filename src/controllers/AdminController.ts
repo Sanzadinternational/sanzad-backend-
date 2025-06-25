@@ -401,7 +401,7 @@ const info = await transporter.sendMail({
 
 console.log("Message sent: %s", info.messageId);
 
-        return res.status(200).json({ 
+     res.status(200).json({ 
             message: 'Agent approval status updated successfully.',
             result,
             results 
