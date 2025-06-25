@@ -13,7 +13,7 @@ import { LoginRoute } from "./src/routes/LoginRoute";
 import { SearchRouter } from "./src/routes/SearchRoute";
 import { ProfileRoute } from "./src/routes/ProfileRoute";
 import { PaymentRoute } from "./src/routes/PaymentRoute";
-import { countryRoute } from "./src/routes/countryRoute";
+import { CountryRoute } from "./src/routes/countryRoute";
 
 const app = express();
 const server = http.createServer(app);
