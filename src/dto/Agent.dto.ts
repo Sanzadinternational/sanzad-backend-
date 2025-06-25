@@ -9,7 +9,7 @@ export interface CreateAgentInput {
   Gst_Vat_Tax_number: string;
   Contact_Person: string;
   Email: string;
- 
+  State: string;
   Password: string;
   Office_number: string;
   Mobile_number: string;
