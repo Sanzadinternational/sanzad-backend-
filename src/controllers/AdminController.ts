@@ -348,17 +348,6 @@ export const ChangeAgentApprovalStatus = async (req: Request, res: Response, nex
             });
         }
 
-         if(parseInt(isApproved) === 2)
-        {
-          const { RejectionReason } = req.body;
-
-        const result = await db.update(AgentTable)
-        .set({ RejectionReason })
-        .where(eq(AgentTable.Email, id)) // or use `.id` if you're using ID
-        .returning();
-
-        res.status(200).json({message:"Agent is Rejected Successfully",result});
-        }
 // Fetch the last inserted record
 const result = await db
 .select({
@@ -382,7 +371,8 @@ auth: {
      pass: 'betf euwp oliy tooq', // Email password from environment variable
 },
 });
-
+if(parseInt(isApproved) === 1)
+{
 const info = await transporter.sendMail({
   from: '"Sanzad International" <sanzadinternational5@gmail.com>', // Sender address
   to: `${result[0].Email}`, // Recipient email
@@ -416,6 +406,20 @@ console.log("Message sent: %s", info.messageId);
             result,
             results 
         });
+
+}else if(parseInt(isApproved) === 2)
+        {
+          const { RejectionReason } = req.body;
+
+        const result = await db.update(AgentTable)
+        .set({ RejectionReason })
+        .where(eq(AgentTable.Email, id)) // or use `.id` if you're using ID
+        .returning();
+
+        res.status(200).json({message:"Agent is Rejected Successfully",result});
+        }else{
+        res.status(200).json({message:"Agent Status is Pending"});
+        }
     } catch (error) {
         console.error('Error updating agent approval status:', error);
         next(error); // Pass error to global error handler
