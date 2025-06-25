@@ -22,6 +22,7 @@ export const AgentTable = pgTable('Agent_registration', {
   IsApproved:integer(),
   Token:varchar({length:255}),
   ResetTokenExpiry: varchar({length:255}),
+  RejectionReason:varchar({length:755}), 
 }); 
 export const forget_password = pgTable('forget_password', { 
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
