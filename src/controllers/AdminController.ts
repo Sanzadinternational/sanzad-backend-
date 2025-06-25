@@ -503,7 +503,7 @@ export const ChangeSupplierApprovalStatus = async(req:Request,res:Response,next:
 
         const result = await db.update(registerTable)
         .set({ RejectionReason })
-        // .where(eq(registerTable.Email, Email)) // or use `.id` if you're using ID
+        .where(eq(registerTable.Email, id)) // or use `.id` if you're using ID
         .returning();
 
         res.status(200).json({message:"Supplier is Rejected Successfully",result});
