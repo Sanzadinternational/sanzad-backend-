@@ -34,17 +34,17 @@ export const BookingTable = pgTable('booking', {
         .default('pending')
         .$type<'pending' | 'confirmed' | 'completed' | 'cancelled'>(),
     booked_at: timestamp('booked_at', { withTimezone: true }).defaultNow(),
-    plane_arriving_form: varchar({length:355}),
-    airline_name:varchar({length:255}),
-    flight_number:varchar({length:255}),
-    cruise_ship_name:varchar({length:255}),
-    train_arriving_from:varchar({length:255}),
-    train_name:varchar({length:255}),
-    train_operator:varchar({length:255}),
-    hotel_name:varchar({length:255}),
-    pickup_address:varchar({length:255}),
-    destination_name:varchar({length:255}),
-    destination_address:varchar({length:255}),
+    planeArrivingFrom: varchar({length:355}),
+    airlineName:varchar({length:255}),
+    flightNumber:varchar({length:255}),
+    cruiseShipName:varchar({length:255}),
+    trainArrivingFrom:varchar({length:255}),
+    trainName:varchar({length:255}),
+    trainOperator:varchar({length:255}),
+    hotelName:varchar({length:255}),
+    pickupAddress:varchar({length:255}),
+    destinationName:varchar({length:255}),
+    destinationAddress:varchar({length:255}),
     completed_at: timestamp('completed_at', { withTimezone: true })
 });
 
