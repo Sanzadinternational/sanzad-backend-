@@ -154,7 +154,18 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
        passenger_email, 
        passenger_name, 
        passenger_phone, 
-       currency
+       currency,
+       planeArrivingFrom,
+       airlineName,
+       flightNumber,
+       cruiseShipName,
+       trainArrivingFrom,
+       trainName,
+       trainOperator,
+       hotelName,
+       pickupAddress,
+       destinationName,
+       destinationAddress,
       } = req.body;
   
       if (!agent_id || !vehicle_id || !suplier_id || !pickup_location || !drop_location || !price || !reference_number) {
@@ -180,6 +191,17 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
      customer_email: passenger_email,
      customer_mobile: passenger_phone,
      currency,
+        planeArrivingFrom,
+       airlineName,
+       flightNumber,
+       cruiseShipName,
+       trainArrivingFrom,
+       trainName,
+       trainOperator,
+       hotelName,
+       pickupAddress,
+       destinationName,
+       destinationAddress,
         status: 'pending',
       }).returning({ id: BookingTable.id });
   
