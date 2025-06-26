@@ -155,22 +155,35 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
        passenger_name, 
        passenger_phone, 
        currency,
-       planeArrivingFrom,
-       airlineName,
-       flightNumber,
-       cruiseShipName,
-       trainArrivingFrom,
-       trainName,
-       trainOperator,
-       hotelName,
-       pickupAddress,
-       destinationName,
-       destinationAddress,
+pickupDetails,
       } = req.body;
   
       if (!agent_id || !vehicle_id || !suplier_id || !pickup_location || !drop_location || !price || !reference_number) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
+
+     let pickupTypeFields: Record<string, any> = {};
+    if (pickupDetails?.pickupType === "airport") {
+      pickupTypeFields = {
+        planeArrivingFrom: pickupDetails.planeArrivingFrom,
+        airlineName: pickupDetails.airlineName,
+        flightNumber: pickupDetails.flightNumber,
+      };
+    } else if (pickupDetails?.pickupType === "cruise") {
+      pickupTypeFields = {
+        cruiseShipName: pickupDetails.cruiseShipName,
+      };
+    } else if (pickupDetails?.pickupType === "train") {
+      pickupTypeFields = {
+        trainArrivingFrom: pickupDetails.trainArrivingFrom,
+        trainName: pickupDetails.trainName,
+        trainOperator: pickupDetails.trainOperator,
+      };
+    } else if (pickupDetails?.pickupType === "hotel") {
+      pickupTypeFields = {
+        hotelName: pickupDetails.hotelName,
+      };
+    }
 
       const customerEmail = "abhinavgu34@gmail.com";
         const customerPhone = "8433169822";
@@ -191,17 +204,7 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
      customer_email: passenger_email,
      customer_mobile: passenger_phone,
      currency,
-        planeArrivingFrom,
-       airlineName,
-       flightNumber,
-       cruiseShipName,
-       trainArrivingFrom,
-       trainName,
-       trainOperator,
-       hotelName,
-       pickupAddress,
-       destinationName,
-       destinationAddress,
+        ...pickupTypeFields,
         status: 'pending',
       }).returning({ id: BookingTable.id });
   
