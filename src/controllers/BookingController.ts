@@ -24,6 +24,17 @@ export const Booking = async(req:Request,res:Response,next:NextFunction)=>{
             passenger_name,
             passenger_email,
             passenger_contact_no,
+            plane_arriving_form,
+            airline_name,
+            flight_number,
+            cruise_ship_name,
+            train_arriving_from,
+            train_name,
+            train_operator,
+            hotel_name,
+            pickup_address,
+            destination_name,
+            destination_address,
             agentforeign
           } = <CreateBooking>req.body; 
           function getSixDigitRandom() {
@@ -49,6 +60,17 @@ export const Booking = async(req:Request,res:Response,next:NextFunction)=>{
             passenger_name,
             passenger_email,
             passenger_contact_no,
+            plane_arriving_form,
+            airline_name,
+            flight_number,
+            cruise_ship_name,
+            train_arriving_from,
+            train_name,
+            train_operator,
+            hotel_name,
+            pickup_address,
+            destination_name,
+            destination_address,
             agentforeign
           })
           .returning();
