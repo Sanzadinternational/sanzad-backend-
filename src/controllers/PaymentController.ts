@@ -156,6 +156,7 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
        passenger_phone, 
        currency,
 pickupDetails,
+       dropoffDetails
       } = req.body;
   
       if (!agent_id || !vehicle_id || !suplier_id || !pickup_location || !drop_location || !price || !reference_number) {
@@ -173,13 +174,13 @@ pickupDetails,
       pickupTypeFields = {
         cruiseShipName: pickupDetails.cruiseShipName,
       };
-    } else if (pickupDetails?.pickupType === "train") {
+    } else if (pickupDetails?.pickupType === "station") {
       pickupTypeFields = {
         trainArrivingFrom: pickupDetails.trainArrivingFrom,
         trainName: pickupDetails.trainName,
         trainOperator: pickupDetails.trainOperator,
       };
-    } else if (pickupDetails?.pickupType === "hotel") {
+    } else if (pickupDetails?.pickupType === "others") {
       pickupTypeFields = {
         hotelName: pickupDetails.hotelName,
       };
@@ -205,6 +206,7 @@ pickupDetails,
      customer_mobile: passenger_phone,
      currency,
         ...pickupTypeFields,
+       ..dropoffDetails,
         status: 'pending',
       }).returning({ id: BookingTable.id });
   
