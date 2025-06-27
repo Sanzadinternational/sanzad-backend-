@@ -681,45 +681,7 @@ export const DeleteMarginData = async(req:Request,res:Response,next:NextFunction
 }
 export const GetAllBooking = async(req:Request,res:Response,next:NextFunction)=>{
   try{
-        const result= await db.select({ 
-            id:BookingTable.id,
-         agent_id:BookingTable.agent_id,
-         vehicle_id:BookingTable.vehicle_id,
-         suplier_id:BookingTable.suplier_id,
-         pickup_location:BookingTable.pickup_location,
-        drop_location:BookingTable.drop_location,
-        pickup_lat:BookingTable.pickup_lat,
-        pickup_lng:BookingTable.pickup_lng,
-        drop_lat:BookingTable.drop_lat,
-        drop_lng:BookingTable.drop_lng,
-        distance_miles:BookingTable.distance_miles,
-        price:BookingTable.price,
-        currency:BookingTable.currency,
-        customer_name:BookingTable.customer_name,
-        customer_email:BookingTable.customer_email,
-        customer_mobile:BookingTable.customer_mobile,
-        status:BookingTable.status,
-        booked_at:BookingTable.booked_at,
-        planeArrivingFrom:BookingTable.planeArrivingFrom,
-        airlineName:BookingTable.airlineName,
-        flightNumber:BookingTable.flightNumber,
-        cruiseShipName:BookingTable.cruiseShipName,
-        trainArrivingFrom:BookingTable.trainArrivingFrom,
-        trainName:BookingTable.trainName,
-        trainOperator:BookingTable.trainOperator,
-        hotelName:BookingTable.hotelName,
-        pickupAddress:BookingTable.pickupAddress,
-        destinationName:BookingTable.destinationName,
-        destinationAddress:BookingTable.destinationAddress,
-        booking_id:PaymentsTable.booking_id,
-        payment_method:PaymentsTable.payment_method,
-        payment_status:PaymentsTable.payment_status,
-        transaction_id:PaymentsTable.transaction_id,
-        reference_number:PaymentsTable.reference_number,
-        amount:PaymentsTable.amount,
-        Company_name:AgentTable.Company_name,
-        Owner:registerTable.Owner,
-        })
+        const result= await db.select()
         .from(BookingTable)
        .fullJoin( 
             PaymentsTable ,
