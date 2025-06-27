@@ -681,7 +681,9 @@ export const DeleteMarginData = async(req:Request,res:Response,next:NextFunction
 }
 export const GetAllBooking = async(req:Request,res:Response,next:NextFunction)=>{
   try{
-        const result= await db.select()
+        const result= await db.select({
+               id:BookingTable.id,
+        })
         .from(BookingTable)
        .fullJoin( 
             PaymentsTable ,
