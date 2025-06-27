@@ -156,7 +156,7 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
        passenger_phone, 
        currency,
 pickupDetails,
-       dropoffDetails
+       dropoffDetails,
       } = req.body;
   
       if (!agent_id || !vehicle_id || !suplier_id || !pickup_location || !drop_location || !price || !reference_number) {
@@ -206,7 +206,7 @@ pickupDetails,
      customer_mobile: passenger_phone,
      currency,
         ...pickupTypeFields,
-       ..dropoffDetails,
+       ...dropoffDetails,
         status: 'pending',
       }).returning({ id: BookingTable.id });
   
