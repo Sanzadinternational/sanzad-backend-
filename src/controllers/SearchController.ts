@@ -382,7 +382,7 @@ export const getBearerToken = async (
   
   // Function to fetch and normalize data from third-party APIs
   export const fetchFromThirdPartyApis = async (
-    apiDetails: { url: string; username: string; password: string, supplier_id:string }[],
+    validApiDetails: { url: string; username: string; password: string, supplier_id:string }[],
     dropoffLocation: string,
     pickupLocation: string
   ): Promise<any[]> => {
