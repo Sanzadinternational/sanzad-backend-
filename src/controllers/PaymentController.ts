@@ -64,23 +64,26 @@ export const PaymentInitiate = async (req: Request, res: Response, next: NextFun
     const txnid = `BOOK-${bookingId.slice(0, 8)}-${Date.now().toString().slice(-4)}`;
     const productinfo = "RideBooking";
 
-  const hashString = `${key}|${txnid}|${price}|${productinfo}|${passenger_name}|${passenger_email}|||||||||||${salt}`;
-  const hash = crypto.createHash("sha512").update(hashString).digest("hex");
+  const amount = Number(price).toFixed(2); // Ensure consistent formatting
 
-    const payuParams = {
-      key,
-      txnid,
-      amount: price,
-      productinfo,
-      firstname: passenger_name,
-      email: passenger_email,
-      phone: passenger_phone,
-      surl,
-      furl,
-      hash,
-      service_provider: "payu_paisa",
-      udf1: bookingId
-    };
+const hashString = `${key}|${txnid}|${amount}|${productinfo}|${passenger_name}|${passenger_email}|||||||||||${salt}`;
+const hash = crypto.createHash("sha512").update(hashString).digest("hex");
+
+const payuParams = {
+  key,
+  txnid,
+  amount,
+  productinfo,
+  firstname: passenger_name,
+  email: passenger_email,
+  phone: passenger_phone,
+  surl,
+  furl,
+  hash,
+  service_provider: "payu_paisa",
+  udf1: bookingId
+};
+
 
     return res.json({
      paymentUrl: payuUrl,
