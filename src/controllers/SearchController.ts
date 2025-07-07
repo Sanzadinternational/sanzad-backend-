@@ -407,6 +407,7 @@ export const getBearerToken = async (
           passengers: item.car_class?.capacity || 0,
           mediumBag: item.car_class?.luggage_capacity || 0,
           source: "api",
+         SmallBag: 0,
           supplierId: supplier_id,
         }));
 
