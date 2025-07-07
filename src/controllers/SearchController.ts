@@ -381,47 +381,45 @@ export const getBearerToken = async (
   
   
   // Function to fetch and normalize data from third-party APIs
-  export const fetchFromThirdPartyApis = async (
-    validApiDetails: { url: string; username: string; password: string, supplier_id:string }[],
-    dropoffLocation: string,
-    pickupLocation: string
-  ): Promise<any[]> => {
-    const results = await Promise.all(
-      validApiDetails.map(async ({ url, username, password }) => {
-        try {
-          // Get the Bearer token
-          const token = await getBearerToken(url, username, password);
-          // Fetch data using the Bearer token
-          const response = await axios.get(`
-            ${url}?user_id=${username}&lang=en&currency=USD&start_place_point=${pickupLocation}&finish_place_point=${dropoffLocation}`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
-  
-          
-          return response.data.result.map((item: any) => ({
-            vehicalType: item.car_class?.title || "Unknown",
-            brand: item.car_class?.models[0] || "Unknown",
-            price: item.price || 0,
-            currency: item.currency || "USD",
-            passengers: item.car_class?.capacity || 0,
-            mediumBag: item.car_class?.luggage_capacity || 0,
-            source: "api",
-           supplierId: supplier_id,
-          }));
+ export const fetchFromThirdPartyApis = async (
+  validApiDetails: { url: string; username: string; password: string; supplier_id: string }[],
+  dropoffLocation: string,
+  pickupLocation: string
+): Promise<any[]> => {
+  const results = await Promise.all(
+    validApiDetails.map(async ({ url, username, password, supplier_id }) => {
+      try {
+        const token = await getBearerToken(url, username, password);
+        const response = await axios.get(
+          `${url}?user_id=${username}&lang=en&currency=USD&start_place_point=${pickupLocation}&finish_place_point=${dropoffLocation}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
-        } catch (error: any) {
-          console.error(`Error fetching data from ${url}:, error.message`);
-          return { source: url, error: error.message};
-        }
-      })
-    );
-  
-    return results;
-  };
+        return response.data.result.map((item: any) => ({
+          vehicalType: item.car_class?.title || "Unknown",
+          brand: item.car_class?.models[0] || "Unknown",
+          price: item.price || 0,
+          currency: item.currency || "USD",
+          passengers: item.car_class?.capacity || 0,
+          mediumBag: item.car_class?.luggage_capacity || 0,
+          source: "api",
+          supplierId: supplier_id,
+        }));
+
+      } catch (error: any) {
+        console.error(`Error fetching data from ${url}: ${error.message}`);
+        return [{ source: url, error: error.message }];
+      }
+    })
+  );
+
+  return results.flat();
+};
+
 
 // Search function
 export const Search = async (req: Request, res: Response, next: NextFunction) => {
