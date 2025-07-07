@@ -83,8 +83,8 @@ export const PaymentInitiate = async (req: Request, res: Response, next: NextFun
     };
 
     return res.json({
-      url: payuUrl,
-      params: payuParams
+     paymentUrl: payuUrl,
+  formData: payuParams
     });
   } catch (error) {
     console.error("Payment initiation error:", error);
