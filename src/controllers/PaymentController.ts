@@ -35,8 +35,8 @@ export const PaymentInitiate = async (req: Request, res: Response, next: NextFun
     const key = 'FYWyBY';
     const salt = 'QlrgPqGiOlYGXn7eQ0eIx2VpyEJBjfL1';
     const payuUrl = 'https://test.payu.in/_payment';
-    const surl = `${process.env.FRONTEND_URL}/api/payments/status-update`;
-    const furl = `${process.env.FRONTEND_URL}/api/payments/status-update`;
+    const surl = `https://api.sanzadinternational.in/api/payments/status-update`;
+    const furl = `https://api.sanzadinternational.in/api/payments/status-update`;
 
     const [booking] = await db
       .insert(BookingTable)
