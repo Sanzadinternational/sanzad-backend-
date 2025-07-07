@@ -384,14 +384,15 @@ export const getBearerToken = async (
  export const fetchFromThirdPartyApis = async (
   validApiDetails: { url: string; username: string; password: string; supplier_id: string }[],
   dropoffLocation: string,
-  pickupLocation: string
+  pickupLocation: string,
+  targetCurrency: string
 ): Promise<any[]> => {
   const results = await Promise.all(
     validApiDetails.map(async ({ url, username, password, supplier_id }) => {
       try {
         const token = await getBearerToken(url, username, password);
         const response = await axios.get(
-          `${url}?user_id=${username}&lang=en&currency=USD&start_place_point=${pickupLocation}&finish_place_point=${dropoffLocation}`,
+          `${url}?user_id=${username}&lang=en&currency=${targetCurrency}&start_place_point=${pickupLocation}&finish_place_point=${dropoffLocation}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -449,7 +450,8 @@ export const Search = async (req: Request, res: Response, next: NextFunction) =>
     const apiData = await fetchFromThirdPartyApis(
       validApiDetails,
       dropoffLocation,
-      pickupLocation
+      pickupLocation,
+     targetCurrency
     );
 
     const DatabaseData = await fetchFromDatabase(pickupLocation, dropoffLocation,targetCurrency,time, date);
