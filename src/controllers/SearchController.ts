@@ -387,7 +387,7 @@ export const getBearerToken = async (
     pickupLocation: string
   ): Promise<any[]> => {
     const results = await Promise.all(
-      apiDetails.map(async ({ url, username, password }) => {
+      validApiDetails.map(async ({ url, username, password }) => {
         try {
           // Get the Bearer token
           const token = await getBearerToken(url, username, password);
