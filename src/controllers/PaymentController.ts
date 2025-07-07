@@ -12,129 +12,135 @@ import { AgentTable } from "../db/schema/AgentSchema";
 const nodemailer = require("nodemailer"); 
 import PDFDocument from 'pdfkit';
 
-export const PaymentIniciate = async (req: Request, res: Response, next: NextFunction) => {
+export const PaymentInitiate = async (req: Request, res: Response, next: NextFunction) => {
   try {
-  const { agent_id, vehicle_id, suplier_id, pickup_location, drop_location, pickup_lat, pickup_lng, drop_lat, drop_lng, distance_miles, price, passenger_email, passenger_name, passenger_phone, currency } = req.body;
-
-        // const merchantId = process.env.CCAVENUE_MERCHANT_ID!;
-        // const accessCode = process.env.CCAVENUE_ACCESS_CODE!;
-        // const workingKey = process.env.CCAVENUE_WORKING_KEY!;
-    const merchantId = 	'4188798';
-        const accessCode = 'AVOA68MD68CH89AOHC';
-        const workingKey = '0CF068BF3116484E4A4ABEE416E0D777';
-        const redirectUrl = "https://sanzadinternational.in/payment-response-handler";
-        const cancelUrl = "https://sanzadinternational.in/payment-failed";
-        const customerEmail = "abhinavgu34@gmail.com";
-        const customerPhone = "8433169822";
-
-            // Step 1: Save booking in `booking` table
-    const [booking] = await db
-    .insert(BookingTable)
-    .values({
-      agent_id: agent_id,
-      vehicle_id: vehicle_id,
-      suplier_id: suplier_id,
-      pickup_location: pickup_location,
-      drop_location: drop_location,
-      pickup_lat: pickup_lat,
-      pickup_lng: pickup_lng,
-      drop_lat: drop_lat,
-      drop_lng: drop_lng,
-      distance_miles: distance_miles,
+    const {
+      agent_id,
+      vehicle_id,
+      suplier_id,
+      pickup_location,
+      drop_location,
+      pickup_lat,
+      pickup_lng,
+      drop_lat,
+      drop_lng,
+      distance_miles,
       price,
-     customer_name: passenger_name,
-     customer_email: passenger_email,
-     customer_mobile: passenger_phone,
-     currency,
-      status: 'pending',
-    })
-    .returning({ id: BookingTable.id });
+      passenger_email,
+      passenger_name,
+      passenger_phone,
+      currency
+    } = req.body;
 
-  const bookingId = booking.id;
+    const key = 'FYWyBY';
+    const salt = 'QlrgPqGiOlYGXn7eQ0eIx2VpyEJBjfL1';
+    const payuUrl = 'https://test.payu.in/_payment';
+    const surl = `${process.env.FRONTEND_URL}/api/payments/status-update`;
+    const furl = `${process.env.FRONTEND_URL}/api/payments/status-update`;
 
-  // Step 2: Generate Order ID for CCAvenue
-const orderId = `BOOK-${bookingId.slice(0, 8)}-${Date.now().toString().slice(-4)}`;
+    const [booking] = await db
+      .insert(BookingTable)
+      .values({
+        agent_id,
+        vehicle_id,
+        suplier_id,
+        pickup_location,
+        drop_location,
+        pickup_lat,
+        pickup_lng,
+        drop_lat,
+        drop_lng,
+        distance_miles,
+        price,
+        customer_name: passenger_name,
+        customer_email: passenger_email,
+        customer_mobile: passenger_phone,
+        currency,
+        status: "pending"
+      })
+      .returning({ id: BookingTable.id });
 
+    const bookingId = booking.id;
+    const txnid = `BOOK-${bookingId.slice(0, 8)}-${Date.now().toString().slice(-4)}`;
+    const productinfo = "RideBooking";
 
-        // Payment data
-        const data = `language=EN&billing_email=${passenger_email}&currency=INR&order_id=${orderId}&merchant_id=${merchantId}&amount=${price}&redirect_url=${redirectUrl}&cancel_url=${cancelUrl}&billing_tel=${passenger_phone}&merchant_param1=${bookingId}`;
-   console.log('Raw Payment Data:', data);
+    const hashString = `${key}|${txnid}|${price}|${productinfo}|${passenger_name}|${passenger_email}|||||||||||${salt}`;
+    const hash = crypto.createHash("sha512").update(hashString).digest("hex");
 
-        const encryptedData = encrypt(data, workingKey);
-  
-        res.json({
-          url: 'https://secure.ccavenue.com/transaction/transaction.do?command=initiateTransaction',
-          access_code: accessCode,
-          encRequest: encryptedData
-        });
-      }
-      catch (error) {
-        console.error('Payment initiation failed:', error);
-        res.status(500).json({ error: 'Failed to initiate payment' });
-      }
+    const payuParams = {
+      key,
+      txnid,
+      amount: price,
+      productinfo,
+      firstname: passenger_name,
+      email: passenger_email,
+      phone: passenger_phone,
+      surl,
+      furl,
+      hash,
+      service_provider: "payu_paisa",
+      udf1: bookingId
+    };
+
+    return res.json({
+      url: payuUrl,
+      params: payuParams
+    });
+  } catch (error) {
+    console.error("Payment initiation error:", error);
+    return res.status(500).json({ error: "Failed to initiate payment" });
+  }
 };
 
 export const PaymentStatusUpdate = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    console.log('Payment Status Update');
-    const encResp = req.body.encResp;
-   console.log(req.body.encResp); // Check if encResp exists
+    const {
+      status,
+      txnid,
+      amount,
+      email,
+      firstname,
+      productinfo,
+      mihpayid,
+      mode,
+      hash,
+      udf1
+    } = req.body;
 
-   if (!encResp) {
-  // return res.status(400).json({ error: 'Missing encrypted response (encResp)' });
-    console.log('Missing encrypted response (encResp)');
-}
-    console.log(encResp);
-    const workingKey = '0CF068BF3116484E4A4ABEE416E0D777';
-    
-    const decryptedResponse = decrypt(encResp, workingKey);
-    const responseData = new URLSearchParams(decryptedResponse);
-    console.log(responseData);
-    
-    const orderId = responseData.get('order_id'); 
-    const status = responseData.get('order_status'); // 'Success' | 'Failure' | 'Aborted'
-    const amount = responseData.get('amount');
-    const transactionId = responseData.get('tracking_id'); // Unique Transaction ID
-    const paymentMode = responseData.get('payment_mode'); // Example: 'Net Banking', 'Credit Card'
+    const key = 'FYWyBY';
+    const salt = 'QlrgPqGiOlYGXn7eQ0eIx2VpyEJBjfL1';
 
-    // Extract Booking ID from `merchant_param1`
-    const bookingId = responseData.get('merchant_param1');
-    if (!bookingId) {
-      return res.status(400).json({ error: 'Invalid booking reference' });
+    const hashString = `${salt}|${status}|||||||||||${udf1}|${email}|${firstname}|${productinfo}|${amount}|${txnid}|${key}`;
+    const expectedHash = crypto.createHash("sha512").update(hashString).digest("hex");
+
+    if (expectedHash !== hash) {
+      console.warn("Invalid PayU hash");
+      return res.status(400).json({ error: "Invalid hash" });
     }
 
-    let paymentStatus: 'successful' | 'failed' = 'failed';
-    let bookingStatus: 'confirmed' | 'cancelled' = 'cancelled';
+    const paymentStatus = status.toLowerCase() === "success" ? "successful" : "failed";
+    const bookingStatus = paymentStatus === "successful" ? "confirmed" : "cancelled";
 
-    if (status === 'Success') {
-      paymentStatus = 'successful';
-      bookingStatus = 'confirmed';
-    }
-
-    // Step 3: Save payment details in `payments` table
     await db.insert(PaymentsTable).values({
-      booking_id: bookingId,
-      payment_method: 'CCavenue',
+      booking_id: udf1,
+      payment_method: "PayU",
       payment_status: paymentStatus,
-      transaction_id: transactionId ? transactionId : null, // CCAvenue Transaction ID
-      reference_number: null, // Not needed for CCAvenue
-      amount: (parseFloat(amount || "0")).toFixed(2),
+      transaction_id: mihpayid,
+      reference_number: txnid,
+      amount: parseFloat(amount).toFixed(2)
     });
 
-    // // Step 4: Update booking status based on payment outcome
-    // await db.update(BookingTable)
-    //   .set({ status: bookingStatus })
-    //   .where(sql`${BookingTable.id} = ${bookingId}`);
+    await db.update(BookingTable)
+      .set({ status: bookingStatus })
+      .where(sql`${BookingTable.id} = ${udf1}`);
 
-  return res.status(200).json({
-  redirectUrl: `${process.env.FRONTEND_URL}/payment-${paymentStatus}?orderId=${orderId}&transactionId=${transactionId}&amount=${amount}&paymentMode=${paymentMode}`
-});
+    // Redirect user from server or pass redirect URL
+    return res.redirect(`${process.env.FRONTEND_URL}/payment-${paymentStatus}?orderId=${txnid}&transactionId=${mihpayid}&amount=${amount}&paymentMode=${mode}`);
   } catch (error) {
-    console.error('Payment callback error:', error);
-    res.status(500).json({ error: 'Payment processing failed' });
+    console.error("PayU callback failed:", error);
+    return res.status(500).json({ error: "Payment processing failed" });
   }
-  };
-
+};
   
   export const PaymentWithReferenceNo = async (req: Request, res: Response, next: NextFunction) => {
     try {
