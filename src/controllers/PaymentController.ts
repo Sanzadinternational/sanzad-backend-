@@ -64,7 +64,7 @@ export const PaymentInitiate = async (req: Request, res: Response, next: NextFun
     const txnid = `BOOK-${bookingId.slice(0, 8)}-${Date.now().toString().slice(-4)}`;
     const productinfo = "RideBooking";
 
-  const hashString = `${key}|${txnid}|${amount}|${productinfo}|${firstname}|${email}|||||||||||${salt}`;
+  const hashString = `${key}|${txnid}|${price}|${productinfo}|${firstname}|${email}|||||||||||${salt}`;
   const hash = crypto.createHash("sha512").update(hashString).digest("hex");
 
     const payuParams = {
