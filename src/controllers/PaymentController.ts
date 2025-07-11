@@ -66,41 +66,48 @@ export const PaymentInitiate = async (req: Request, res: Response, next: NextFun
 
   const amount = Number(price).toFixed(2); // Ensure consistent formatting
 
-const hashString = `${key}|${txnid}|${amount}|${productinfo}|${passenger_name}|${passenger_email}|${bookingId}|||||||||${salt}`;
-console.log(hashString);
-const hash = crypto
-  .createHash("sha512")
-  .update(hashString)
-  .digest("hex");
+// CORRECTED HASH CALCULATION
+    const hashFields = [
+      key,
+      txnid,
+      amount,
+      productinfo,
+      passenger_name,  // firstname
+      passenger_email, // email
+      bookingId,       // udf1
+      '',              // udf2
+      '',              // udf3
+      '',              // udf4
+      '',              // udf5
+      '',              // udf6
+      '',              // udf7
+      '',              // udf8
+      '',              // udf9
+      '',              // udf10
+      salt
+    ];
 
-const payuParams = {
-  key,
-  txnid,
-  amount,
-  productinfo,
-  firstname: passenger_name,
-  email: passenger_email,
-  phone: passenger_phone,
-  surl,
-  furl,
-  hash,
-  service_provider: "payu_paisa", // Required for older integrations
-  udf1: bookingId,
-  udf2: "",
-  udf3: "",
-  udf4: "",
-  udf5: "",
-  udf6: "",
-  udf7: "",
-  udf8: "",
-  udf9: "",
-  udf10: ""
-};
+    const hashString = hashFields.join('|');
+    const hash = crypto.createHash('sha512').update(hashString).digest('hex');
 
+    const payuParams = {
+      key,
+      txnid,
+      amount,
+      productinfo,
+      firstname: passenger_name,
+      email: passenger_email,
+      phone: passenger_phone,
+      surl,
+      furl,
+      hash,
+      service_provider: "payu_paisa",
+      udf1: bookingId  // Must match udf1 in hash calculation
+    };
 
     return res.json({
-     paymentUrl: payuUrl,
-  formData: payuParams
+      paymentUrl: payuUrl,
+      formData: payuParams
     });
   } catch (error) {
     console.error("Payment initiation error:", error);
