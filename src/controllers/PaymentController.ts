@@ -66,8 +66,11 @@ export const PaymentInitiate = async (req: Request, res: Response, next: NextFun
 
   const amount = Number(price).toFixed(2); // Ensure consistent formatting
 
-const hashString = `${key}|${txnid}|${amount}|${productinfo}|${passenger_name}|${passenger_email}|||||||||||${salt}`;
-const hash = crypto.createHash("sha512").update(hashString).digest("hex");
+const hashString = `${key}|${txnid}|${amount}|${productinfo}|${passenger_name}|${passenger_email}|${bookingId}|||||||||${salt}`;
+const hash = crypto
+  .createHash("sha512")
+  .update(hashString)
+  .digest("hex");
 
 const payuParams = {
   key,
@@ -80,8 +83,17 @@ const payuParams = {
   surl,
   furl,
   hash,
-  service_provider: "payu_paisa",
-  udf1: bookingId
+  service_provider: "payu_paisa", // Required for older integrations
+  udf1: bookingId,
+  udf2: "",
+  udf3: "",
+  udf4: "",
+  udf5: "",
+  udf6: "",
+  udf7: "",
+  udf8: "",
+  udf9: "",
+  udf10: ""
 };
 
 
