@@ -67,6 +67,7 @@ export const PaymentInitiate = async (req: Request, res: Response, next: NextFun
   const amount = Number(price).toFixed(2); // Ensure consistent formatting
 
 const hashString = `${key}|${txnid}|${amount}|${productinfo}|${passenger_name}|${passenger_email}|${bookingId}|||||||||${salt}`;
+console.log(hashString);
 const hash = crypto
   .createHash("sha512")
   .update(hashString)
