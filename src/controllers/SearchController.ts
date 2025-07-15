@@ -39,11 +39,15 @@ import { Create_Vehicles } from "../db/schema/SupplierSchema";
  };
 
 
- export async function convertCurrency(amount: number, from: string, to: string): Promise<number> {
+export async function convertCurrency(amount: number, from: string, to: string): Promise<number> {
   try {
     const res = await axios.get(`https://v6.exchangerate-api.com/v6/5792347d5ad3d4f4281902b1/latest/${from}`);
-    const rate = res.data?.conversion_rates?.[to];
+    let rate = res.data?.conversion_rates?.[to];
     if (!rate) throw new Error(`Missing rate for ${to}`);
+
+    // Apply 1.5% exchange fee
+    rate *= 1.015;
+
     return amount * rate;
   } catch (err) {
     console.error(`Error converting from ${from} to ${to}`, err);
