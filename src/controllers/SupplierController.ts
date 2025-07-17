@@ -735,6 +735,32 @@ export const CreateSupplierApi = async (req: Request, res: Response, next: NextF
         next(error);
     } 
 }; 
+export const GetSupplierApi = async(Req:Request,res:Response,next:NextFunction)=>{
+    try{
+         const getsupplierapidata = await db.select()
+         .from(SupplierApidataTable)
+         return res.status(200).json(getsupplierapidata);
+    }catch(error){
+        next(error)
+    }
+}
+export const DeleteSupplierApi = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+
+    const deletedSupplier = await db
+      .delete(SupplierApidataTable)
+      .where(eq(SupplierApidataTable.id, id))
+      .returning();
+
+    res.status(200).json({
+      message: "Supplier deleted successfully",
+      deletedSupplier,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 // Car Details
 export const CreateTransferCarDetails = async (
     req: Request,
