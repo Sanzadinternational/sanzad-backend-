@@ -134,7 +134,18 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
     const key = 'FYWyBY';
     const salt = 'QlrgPqGiOlYGXn7eQ0eIx2VpyEJBjfL1';
 
-    const hashString = `${salt}|${status}|||||||||||${udf1}|${email}|${firstname}|${productinfo}|${amount}|${txnid}|${key}`;
+    const hashString = [
+  salt,
+  status,
+  '', '', '', '', '', '', '', '', '', // udf10 to udf2
+  udf1,
+  email,
+  firstname,
+  productinfo,
+  amount,
+  txnid,
+  key
+].join('|');
     const expectedHash = crypto.createHash("sha512").update(hashString).digest("hex");
 
     if (expectedHash !== hash) {
