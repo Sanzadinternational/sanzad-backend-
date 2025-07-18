@@ -88,6 +88,7 @@ export const PaymentInitiate = async (req: Request, res: Response, next: NextFun
     ];
 
     const hashString = hashFields.join('|');
+   console.log(hashString);
     const hash = crypto.createHash('sha512').update(hashString).digest('hex');
 
     const payuParams = {
