@@ -165,10 +165,6 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
       amount: parseFloat(amount).toFixed(2)
     });
 
-    await db.update(BookingTable)
-      .set({ status: bookingStatus })
-      .where(sql`${BookingTable.id} = ${udf1}`);
-
     // Redirect user from server or pass redirect URL
     return res.redirect(`${process.env.FRONTEND_URL}/payment-${paymentStatus}?orderId=${txnid}&transactionId=${mihpayid}&amount=${amount}&paymentMode=${mode}`);
   } catch (error) {
