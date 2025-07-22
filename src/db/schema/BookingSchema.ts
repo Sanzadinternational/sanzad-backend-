@@ -16,7 +16,6 @@ import { Create_Vehicles } from './SupplierSchema';
 export const BookingTable = pgTable('booking', { 
     id: uuid('id').defaultRandom().primaryKey(),
     agent_id: integer('Agent_Id').references(() => AgentTable.id),
-    vehicle_id: uuid('vehicle_id').notNull().references(() => Create_Vehicles.id, { onDelete: 'cascade' }),
     suplier_id: integer('supplier_Id').references(() => registerTable.id),
     pickup_location: varchar({length:255}).notNull(),
     drop_location: varchar({length:255}).notNull(),
