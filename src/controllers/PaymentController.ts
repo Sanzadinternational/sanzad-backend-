@@ -29,7 +29,9 @@ export const PaymentInitiate = async (req: Request, res: Response, next: NextFun
       passenger_email,
       passenger_name,
       passenger_phone,
-      currency
+      currency,
+     pickupDetails,
+       dropoffDetails,
     } = req.body;
 
     const key = 'FYWyBY';
@@ -37,6 +39,29 @@ export const PaymentInitiate = async (req: Request, res: Response, next: NextFun
     const payuUrl = 'https://secure.payu.in/_payment';
     const surl = `https://api.sanzadinternational.in/api/V1/payment//payment-status-update`;
     const furl = `https://api.sanzadinternational.in/api/V1/payment//payment-status-update`;
+
+   let pickupTypeFields: Record<string, any> = {};
+    if (pickupDetails?.pickupType === "airport") {
+      pickupTypeFields = {
+        planeArrivingFrom: pickupDetails.planeArrivingFrom,
+        airlineName: pickupDetails.airlineName,
+        flightNumber: pickupDetails.flightNumber,
+      };
+    } else if (pickupDetails?.pickupType === "cruise") {
+      pickupTypeFields = {
+        cruiseShipName: pickupDetails.cruiseShipName,
+      };
+    } else if (pickupDetails?.pickupType === "station") {
+      pickupTypeFields = {
+        trainArrivingFrom: pickupDetails.trainArrivingFrom,
+        trainName: pickupDetails.trainName,
+        trainOperator: pickupDetails.trainOperator,
+      };
+    } else if (pickupDetails?.pickupType === "others") {
+      pickupTypeFields = {
+        hotelName: pickupDetails.hotelName,
+      };
+    }
 
     const [booking] = await db
       .insert(BookingTable)
@@ -56,6 +81,8 @@ export const PaymentInitiate = async (req: Request, res: Response, next: NextFun
         customer_email: passenger_email,
         customer_mobile: passenger_phone,
         currency,
+        ...pickupTypeFields,
+        ...dropoffDetails,
         status: "pending"
       })
       .returning({ id: BookingTable.id });
