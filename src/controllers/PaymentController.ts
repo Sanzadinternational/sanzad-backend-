@@ -63,7 +63,7 @@ export const PaymentInitiate = async (req: Request, res: Response, next: NextFun
       };
     }
 
-   const agent = await db
+   const [agent] = await db
   .select({
     name: AgentTable.name,
     email: AgentTable.email
@@ -72,7 +72,7 @@ export const PaymentInitiate = async (req: Request, res: Response, next: NextFun
   .where(eq(AgentTable.id, agent_id))
   .then(rows => rows[0]);
 
-const supplier = await db
+const [supplier] = await db
   .select({
     name: registerTable.name,
     email: registerTable.email
