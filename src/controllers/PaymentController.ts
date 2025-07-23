@@ -65,8 +65,8 @@ export const PaymentInitiate = async (req: Request, res: Response, next: NextFun
 
    const [agent] = await db
   .select({
-    name: AgentTable.name,
-    email: AgentTable.email
+    name: AgentTable.Company_name,
+    email: AgentTable.Email
   })
   .from(AgentTable)
   .where(eq(AgentTable.id, agent_id))
@@ -74,8 +74,8 @@ export const PaymentInitiate = async (req: Request, res: Response, next: NextFun
 
 const [supplier] = await db
   .select({
-    name: registerTable.name,
-    email: registerTable.email
+    name: registerTable.Company_name,
+    email: registerTable.Email
   })
   .from(registerTable)
   .where(eq(registerTable.id, suplier_id))
