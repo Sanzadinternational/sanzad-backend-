@@ -123,7 +123,7 @@ if (!agent || !supplier) {
       amount,
       productinfo,
       passenger_name,  // firstname
-      passenger_email, // email
+      agent.email, // email
       bookingId,       // udf1
       agent.name,      // udf2
       agent.email,     // udf3
