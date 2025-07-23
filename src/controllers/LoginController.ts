@@ -30,6 +30,9 @@ const authenticateUser = async (email: string, password: string, userTable: any)
   if (user.IsApproved === 0) {
     return { error: 'Account is not activated' };
   }
+    if (user.IsApproved === 2) {
+    return { error: 'Account is Rejected' };
+  }
   // Password validation
   const isPasswordValid = await bcrypt.compare(password, user.Password);
   if (!isPasswordValid) return null;
