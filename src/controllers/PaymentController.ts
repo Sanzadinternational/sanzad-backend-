@@ -9,6 +9,7 @@ import { PaymentsTable, BookingTable
 import { notifications } from "../db/schema/schema";
 import { io } from "../..";
 import { AgentTable } from "../db/schema/AgentSchema";
+import { registerTable } from "../db/schema/SupplierSchema";
 const nodemailer = require("nodemailer"); 
 import PDFDocument from 'pdfkit';
 
@@ -63,6 +64,28 @@ export const PaymentInitiate = async (req: Request, res: Response, next: NextFun
       };
     }
 
+   const agent = await db
+  .select({
+    name: AgentTable.name,
+    email: AgentTable.email
+  })
+  .from(AgentTable)
+  .where(eq(AgentTable.id, agent_id))
+  .then(rows => rows[0]);
+
+const supplier = await db
+  .select({
+    name: registerTable.name,
+    email: registerTable.email
+  })
+  .from(registerTable)
+  .where(eq(registerTable.id, suplier_id))
+  .then(rows => rows[0]);
+
+if (!agent || !supplier) {
+  return res.status(400).json({ error: "Invalid agent or supplier ID" });
+}
+
     const [booking] = await db
       .insert(BookingTable)
       .values({
@@ -102,10 +125,10 @@ export const PaymentInitiate = async (req: Request, res: Response, next: NextFun
       passenger_name,  // firstname
       passenger_email, // email
       bookingId,       // udf1
-      '',              // udf2
-      '',              // udf3
-      '',              // udf4
-      '',              // udf5
+      agent.name,      // udf2
+      agent.email,     // udf3
+      supplier.name,   // udf4
+      supplier.email,  // udf5
       '',              // udf6
       '',              // udf7
       '',              // udf8
@@ -130,7 +153,11 @@ export const PaymentInitiate = async (req: Request, res: Response, next: NextFun
       furl,
       hash,
       service_provider: "payu_paisa",
-      udf1: bookingId  // Must match udf1 in hash calculation
+      udf1: bookingId,
+      udf2: agent.name,      // udf2
+      udf3: agent.email,     // udf3
+      udf4: supplier.name,   // udf4
+      udf5: supplier.email, // Must match udf1 in hash calculation
     };
 
     return res.json({
@@ -155,7 +182,11 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
       mihpayid,
       mode,
       hash,
-      udf1
+      udf1,
+     udf2,
+     udf3,
+     udf4,
+     udf5
     } = req.body;
 
     const key = 'FYWyBY';
@@ -164,7 +195,11 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
     const hashString = [
   salt,
   status,
-  '', '', '', '', '', '', '', '', '', // udf10 to udf2
+  '', '', '', '', '',
+     udf5,
+     udf4,
+     udf3,
+     udf2,// udf10 to udf2
   udf1,
   email,
   firstname,
