@@ -17,7 +17,6 @@ export const PaymentInitiate = async (req: Request, res: Response, next: NextFun
   try {
     const {
       agent_id,
-      vehicle_id,
       suplier_id,
       pickup_location,
       drop_location,
@@ -90,7 +89,6 @@ if (!agent || !supplier) {
       .insert(BookingTable)
       .values({
         agent_id,
-        vehicle_id,
         suplier_id,
         pickup_location,
         drop_location,
@@ -239,7 +237,6 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
     try {
       const {
         agent_id,
-        vehicle_id,
         suplier_id,
         pickup_location,
         drop_location,
@@ -258,7 +255,7 @@ pickupDetails,
        dropoffDetails,
       } = req.body;
   
-      if (!agent_id || !vehicle_id || !suplier_id || !pickup_location || !drop_location || !price || !reference_number) {
+      if (!agent_id || !suplier_id || !pickup_location || !drop_location || !price || !reference_number) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
@@ -290,7 +287,6 @@ pickupDetails,
       // Insert booking and get the generated ID
       const [booking] = await db.insert(BookingTable).values({
         agent_id,
-        vehicle_id,
         suplier_id,
         pickup_location,
         drop_location,
