@@ -63,23 +63,15 @@ export const PaymentInitiate = async (req: Request, res: Response, next: NextFun
       };
     }
 
-   const [agent] = await db
-  .select({
-    name: AgentTable.Company_name,
-    email: AgentTable.Email
-  })
+const [agent] = await db
+  .select({ name: AgentTable.Company_name, email: AgentTable.Email })
   .from(AgentTable)
-  .where(eq(AgentTable.id, agent_id))
-  .then(rows => rows[0]);
+  .where(eq(AgentTable.id, agent_id));
 
 const [supplier] = await db
-  .select({
-    name: registerTable.Company_name,
-    email: registerTable.Email
-  })
+  .select({ name: registerTable.Company_name, email: registerTable.Email })
   .from(registerTable)
-  .where(eq(registerTable.id, suplier_id))
-  .then(rows => rows[0]);
+  .where(eq(registerTable.id, suplier_id));
 
 if (!agent || !supplier) {
   return res.status(400).json({ error: "Invalid agent or supplier ID" });
