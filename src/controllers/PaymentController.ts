@@ -112,7 +112,7 @@ if (!agent || !supplier) {
       txnid,
       amount,
       productinfo,
-      passenger_name,  // firstname
+      agent.name,  // firstname
       agent.email, // email
       bookingId,       // udf1
       agent.name,      // udf2
@@ -136,8 +136,8 @@ if (!agent || !supplier) {
       txnid,
       amount,
       productinfo,
-      firstname: passenger_name,
-      email: passenger_email,
+      firstname: agent.name,
+      email: agent.email,
       phone: passenger_phone,
       surl,
       furl,
