@@ -217,6 +217,51 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
       amount: parseFloat(amount).toFixed(2)
     });
 
+     if (paymentStatus === 'successful') {
+      const transporter = nodemailer.createTransport({
+        service: 'Gmail',
+        auth: {
+          user: 'sanzadinternational5@gmail.com',
+          pass: 'betf euwp oliy tooq', // Use environment variables in production
+        },
+      });
+
+      await transporter.sendMail({
+        from: '"Sanzadinternational" <sanzadinternational5@gmail.com>',
+        to: udf3, // Email address from udf3
+        subject: "Payment Successful",
+        text: `Dear ${udf2},\n\nYour payment has been successful.`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #f9f9f9;">
+  <h2 style="color: #2c3e50; text-align: center;">🎉 Payment Successful</h2>
+  <p style="font-size: 16px; color: #333;">Dear User,</p>
+  <p style="font-size: 16px; color: #333;">
+    We are pleased to inform you that your payment has been successfully received. Thank you for choosing <strong>Sanzad International</strong>.
+  </p>
+
+  <div style="margin: 20px 0; padding: 15px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.05);">
+    <h3 style="color: #2c3e50;">🧾 Payment Summary</h3>
+    <ul style="list-style: none; padding: 0; font-size: 15px;">
+      <li><strong>Transaction ID:</strong> ${mihpayid}</li>
+      <li><strong>Order ID:</strong> ${txnid}</li>
+      <li><strong>Amount:</strong> ₹${amount}</li>
+      <li><strong>Payment Mode:</strong> ${mode}</li>
+    </ul>
+  </div>
+
+  <p style="font-size: 16px; color: #333;">If you have any questions or need support, feel free to contact our team.</p>
+
+  <p style="font-size: 16px; color: #333;">Best regards,<br/><strong>Sanzad International Team</strong></p>
+
+  <div style="margin-top: 30px; text-align: center; font-size: 13px; color: #888;">
+    <p>This is an automated message. Please do not reply.</p>
+  </div>
+</div>
+
+        `
+      });
+    }
+
     // Redirect user from server or pass redirect URL
     return res.redirect(`${process.env.FRONTEND_URL}/payment-${paymentStatus}?orderId=${txnid}&transactionId=${mihpayid}&amount=${amount}&paymentMode=${mode}`);
   } catch (error) {
