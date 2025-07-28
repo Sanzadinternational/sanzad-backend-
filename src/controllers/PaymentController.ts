@@ -256,11 +256,53 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
   <div style="margin-top: 30px; text-align: center; font-size: 13px; color: #888;">
     <p>This is an automated message. Please do not reply.</p>
   </div>
-</div>
-
-        `
+</div>`
       });
-    }
+    }else{
+      const transporter = nodemailer.createTransport({
+        service: 'Gmail',
+        auth: {
+          user: 'sanzadinternational5@gmail.com',
+          pass: 'betf euwp oliy tooq', // Use environment variables in production
+        },
+      });
+
+      await transporter.sendMail({
+        from: '"Sanzadinternational" <sanzadinternational5@gmail.com>',
+        to: udf3, // Email address from udf3
+        subject: "Payment Failed",
+        text: `Dear ${udf2},\n\nYour payment has been Failed.`,
+        html: `
+         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; border: 1px solid #f5c6cb; border-radius: 10px; background-color: #fff3f3;">
+  <h2 style="color: #c0392b; text-align: center;">❗ Payment Failed</h2>
+
+  <p style="font-size: 16px; color: #333;">Dear User,</p>
+
+  <p style="font-size: 16px; color: #333;">
+    Unfortunately, your payment attempt was <strong>unsuccessful</strong>. This may have occurred due to network issues, incorrect card details, or insufficient funds.
+  </p>
+
+  <div style="margin: 20px 0; padding: 15px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.05);">
+    <h3 style="color: #c0392b;">🔁 Payment Attempt Details</h3>
+    <ul style="list-style: none; padding: 0; font-size: 15px;">
+      <li><strong>Transaction ID:</strong> ${mihpayid}</li>
+      <li><strong>Order ID:</strong> ${txnid}</li>
+      <li><strong>Amount:</strong> ₹${amount}</li>
+      <li><strong>Payment Mode:</strong> ${mode}</li>
+    </ul>
+  </div>
+
+  <p style="font-size: 16px; color: #333;">You can try again using the payment link or contact our support if the issue persists.</p>
+
+  <p style="font-size: 16px; color: #333;">Best regards,<br/><strong>Sanzad International Team</strong></p>
+
+  <div style="margin-top: 30px; text-align: center; font-size: 13px; color: #999;">
+    <p>This is an automated message. Please do not reply.</p>
+  </div>
+</div>
+`
+      });
+     }
 
     // Redirect user from server or pass redirect URL
     return res.redirect(`${process.env.FRONTEND_URL}/payment-${paymentStatus}?orderId=${txnid}&transactionId=${mihpayid}&amount=${amount}&paymentMode=${mode}`);
