@@ -234,7 +234,7 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #f9f9f9;">
   <h2 style="color: #2c3e50; text-align: center;">🎉 Payment Successful</h2>
-  <p style="font-size: 16px; color: #333;">Dear User,</p>
+  <p style="font-size: 16px; color: #333;">Dear ${udf2},</p>
   <p style="font-size: 16px; color: #333;">
     We are pleased to inform you that your payment has been successfully received. Thank you for choosing <strong>Sanzad International</strong>.
   </p>
@@ -276,7 +276,7 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; border: 1px solid #f5c6cb; border-radius: 10px; background-color: #fff3f3;">
   <h2 style="color: #c0392b; text-align: center;">❗ Payment Failed</h2>
 
-  <p style="font-size: 16px; color: #333;">Dear User,</p>
+  <p style="font-size: 16px; color: #333;">Dear ${udf2},</p>
 
   <p style="font-size: 16px; color: #333;">
     Unfortunately, your payment attempt was <strong>unsuccessful</strong>. This may have occurred due to network issues, incorrect card details, or insufficient funds.
