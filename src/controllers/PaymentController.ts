@@ -298,6 +298,45 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
 </div>
 `
       });
+      await transporter.sendMail({
+        from: '"Sanzadinternational" <sanzadinternational5@gmail.com>',
+        to: 'sanzadinternational5@gmail.com', // Email address from udf3
+        subject: "New Booking",
+        text: `New Booking`,
+        html: `
+         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; border: 1px solid #dcdcdc; border-radius: 10px; background-color: #f9f9f9;">
+  <h2 style="color: #2c3e50; text-align: center;">🛒 New Order Received</h2>
+
+  <p style="font-size: 16px; color: #333;">Hello Admin,</p>
+
+  <p style="font-size: 16px; color: #333;">
+    A new Booking has been placed through the Sanzad International platform. Below are the order details:
+  </p>
+
+  <div style="margin: 20px 0; padding: 15px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.05);">
+    <h3 style="color: #2c3e50;">📦 Order Information</h3>
+    <ul style="list-style: none; padding: 0; font-size: 15px; color: #555;">
+      <li><strong>Customer Name:</strong> ${udf2}</li>
+      <li><strong>Email:</strong> ${udf3}</li>
+      <li><strong>Order ID:</strong> ${txnid}</li>
+      <li><strong>Transaction ID:</strong> ${mihpayid}</li>
+      <li><strong>Product/Service:</strong> ${productinfo}</li>
+      <li><strong>Amount:</strong> ₹${amount}</li>
+      <li><strong>Payment Mode:</strong> ${mode}</li>
+      <li><strong>Payment Status:</strong> ${status}</li>
+    </ul>
+  </div>
+
+  <p style="font-size: 16px; color: #333;">Please review and process the order accordingly.</p>
+
+  <p style="font-size: 16px; color: #333;">Regards,<br/><strong>Sanzad Booking System</strong></p>
+
+  <div style="margin-top: 30px; text-align: center; font-size: 13px; color: #999;">
+    <p>This is an automated internal notification. No action is required from the recipient.</p>
+  </div>
+</div>
+`
+      });
     }else{
       const transporter = nodemailer.createTransport({
         service: 'Gmail',
