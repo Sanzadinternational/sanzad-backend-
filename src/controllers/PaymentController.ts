@@ -651,87 +651,139 @@ export const downloadInvoice = async (req: Request, res: Response) => {
   }
 };
 export const downloadVoucher = async (req: Request, res: Response) => {
- const doc = new PDFDocument({ margin: 50 });
+  const doc = new PDFDocument({ margin: 50 });
 
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', 'inline; filename="voucher.pdf"');
-
   doc.pipe(res);
 
-  // Heading
-  doc.fontSize(18).text('Transfer Voucher', { align: 'center' });
-  doc.moveDown();
+  // Optional Logo (add logo.png in the root or modify path)
+  const logoPath = path.join(__dirname, 'logo.png');
+  if (fs.existsSync(logoPath)) {
+    doc.image(logoPath, 50, 45, { width: 100 });
+    doc.moveDown(1.5);
+  }
 
-  // Transfer Details
-  doc.fontSize(12).text(`Transfer ID: SI0001`, { align: 'left' });
-  doc.text(`Issue Date: 01-July-2025`);
-  doc.moveDown();
+  // Header
+  doc
+    .fontSize(20)
+    .fillColor('#333')
+    .text('Transfer Voucher', { align: 'center' })
+    .moveDown(0.5);
 
-  doc.text(`Transfer: August 01, 2024 16:45 Hrs`);
-  doc.moveDown();
+  doc
+    .fontSize(12)
+    .fillColor('#666')
+    .text('Transfer ID: SI0001')
+    .text('Issue Date: 01-July-2025')
+    .moveDown(0.5);
 
-  // Passenger
-  doc.fontSize(14).text('Passenger Details:', { underline: true });
-  doc.fontSize(12).text(`Name: Mrs. FARZANA PERVEZ PATEL`);
-  doc.text(`Mobile Number: +91 9820407529`);
-  doc.moveDown();
+  drawLine(doc);
 
-  // Itinerary
-  doc.fontSize(14).text('Transfers Itinerary:', { underline: true });
-  doc.fontSize(12).text(`Date: 01-Aug-2025`);
-  doc.text(`Pick-Up Time: 16:45 Hrs`);
-  doc.text(`Pick-Up Location: Paris Charles de Gaulle Airport\nAddress: 95700 Roissy-en-France, France`);
-  doc.text(`Drop-off Location: Novotel Paris Centre Tour Eiffel\nAddress: 61 Quai de Grenelle, 75015 Paris, France`);
-  doc.moveDown();
+  // Transfer Info
+  doc
+    .fillColor('#000')
+    .fontSize(12)
+    .text('Transfer: August 01, 2024 - 16:45 Hrs')
+    .moveDown(1);
 
-  // Booking
-  doc.fontSize(14).text('Booking Details:', { underline: true });
-  doc.fontSize(12).text(`No. of Passengers: 04`);
-  doc.text(`No. of Luggages: 04`);
-  doc.text(`Vehicle Type: Minivan Or Similar`);
-  doc.text(`Remark: Waiting 15 minutes`);
-  doc.text(`Payment: Paid in Full`);
-  doc.moveDown();
+  // Passenger Section
+  sectionHeader(doc, 'Passenger Details');
+  doc
+    .text('Name: Mrs. FARZANA PERVEZ PATEL')
+    .text('Mobile Number: +91 9820407529')
+    .moveDown();
+
+  // Itinerary Section
+  sectionHeader(doc, 'Transfer Itinerary');
+  doc
+    .text('Date: 01-Aug-2025')
+    .text('Pick-Up Time: 16:45 Hrs')
+    .text('Pick-Up Location: Paris Charles de Gaulle Airport\n95700 Roissy-en-France, France')
+    .text('Drop-off Location: Novotel Paris Centre Tour Eiffel\n61 Quai de Grenelle, 75015 Paris, France')
+    .moveDown();
+
+  // Booking Details
+  sectionHeader(doc, 'Booking Details');
+  doc
+    .text('No. of Passengers: 04')
+    .text('No. of Luggages: 04')
+    .text('Vehicle Type: Minivan Or Similar')
+    .text('Remark: Waiting 15 minutes')
+    .text('Payment: Paid in Full')
+    .moveDown();
 
   // Meeting Point
-  doc.fontSize(14).text('Meeting Point:', { underline: true });
-  doc.fontSize(12).text(`The driver will meet you at the main entrance of the building or wait in the designated parking area, depending on local access and parking regulations.`);
-  doc.text(`Please be ready at the scheduled time to ensure a smooth transfer.`);
-  doc.moveDown();
+  sectionHeader(doc, 'Meeting Point');
+  doc
+    .text('The driver will meet you at the main entrance or designated parking area, depending on local access and parking rules.')
+    .text('Please be ready at the scheduled time to ensure a smooth transfer.')
+    .moveDown();
 
   // Support
-  doc.fontSize(14).text('24X7 Customer Support:', { underline: true });
-  doc.fontSize(12).text(`+91 7880331786`);
-  doc.text(`If you are unable to reach your driver directly, please do not leave your pick-up location without first contacting our customer support team.`);
-  doc.moveDown();
+  sectionHeader(doc, '24x7 Customer Support');
+  doc
+    .text('Phone: +91 7880331786')
+    .text('If you are unable to reach your driver, do not leave your location without first contacting support.')
+    .moveDown();
 
   // Terms & Conditions
-  doc.fontSize(14).text('Important Information', { underline: true });
-  doc.fontSize(11).text(`
-Transfer Service Terms and Conditions
-
-• Airport Pick-Up Waiting Time: Complimentary 45 minutes from actual landing time.
-• Other Pick-Up Locations: 15 minutes free waiting time.
-• Delays at Immigration/Baggage: Call emergency number for extension (subject to availability).
-• Point-to-Point Transfers: Driver cannot wait beyond allocated time.
-• Booking Changes: Must be requested 72+ hours in advance.
-• Exceeding Waiting Time: May incur extra fee or cancellation.
-• Provider Disclaimer: Agency not responsible for 3rd-party service quality.
-• Mobile Contact: Ensure mobile is active and reachable.
-• Baggage Delays: Contact provider immediately.
-• Amendments/Cancellations: Email or call support.
-• Last-Minute Changes (within 72 hrs): Call support directly.
-• Smoking Policy: No smoking in vehicles.
-• Missed Connections Due to Delay: Not liable for delays caused by client.
-  `);
-
+  sectionHeader(doc, 'Important Information');
+  doc.fontSize(10).list([
+    'Airport Pick-Up: 45 min complimentary wait from landing time.',
+    'Non-Airport Pick-Up: 15 min free wait time.',
+    'Delays: Call emergency number to request extension (subject to availability).',
+    'Driver may leave if waiting time exceeded due to tight schedules.',
+    'Booking changes must be requested at least 72 hours in advance.',
+    'Exceeding waiting time may result in additional fees or cancellation.',
+    'We are not liable for third-party supplier service issues.',
+    'Mobile phone must be active and reachable at pickup time.',
+    'Delays at customs or baggage? Contact emergency number immediately.',
+    'Cancellations/Amendments must be made via email or phone.',
+    'Last-minute changes (<72 hrs) must be called in directly.',
+    'Smoking is strictly prohibited in all vehicles.',
+    'We are not liable if you miss connections due to personal delays.'
+  ]);
   doc.moveDown();
-  doc.text('***Thank you! Have a wonderful trip!***', { align: 'center' });
-  doc.moveDown();
+
+  // Closing Message
+  doc
+    .fontSize(12)
+    .fillColor('#000')
+    .text('*** Thank you! Have a wonderful trip! ***', { align: 'center' })
+    .moveDown(1);
+
+  drawLine(doc);
 
   // Footer
-  doc.fontSize(10).text(`FF-4 1st Floor, H-53, Sector-63, Noida, Gautam Buddha Nagar, UP, 201301`, { align: 'center' });
-  doc.text(`24X7 Customer Support: +91 7880331786`, { align: 'center' });
+  doc
+    .fontSize(10)
+    .fillColor('#666')
+    .text('FF-4 1st Floor, H-53, Sector-63, Noida, Gautam Buddha Nagar, UP, 201301', {
+      align: 'center'
+    })
+    .text('24X7 Customer Support: +91 7880331786', { align: 'center' });
 
   doc.end();
 };
+
+// Section Header Helper
+function sectionHeader(doc: PDFKit.PDFDocument, title: string) {
+  doc
+    .moveDown(0.5)
+    .fontSize(13)
+    .fillColor('#007ACC')
+    .text(title, { underline: true })
+    .fillColor('#000')
+    .fontSize(11);
+}
+
+// Divider Line Helper
+function drawLine(doc: PDFKit.PDFDocument) {
+  doc
+    .strokeColor('#CCCCCC')
+    .moveTo(50, doc.y)
+    .lineTo(550, doc.y)
+    .stroke()
+    .moveDown();
+}
