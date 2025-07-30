@@ -650,3 +650,88 @@ export const downloadInvoice = async (req: Request, res: Response) => {
     }
   }
 };
+export const downloadVoucher = async (req: Request, res: Response) => {
+ const doc = new PDFDocument({ margin: 50 });
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', 'inline; filename="voucher.pdf"');
+
+  doc.pipe(res);
+
+  // Heading
+  doc.fontSize(18).text('Transfer Voucher', { align: 'center' });
+  doc.moveDown();
+
+  // Transfer Details
+  doc.fontSize(12).text(`Transfer ID: SI0001`, { align: 'left' });
+  doc.text(`Issue Date: 01-July-2025`);
+  doc.moveDown();
+
+  doc.text(`Transfer: August 01, 2024 16:45 Hrs`);
+  doc.moveDown();
+
+  // Passenger
+  doc.fontSize(14).text('Passenger Details:', { underline: true });
+  doc.fontSize(12).text(`Name: Mrs. FARZANA PERVEZ PATEL`);
+  doc.text(`Mobile Number: +91 9820407529`);
+  doc.moveDown();
+
+  // Itinerary
+  doc.fontSize(14).text('Transfers Itinerary:', { underline: true });
+  doc.fontSize(12).text(`Date: 01-Aug-2025`);
+  doc.text(`Pick-Up Time: 16:45 Hrs`);
+  doc.text(`Pick-Up Location: Paris Charles de Gaulle Airport\nAddress: 95700 Roissy-en-France, France`);
+  doc.text(`Drop-off Location: Novotel Paris Centre Tour Eiffel\nAddress: 61 Quai de Grenelle, 75015 Paris, France`);
+  doc.moveDown();
+
+  // Booking
+  doc.fontSize(14).text('Booking Details:', { underline: true });
+  doc.fontSize(12).text(`No. of Passengers: 04`);
+  doc.text(`No. of Luggages: 04`);
+  doc.text(`Vehicle Type: Minivan Or Similar`);
+  doc.text(`Remark: Waiting 15 minutes`);
+  doc.text(`Payment: Paid in Full`);
+  doc.moveDown();
+
+  // Meeting Point
+  doc.fontSize(14).text('Meeting Point:', { underline: true });
+  doc.fontSize(12).text(`The driver will meet you at the main entrance of the building or wait in the designated parking area, depending on local access and parking regulations.`);
+  doc.text(`Please be ready at the scheduled time to ensure a smooth transfer.`);
+  doc.moveDown();
+
+  // Support
+  doc.fontSize(14).text('24X7 Customer Support:', { underline: true });
+  doc.fontSize(12).text(`+91 7880331786`);
+  doc.text(`If you are unable to reach your driver directly, please do not leave your pick-up location without first contacting our customer support team.`);
+  doc.moveDown();
+
+  // Terms & Conditions
+  doc.fontSize(14).text('Important Information', { underline: true });
+  doc.fontSize(11).text(`
+Transfer Service Terms and Conditions
+
+• Airport Pick-Up Waiting Time: Complimentary 45 minutes from actual landing time.
+• Other Pick-Up Locations: 15 minutes free waiting time.
+• Delays at Immigration/Baggage: Call emergency number for extension (subject to availability).
+• Point-to-Point Transfers: Driver cannot wait beyond allocated time.
+• Booking Changes: Must be requested 72+ hours in advance.
+• Exceeding Waiting Time: May incur extra fee or cancellation.
+• Provider Disclaimer: Agency not responsible for 3rd-party service quality.
+• Mobile Contact: Ensure mobile is active and reachable.
+• Baggage Delays: Contact provider immediately.
+• Amendments/Cancellations: Email or call support.
+• Last-Minute Changes (within 72 hrs): Call support directly.
+• Smoking Policy: No smoking in vehicles.
+• Missed Connections Due to Delay: Not liable for delays caused by client.
+  `);
+
+  doc.moveDown();
+  doc.text('***Thank you! Have a wonderful trip!***', { align: 'center' });
+  doc.moveDown();
+
+  // Footer
+  doc.fontSize(10).text(`FF-4 1st Floor, H-53, Sector-63, Noida, Gautam Buddha Nagar, UP, 201301`, { align: 'center' });
+  doc.text(`24X7 Customer Support: +91 7880331786`, { align: 'center' });
+
+  doc.end();
+};
