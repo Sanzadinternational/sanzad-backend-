@@ -1,5 +1,5 @@
 import express, {Request, Response, NextFunction, Router} from 'express'; 
-import { PaymentInitiate, PaymentWithReferenceNo,ChangePaymentStatusByBookingId, downloadInvoice } from '../controllers/PaymentController';
+import { PaymentInitiate, PaymentWithReferenceNo,ChangePaymentStatusByBookingId, downloadInvoice, downloadVoucher } from '../controllers/PaymentController';
 import { PaymentStatusUpdate } from '../controllers/PaymentController';
 const router = express.Router(); 
 
