@@ -12,6 +12,8 @@ import { AgentTable } from "../db/schema/AgentSchema";
 import { registerTable } from "../db/schema/SupplierSchema";
 const nodemailer = require("nodemailer"); 
 import PDFDocument from 'pdfkit';
+import fs from 'fs';
+import path from 'path';
 
 export const PaymentInitiate = async (req: Request, res: Response, next: NextFunction) => {
   try {
