@@ -570,97 +570,97 @@ export const downloadInvoice = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Booking not found' });
     }
 
-//   //   const doc = new PDFDocument({ margin: 50 });
-//   //   res.setHeader('Content-Type', 'application/pdf');
-//   //   res.setHeader('Content-Disposition', `inline; filename=invoice_${booking.id}.pdf`);
-//   //   doc.pipe(res);
+   const doc = new PDFDocument({ margin: 50 });
+   res.setHeader('Content-Type', 'application/pdf');
+   res.setHeader('Content-Disposition', `inline; filename=invoice_${booking.id}.pdf`);
+  doc.pipe(res);
 
 //   //   // === Optional Logo ===
-//   //   const logoPath = path.join(__dirname, 'logo.png');
-//   //   if (fs.existsSync(logoPath)) {
-//   //     doc.image(logoPath, 50, 45, { width: 100 });
-//   //     doc.moveDown(1.5);
-//   //   }
+   const logoPath = path.join(__dirname, 'logo.png');
+   if (fs.existsSync(logoPath)) {
+    doc.image(logoPath, 50, 45, { width: 100 });
+    doc.moveDown(1.5);
+  }
 
 //   //   // === Header ===
-//   //   doc
-//   //     .fontSize(20)
-//   //     .fillColor('#004aad')
-//   //     .text('PROFORMA INVOICE', { align: 'center' })
-//   //     .moveDown(0.5);
+   doc
+    .fontSize(20)
+   .fillColor('#004aad')
+    .text('PROFORMA INVOICE', { align: 'center' })
+    .moveDown(0.5);
 
-//   //   const createdAt = booking.created_at ? new Date(booking.created_at) : null;
-//   //   const formattedDate = createdAt && !isNaN(createdAt.getTime())
-//   //     ? createdAt.toLocaleDateString('en-GB', {
-//   //         day: '2-digit',
-//   //         month: 'short',
-//   //         year: 'numeric',
-//   //       })
-//   //     : 'N/A';
+   const createdAt = booking.created_at ? new Date(booking.created_at) : null;
+   const formattedDate = createdAt && !isNaN(createdAt.getTime())
+     ? createdAt.toLocaleDateString('en-GB', {
+        day: '2-digit',
+       month: 'short',
+       year: 'numeric',
+      })
+     : 'N/A';
 
-//   //   doc
-//   //     .fontSize(12)
-//   //     .fillColor('#666')
-//   //     .text(`Invoice #: ${booking.id}`)
-//   //     .text(`Date: ${formattedDate}`)
-//   //     .moveDown(0.5);
+   doc
+     .fontSize(12)
+     .fillColor('#666')
+     .text(`Invoice #: ${booking.id}`)
+    .text(`Date: ${formattedDate}`)
+     .moveDown(0.5);
 
-//   //   drawLine(doc);
+  drawLine(doc);
 
 //   //   // === Customer Info ===
-//   //   sectionHeader(doc, 'Customer Info');
-//   //   doc
-//   //     .fontSize(11)
-//   //     .fillColor('#000')
-//   //     .text(`Name: ${booking.passenger_name || 'N/A'}`)
-//   //     .text(`Mobile Number: ${booking.mobile_number || 'N/A'}`)
-//   //     .text(`Email: ${booking.email || 'N/A'}`)
-//   //     .moveDown();
+  sectionHeader(doc, 'Customer Info');
+  doc
+    .fontSize(11)
+    .fillColor('#000')
+     .text(`Name: ${booking.passenger_name || 'N/A'}`)
+     .text(`Mobile Number: ${booking.mobile_number || 'N/A'}`)
+     .text(`Email: ${booking.email || 'N/A'}`)
+     .moveDown();
 
 //   //   // === Service Details ===
-//   //   sectionHeader(doc, 'Service Details');
-//   //   doc
-//   //     .text(`Service ID: ${booking.id}`)
-//   //     .text(`From: ${booking.pickup_location || 'N/A'}`)
-//   //     .text(`To: ${booking.drop_location || 'N/A'}`)
-//   //     .text(`Date & Time: ${formattedDate} ${booking.time || ''}`)
-//   //     .text(`Vehicle Type: ${booking.vehicle_type || 'Minivan or Similar'}`)
-//   //     .text(`Passengers: ${booking.passengers || 'N/A'}`)
-//   //     .text(`Luggage: ${booking.luggage || 'N/A'}`)
-//   //     .moveDown();
+   sectionHeader(doc, 'Service Details');
+   doc
+    .text(`Service ID: ${booking.id}`)
+    .text(`From: ${booking.pickup_location || 'N/A'}`)
+    .text(`To: ${booking.drop_location || 'N/A'}`)
+    .text(`Date & Time: ${formattedDate} ${booking.time || ''}`)
+   .text(`Vehicle Type: ${booking.vehicle_type || 'Minivan or Similar'}`)
+    .text(`Passengers: ${booking.passengers || 'N/A'}`)
+    .text(`Luggage: ${booking.luggage || 'N/A'}`)
+    .moveDown();
 
 //   //   // === Price Breakdown ===
-//   //   sectionHeader(doc, 'Payment Details');
-//   //   doc
-//   //     .text(`Payment Status: Paid in Full`)
-//   //     .text(`Total Price: €${booking.price}`, { align: 'right' })
-//   //     .moveDown();
+  sectionHeader(doc, 'Payment Details');
+   doc
+     .text(`Payment Status: Paid in Full`)
+    .text(`Total Price: €${booking.price}`, { align: 'right' })
+     .moveDown();
 
 //   //   // === Footer Note ===
-//   //   doc
-//   //     .fontSize(12)
-//   //     .fillColor('#000')
-//   //     .text('*** Thank you for choosing Sanzad International! ***', { align: 'center' })
-//   //     .moveDown();
+   doc
+    .fontSize(12)
+    .fillColor('#000')
+    .text('*** Thank you for choosing Sanzad International! ***', { align: 'center' })
+    .moveDown();
 
-//   //   drawLine(doc);
+   drawLine(doc);
 
 //   //   // === Footer ===
-//   //   doc
-//   //     .fontSize(10)
-//   //     .fillColor('#666')
-//   //     .text('FF-4 1st Floor, H-53, Sector-63, Noida, Gautam Buddha Nagar, UP, 201301', {
-//   //       align: 'center'
-//   //     })
-//   //     .text('24X7 Customer Support: +91 7880331786', { align: 'center' });
+   doc
+     .fontSize(10)
+     .fillColor('#666')
+     .text('FF-4 1st Floor, H-53, Sector-63, Noida, Gautam Buddha Nagar, UP, 201301', {
+       align: 'center'
+    })
+    .text('24X7 Customer Support: +91 7880331786', { align: 'center' });
 
-//   //   doc.end();
-// //   // } 
-//    catch (error) {
-//    console.error('Error generating invoice:', error);
-//    // if (!res.headersSent) {
-//    // res.status(500).json({ message: 'Failed to generate invoice' });
-// //   //   }
+   doc.end();
+ } 
+   catch (error) {
+   console.error('Error generating invoice:', error);
+ if (!res.headersSent) {
+ res.status(500).json({ message: 'Failed to generate invoice' });
+   }
  }
  };
 export const downloadVoucher = async (req: Request, res: Response) => {
