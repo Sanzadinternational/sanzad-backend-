@@ -557,9 +557,119 @@ pickupDetails,
     }
   };
 
+// export const downloadInvoice = async (req: Request, res: Response) => {
+//   try {
+//     const bookingId = parseInt(req.params.id);
+//     const [booking] = await db
+//       .select()
+//       .from(BookingTable)
+//       .where(eq(BookingTable.id, bookingId))
+//       .limit(1);
+
+//     if (!booking) {
+//       return res.status(404).json({ message: 'Booking not found' });
+//     }
+
+//    const doc = new PDFDocument({ margin: 50 });
+//    res.setHeader('Content-Type', 'application/pdf');
+//    res.setHeader('Content-Disposition', `inline; filename=invoice_${booking.id}.pdf`);
+//   doc.pipe(res);
+
+// //   //   // === Optional Logo ===
+//    const logoPath = path.join(__dirname, 'logo.png');
+//    if (fs.existsSync(logoPath)) {
+//     doc.image(logoPath, 50, 45, { width: 100 });
+//     doc.moveDown(1.5);
+//   }
+
+// //   //   // === Header ===
+//    doc
+//     .fontSize(20)
+//    .fillColor('#004aad')
+//     .text('PROFORMA INVOICE', { align: 'center' })
+//     .moveDown(0.5);
+
+//    const createdAt = booking.created_at ? new Date(booking.created_at) : null;
+//    const formattedDate = createdAt && !isNaN(createdAt.getTime())
+//      ? createdAt.toLocaleDateString('en-GB', {
+//         day: '2-digit',
+//        month: 'short',
+//        year: 'numeric',
+//       })
+//      : 'N/A';
+
+//    doc
+//      .fontSize(12)
+//      .fillColor('#666')
+//      .text(`Invoice #: ${booking.id}`)
+//     .text(`Date: ${formattedDate}`)
+//      .moveDown(0.5);
+
+//   drawLine(doc);
+
+// //   //   // === Customer Info ===
+//   sectionHeader(doc, 'Customer Info');
+//   doc
+//     .fontSize(11)
+//     .fillColor('#000')
+//      .text(`Name: ${booking.passenger_name || 'N/A'}`)
+//      .text(`Mobile Number: ${booking.mobile_number || 'N/A'}`)
+//      .text(`Email: ${booking.email || 'N/A'}`)
+//      .moveDown();
+
+// //   //   // === Service Details ===
+//    sectionHeader(doc, 'Service Details');
+//    doc
+//     .text(`Service ID: ${booking.id}`)
+//     .text(`From: ${booking.pickup_location || 'N/A'}`)
+//     .text(`To: ${booking.drop_location || 'N/A'}`)
+//     .text(`Date & Time: ${formattedDate} ${booking.time || ''}`)
+//    .text(`Vehicle Type: ${booking.vehicle_type || 'Minivan or Similar'}`)
+//     .text(`Passengers: ${booking.passengers || 'N/A'}`)
+//     .text(`Luggage: ${booking.luggage || 'N/A'}`)
+//     .moveDown();
+
+// //   //   // === Price Breakdown ===
+//   sectionHeader(doc, 'Payment Details');
+//    doc
+//      .text(`Payment Status: Paid in Full`)
+//     .text(`Total Price: €${booking.price}`, { align: 'right' })
+//      .moveDown();
+
+// //   //   // === Footer Note ===
+//    doc
+//     .fontSize(12)
+//     .fillColor('#000')
+//     .text('*** Thank you for choosing Sanzad International! ***', { align: 'center' })
+//     .moveDown();
+
+//    drawLine(doc);
+
+// //   //   // === Footer ===
+//    doc
+//      .fontSize(10)
+//      .fillColor('#666')
+//      .text('FF-4 1st Floor, H-53, Sector-63, Noida, Gautam Buddha Nagar, UP, 201301', {
+//        align: 'center'
+//     })
+//     .text('24X7 Customer Support: +91 7880331786', { align: 'center' });
+
+//    doc.end();
+//  } 
+//    catch (error) {
+//    console.error('Error generating invoice:', error);
+//  if (!res.headersSent) {
+//  res.status(500).json({ message: 'Failed to generate invoice' });
+//    }
+//  }
+//  };
+
+
+
 export const downloadInvoice = async (req: Request, res: Response) => {
   try {
-    const bookingId = parseInt(req.params.id);
+    const bookingId = req.params.id;
+
     const [booking] = await db
       .select()
       .from(BookingTable)
@@ -570,99 +680,109 @@ export const downloadInvoice = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Booking not found' });
     }
 
-   const doc = new PDFDocument({ margin: 50 });
-   res.setHeader('Content-Type', 'application/pdf');
-   res.setHeader('Content-Disposition', `inline; filename=invoice_${booking.id}.pdf`);
-  doc.pipe(res);
+    const safeFilename = `invoice_${String(booking.id).replace(/[^a-z0-9]/gi, '_')}.pdf`;
 
-//   //   // === Optional Logo ===
-   const logoPath = path.join(__dirname, 'logo.png');
-   if (fs.existsSync(logoPath)) {
-    doc.image(logoPath, 50, 45, { width: 100 });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=${safeFilename}`);
+
+    const doc = new PDFDocument({ size: 'A4', margin: 50 });
+
+    doc.on('error', (err) => {
+      console.error('PDF generation error:', err);
+      if (!res.headersSent) {
+        res.status(500).json({ message: 'Failed to generate invoice' });
+      } else {
+        res.end();
+      }
+    });
+
+    res.on('close', () => {
+      if (!res.writableEnded) {
+        console.warn('PDF download aborted by client');
+        doc.end();
+      }
+    });
+
+    doc.pipe(res);
+
+    // === HEADER ===
+    doc.rect(0, 0, doc.page.width, 60).fill('#004aad');
+    doc.fillColor('white')
+      .font('Helvetica-Bold')
+      .fontSize(18)
+      .text('sanzadinternational.in', { align: 'center', valign: 'center' });
+
+    doc.moveDown(3);
+    doc.fillColor('#004aad')
+      .fontSize(16)
+      .text('PROFORMA INVOICE', {
+        align: 'center',
+        underline: true,
+      });
+
+    // === FROM & TO SECTION ===
+    doc.moveDown(2);
+    doc.font('Helvetica-Bold').fillColor('black').fontSize(10).text('From:');
+    doc.font('Helvetica').fontSize(10).text(
+      `Office No: 5, 1st Floor, H-53, Sector 63 Rd, A Block, Sector 65, Noida, Uttar Pradesh 201301`,
+      { lineGap: 2 }
+    );
+
+    doc.moveDown(1);
+    doc.font('Helvetica-Bold').text('To:');
+    doc.font('Helvetica').fontSize(10).text('Sanzad International LLC');
+
+    // === INVOICE INFO ===
+    doc.moveDown(1);
+    const createdAt = booking.created_at ? new Date(booking.created_at) : null;
+    const formattedDate = createdAt && !isNaN(createdAt.getTime())
+      ? createdAt.toLocaleDateString('en-GB', {
+          weekday: 'short',
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        })
+      : 'N/A';
+
+    doc.font('Helvetica-Bold').text(`Invoice #: ${booking.id}`);
+    doc.font('Helvetica-Bold').text(`Date: ${formattedDate}`);
+
+    // === SERVICE DETAILS ===
     doc.moveDown(1.5);
+    doc.font('Helvetica-Bold').fontSize(12).fillColor('#004aad').text('Service Details');
+    doc.moveDown(0.5);
+    doc.font('Helvetica').fillColor('black').fontSize(10);
+    doc.text(`Service ID: ${booking.id}`);
+    doc.text(`From: ${booking.pickup_location}`);
+    doc.text(`To: ${booking.drop_location}`);
+    doc.text(`Date & Time: ${formattedDate}${booking.time ? ' at ' + booking.time : ''}`);
+    doc.text(`Provider: Nouni family`);
+
+    // === TOTAL ===
+    const formattedPrice = new Intl.NumberFormat('en-IE', {
+      style: 'currency',
+      currency: 'EUR',
+    }).format(Number(booking.price));
+
+    doc.moveDown(2);
+    doc.font('Helvetica-Bold').fontSize(12).fillColor('black')
+      .text(`Total Paid: ${formattedPrice}`, { align: 'right' });
+
+    // === FOOTER ===
+    doc.moveDown(2);
+    doc.font('Helvetica-Oblique').fontSize(9).fillColor('gray')
+      .text('Thank you for your business!', { align: 'center' });
+
+    doc.end();
+  } catch (error) {
+    console.error('Unexpected error during invoice download:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ message: 'Failed to generate invoice' });
+    }
   }
+};
 
-//   //   // === Header ===
-   doc
-    .fontSize(20)
-   .fillColor('#004aad')
-    .text('PROFORMA INVOICE', { align: 'center' })
-    .moveDown(0.5);
 
-   const createdAt = booking.created_at ? new Date(booking.created_at) : null;
-   const formattedDate = createdAt && !isNaN(createdAt.getTime())
-     ? createdAt.toLocaleDateString('en-GB', {
-        day: '2-digit',
-       month: 'short',
-       year: 'numeric',
-      })
-     : 'N/A';
-
-   doc
-     .fontSize(12)
-     .fillColor('#666')
-     .text(`Invoice #: ${booking.id}`)
-    .text(`Date: ${formattedDate}`)
-     .moveDown(0.5);
-
-  drawLine(doc);
-
-//   //   // === Customer Info ===
-  sectionHeader(doc, 'Customer Info');
-  doc
-    .fontSize(11)
-    .fillColor('#000')
-     .text(`Name: ${booking.passenger_name || 'N/A'}`)
-     .text(`Mobile Number: ${booking.mobile_number || 'N/A'}`)
-     .text(`Email: ${booking.email || 'N/A'}`)
-     .moveDown();
-
-//   //   // === Service Details ===
-   sectionHeader(doc, 'Service Details');
-   doc
-    .text(`Service ID: ${booking.id}`)
-    .text(`From: ${booking.pickup_location || 'N/A'}`)
-    .text(`To: ${booking.drop_location || 'N/A'}`)
-    .text(`Date & Time: ${formattedDate} ${booking.time || ''}`)
-   .text(`Vehicle Type: ${booking.vehicle_type || 'Minivan or Similar'}`)
-    .text(`Passengers: ${booking.passengers || 'N/A'}`)
-    .text(`Luggage: ${booking.luggage || 'N/A'}`)
-    .moveDown();
-
-//   //   // === Price Breakdown ===
-  sectionHeader(doc, 'Payment Details');
-   doc
-     .text(`Payment Status: Paid in Full`)
-    .text(`Total Price: €${booking.price}`, { align: 'right' })
-     .moveDown();
-
-//   //   // === Footer Note ===
-   doc
-    .fontSize(12)
-    .fillColor('#000')
-    .text('*** Thank you for choosing Sanzad International! ***', { align: 'center' })
-    .moveDown();
-
-   drawLine(doc);
-
-//   //   // === Footer ===
-   doc
-     .fontSize(10)
-     .fillColor('#666')
-     .text('FF-4 1st Floor, H-53, Sector-63, Noida, Gautam Buddha Nagar, UP, 201301', {
-       align: 'center'
-    })
-    .text('24X7 Customer Support: +91 7880331786', { align: 'center' });
-
-   doc.end();
- } 
-   catch (error) {
-   console.error('Error generating invoice:', error);
- if (!res.headersSent) {
- res.status(500).json({ message: 'Failed to generate invoice' });
-   }
- }
- };
 export const downloadVoucher = async (req: Request, res: Response) => {
   try {
     const bookingId = parseInt(req.params.id);
