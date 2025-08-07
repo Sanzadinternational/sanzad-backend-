@@ -755,7 +755,8 @@ export const downloadInvoice = async (req: Request, res: Response) => {
     doc.text(`Service ID: ${booking.id}`);
     doc.text(`From: ${booking.pickup_location}`);
     doc.text(`To: ${booking.drop_location}`);
-    doc.text(`Date & Time: ${formattedDate}${booking.time ? ' at ' + booking.time : ''}`);
+    // doc.text(`Date & Time: ${formattedDate}${booking.time ? ' at ' + booking.time : ''}`);
+   doc.text(`Date & Time: ${formattedDate}${timeString ? ' at ' + timeString : ''}`); 
     doc.text(`Provider: Nouni family`);
 
     // === TOTAL ===
