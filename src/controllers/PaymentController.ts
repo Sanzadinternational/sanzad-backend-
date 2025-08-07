@@ -709,7 +709,7 @@ export const downloadInvoice = async (req: Request, res: Response) => {
     doc.fillColor('white')
       .font('Helvetica-Bold')
       .fontSize(18)
-      .text('sanzadinternational.in', { align: 'center', valign: 'center' });
+      .text('sanzadinternational.in', { align: 'center', valign: 'center',padding:'50px', });
 
     doc.moveDown(3);
     doc.fillColor('#004aad')
