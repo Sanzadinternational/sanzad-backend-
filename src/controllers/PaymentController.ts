@@ -744,9 +744,12 @@ export const downloadInvoice = async (req: Request, res: Response) => {
         })
       : 'N/A';
 
-    doc.font('Helvetica-Bold').text(`Invoice #: ${booking.id}`);
-    doc.font('Helvetica-Bold').text(`Date: ${formattedDate}`);
-
+    // doc.font('Helvetica-Bold').text(`Invoice #: ${booking.id}`);
+    // doc.font('Helvetica-Bold').text(`Date: ${formattedDate}`);
+doc.font('Helvetica-Bold').text(`Invoice #: ${booking.id}`);
+doc.moveDown();
+doc.font('Helvetica-Bold').text(`Date: ${formattedDate}`);
+   
     // === SERVICE DETAILS ===
     doc.moveDown(1.5);
     doc.font('Helvetica-Bold').fontSize(12).fillColor('#004aad').text('Service Details');
@@ -757,12 +760,12 @@ export const downloadInvoice = async (req: Request, res: Response) => {
     doc.text(`To: ${booking.drop_location}`);
     // doc.text(`Date & Time: ${formattedDate}${booking.time ? ' at ' + booking.time : ''}`);
    doc.text(`Date & Time: ${formattedDate}${timeString ? ' at ' + timeString : ''}`); 
-    doc.text(`Provider: Nouni family`);
+    
 
     // === TOTAL ===
     const formattedPrice = new Intl.NumberFormat('en-IE', {
       style: 'currency',
-      currency: 'EUR',
+      currency: 'INR',
     }).format(Number(booking.price));
 
     doc.moveDown(2);
