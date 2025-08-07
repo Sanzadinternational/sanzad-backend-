@@ -665,11 +665,11 @@ pickupDetails,
 //  };
 
 
-
 export const downloadInvoice = async (req: Request, res: Response) => {
   try {
     const bookingId = req.params.id;
 
+    // Fetch booking
     const [booking] = await db
       .select()
       .from(BookingTable)
@@ -681,7 +681,6 @@ export const downloadInvoice = async (req: Request, res: Response) => {
     }
 
     const safeFilename = `invoice_${String(booking.id).replace(/[^a-z0-9]/gi, '_')}.pdf`;
-
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=${safeFilename}`);
 
@@ -724,7 +723,7 @@ export const downloadInvoice = async (req: Request, res: Response) => {
     doc.moveDown(2);
     doc.font('Helvetica-Bold').fillColor('black').fontSize(10).text('From:');
     doc.font('Helvetica').fontSize(10).text(
-      `Office No: 5, 1st Floor, H-53, Sector 63 Rd, A Block, Sector 65, Noida, Uttar Pradesh 201301`,
+      'Office No: 5, 1st Floor, H-53, Sector 63 Rd, A Block, Sector 65, Noida, Uttar Pradesh 201301',
       { lineGap: 2 }
     );
 
@@ -734,6 +733,7 @@ export const downloadInvoice = async (req: Request, res: Response) => {
 
     // === INVOICE INFO ===
     doc.moveDown(1);
+
     const createdAt = booking.created_at ? new Date(booking.created_at) : null;
     const formattedDate = createdAt && !isNaN(createdAt.getTime())
       ? createdAt.toLocaleDateString('en-GB', {
@@ -744,12 +744,14 @@ export const downloadInvoice = async (req: Request, res: Response) => {
         })
       : 'N/A';
 
-    // doc.font('Helvetica-Bold').text(`Invoice #: ${booking.id}`);
-    // doc.font('Helvetica-Bold').text(`Date: ${formattedDate}`);
-doc.font('Helvetica-Bold').text(`Invoice #: ${booking.id}`);
-doc.moveDown();
-doc.font('Helvetica-Bold').text(`Date: ${formattedDate}`);
-   
+    const timeString = booking.time instanceof Date
+      ? booking.time.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+      : booking.time || '';
+
+    doc.font('Helvetica-Bold').text(`Invoice #: ${booking.id}`);
+    doc.moveDown();
+    doc.font('Helvetica-Bold').text(`Date: ${formattedDate}`);
+
     // === SERVICE DETAILS ===
     doc.moveDown(1.5);
     doc.font('Helvetica-Bold').fontSize(12).fillColor('#004aad').text('Service Details');
@@ -758,12 +760,10 @@ doc.font('Helvetica-Bold').text(`Date: ${formattedDate}`);
     doc.text(`Service ID: ${booking.id}`);
     doc.text(`From: ${booking.pickup_location}`);
     doc.text(`To: ${booking.drop_location}`);
-    // doc.text(`Date & Time: ${formattedDate}${booking.time ? ' at ' + booking.time : ''}`);
-   doc.text(`Date & Time: ${formattedDate}${timeString ? ' at ' + timeString : ''}`); 
-    
+    doc.text(`Date & Time: ${formattedDate}${timeString ? ' at ' + timeString : ''}`);
 
     // === TOTAL ===
-    const formattedPrice = new Intl.NumberFormat('en-IE', {
+    const formattedPrice = new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
     }).format(Number(booking.price));
@@ -785,6 +785,7 @@ doc.font('Helvetica-Bold').text(`Date: ${formattedDate}`);
     }
   }
 };
+
 
 
 export const downloadVoucher = async (req: Request, res: Response) => {
