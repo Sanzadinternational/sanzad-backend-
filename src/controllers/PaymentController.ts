@@ -790,7 +790,7 @@ export const downloadInvoice = async (req: Request, res: Response) => {
 
 export const downloadVoucher = async (req: Request, res: Response) => {
   try {
-   const bookingId = parseInt(req.params.id);
+   const bookingId = req.params.id;
 const [booking] = await db
   .select({
     bookingId: BookingTable.id,
