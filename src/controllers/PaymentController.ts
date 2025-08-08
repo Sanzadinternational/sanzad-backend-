@@ -793,14 +793,24 @@ export const downloadVoucher = async (req: Request, res: Response) => {
    const bookingId = parseInt(req.params.id);
 const [booking] = await db
   .select({
-    ...BookingTable,   // all booking columns
-    ...PaymentsTable   // all payment columns
+    bookingId: BookingTable.id,
+    bookedAt: BookingTable.booked_at,
+    customerName: BookingTable.customer_name,
+    customerNumber: BookingTable.customer_number,
+    pickupLocation: BookingTable.pickup_location,
+    dropLocation: BookingTable.drop_location,
+    passengers: BookingTable.passengers,
+    luggage: BookingTable.luggage,
+    vehicleType: BookingTable.vehicle_type,
+    remarks: BookingTable.remarks,
+    paymentId: PaymentsTable.id,
+    paymentAmount: PaymentsTable.amount,
+    paymentStatus: PaymentsTable.status
   })
   .from(BookingTable)
   .innerJoin(PaymentsTable, eq(PaymentsTable.bookingId, BookingTable.id))
   .where(eq(BookingTable.id, bookingId))
   .limit(1);
-
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
     }
