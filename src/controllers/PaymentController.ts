@@ -791,11 +791,15 @@ export const downloadInvoice = async (req: Request, res: Response) => {
 export const downloadVoucher = async (req: Request, res: Response) => {
   try {
    const bookingId = parseInt(req.params.id);
-    const [booking] = await db
-      .select()
-       .from(BookingTable)
-      .where(eq(BookingTable.id, bookingId))
-       .limit(1);
+const [booking] = await db
+  .select({
+    ...BookingTable,   // all booking columns
+    ...PaymentsTable   // all payment columns
+  })
+  .from(BookingTable)
+  .innerJoin(PaymentsTable, eq(PaymentsTable.bookingId, BookingTable.id))
+  .where(eq(BookingTable.id, bookingId))
+  .limit(1);
 
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
@@ -821,7 +825,7 @@ export const downloadVoucher = async (req: Request, res: Response) => {
        .text('Transfer Voucher', { align: 'center' })
      .moveDown(0.5);
 
-    const issueDate = new Date(booking.created_at).toLocaleDateString('en-GB', {
+    const issueDate = new Date(booking.booked_at).toLocaleDateString('en-GB', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
@@ -846,8 +850,8 @@ drawLine(doc);
 //     // === PASSENGER DETAILS ===
     sectionHeader(doc, 'Passenger Details');
     doc
-      .text(`Name: ${booking.passenger_name || 'N/A'}`)
-      .text(`Mobile Number: ${booking.mobile_number || 'N/A'}`)
+      .text(`Name: ${booking.customer_name || 'N/A'}`)
+      .text(`Mobile Number: ${booking.customer_number || 'N/A'}`)
       .moveDown();
 
 //     // === ITINERARY ===
