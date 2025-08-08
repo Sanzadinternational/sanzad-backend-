@@ -796,7 +796,7 @@ const [booking] = await db
     bookingId: BookingTable.id,
     bookedAt: BookingTable.booked_at,
     customerName: BookingTable.customer_name,
-    customerNumber: BookingTable.customer_number,
+    customerNumber: BookingTable.customer_mobile,
     pickupLocation: BookingTable.pickup_location,
     dropLocation: BookingTable.drop_location,
     paymentId: PaymentsTable.id,
