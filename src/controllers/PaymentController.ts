@@ -876,7 +876,7 @@ drawLine(doc);
       .text(`No. of Luggages: ${booking.luggage || 'N/A'}`)
       .text(`Vehicle Type: ${booking.vehicle_type || 'Minivan Or Similar'}`)
      .text(`Remark: ${booking.remarks || 'Waiting 15 minutes'}`)
-      .text(`Payment: Paid in Full`)
+      .text(`Payment Status: ${booking.paymentStatus || 'N/A'}`)
      .moveDown();
 
 //     // === MEETING POINT ===
