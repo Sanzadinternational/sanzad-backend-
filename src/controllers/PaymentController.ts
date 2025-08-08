@@ -800,9 +800,6 @@ const [booking] = await db
     pickupLocation: BookingTable.pickup_location,
     dropLocation: BookingTable.drop_location,
     passengers: BookingTable.passengers,
-    luggage: BookingTable.luggage,
-    vehicleType: BookingTable.vehicle_type,
-    remarks: BookingTable.remarks,
     paymentId: PaymentsTable.id,
     paymentAmount: PaymentsTable.amount,
     paymentStatus: PaymentsTable.status
