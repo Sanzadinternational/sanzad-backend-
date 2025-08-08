@@ -840,7 +840,7 @@ const [booking] = await db
      doc
        .fontSize(12)
       .fillColor('#666')
-       .text(`Transfer ID: ${booking.id}`)
+       .text(`Transfer ID: ${booking.bookingId}`)
      .text(`Issue Date: ${issueDate}`)
      .moveDown(0.5);
 
@@ -856,8 +856,8 @@ drawLine(doc);
 //     // === PASSENGER DETAILS ===
     sectionHeader(doc, 'Passenger Details');
     doc
-      .text(`Name: ${booking.customer_name || 'N/A'}`)
-      .text(`Mobile Number: ${booking.customer_number || 'N/A'}`)
+      .text(`Name: ${booking.customerName || 'N/A'}`)
+      .text(`Mobile Number: ${booking.customerNumber || 'N/A'}`)
       .moveDown();
 
 //     // === ITINERARY ===
@@ -865,8 +865,8 @@ drawLine(doc);
     doc
       .text(`Date: ${issueDate}`)
       .text(`Pick-Up Time: ${booking.time || 'N/A'} Hrs`)
-     .text(`Pick-Up Location: ${booking.pickup_location || 'N/A'}`)
-     .text(`Drop-off Location: ${booking.drop_location || 'N/A'}`)
+     .text(`Pick-Up Location: ${booking.pickupLocation || 'N/A'}`)
+     .text(`Drop-off Location: ${booking.dropLocation || 'N/A'}`)
      .moveDown();
 
 //     // === BOOKING DETAILS ===
