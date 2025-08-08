@@ -813,7 +813,7 @@ const [booking] = await db
 
      const doc = new PDFDocument({ margin: 50 });
      res.setHeader('Content-Type', 'application/pdf');
-     res.setHeader('Content-Disposition', `inline; filename="voucher_${booking.id}.pdf"`);
+     res.setHeader('Content-Disposition', `inline; filename="voucher_${booking.bookingId}.pdf"`);
 
     doc.pipe(res);
 
@@ -831,7 +831,7 @@ const [booking] = await db
        .text('Transfer Voucher', { align: 'center' })
      .moveDown(0.5);
 
-    const issueDate = new Date(booking.booked_at).toLocaleDateString('en-GB', {
+    const issueDate = new Date(booking.bookedAt).toLocaleDateString('en-GB', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
