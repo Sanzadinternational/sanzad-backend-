@@ -804,7 +804,7 @@ const [booking] = await db
     paymentStatus: PaymentsTable.payment_status
   })
   .from(BookingTable)
-  .innerJoin(PaymentsTable, eq(PaymentsTable.bookingId, BookingTable.id))
+  .innerJoin(PaymentsTable, eq(PaymentsTable.booking_id, BookingTable.id))
   .where(eq(BookingTable.id, bookingId))
   .limit(1);
     if (!booking) {
