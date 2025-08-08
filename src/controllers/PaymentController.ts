@@ -799,10 +799,9 @@ const [booking] = await db
     customerNumber: BookingTable.customer_number,
     pickupLocation: BookingTable.pickup_location,
     dropLocation: BookingTable.drop_location,
-    passengers: BookingTable.passengers,
     paymentId: PaymentsTable.id,
     paymentAmount: PaymentsTable.amount,
-    paymentStatus: PaymentsTable.status
+    paymentStatus: PaymentsTable.payment_status
   })
   .from(BookingTable)
   .innerJoin(PaymentsTable, eq(PaymentsTable.bookingId, BookingTable.id))
