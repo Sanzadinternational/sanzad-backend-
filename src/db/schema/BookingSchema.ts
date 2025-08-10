@@ -46,6 +46,8 @@ export const BookingTable = pgTable('booking', {
     pickupAddress:varchar({length:255}),
     destinationName:varchar({length:255}),
     destinationAddress:varchar({length:255}),
+    booking_time:varchar({length:255}),
+    pickup_type:varchar({length:255}),
     passengers: varchar({ length: 255 }),
     booking_date: date("booking_date"), // 📅 native DATE type
     return_date: date("return_date"), // 📅 native DATE type
