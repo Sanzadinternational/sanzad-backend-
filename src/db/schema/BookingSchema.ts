@@ -48,7 +48,11 @@ export const BookingTable = pgTable('booking', {
     destinationAddress:varchar({length:255}),
     passengers: varchar({ length: 255 }),
     booking_date: date("booking_date"), // 📅 native DATE type
-    booking_time: time("booking_time"),
+    return_date: date("return_date"), // 📅 native DATE type
+    return_time: time("return_time"),
+    return_trip: varchar('return_trip', { length: 50 })
+        .default('yes')
+        .$type<'yes' | 'No'>(),
     booking_unique_id: varchar({ length: 255 }),
     completed_at: timestamp('completed_at', { withTimezone: true })
 });
