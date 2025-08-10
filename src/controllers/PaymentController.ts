@@ -828,8 +828,12 @@ export const downloadVoucher = async (req: Request, res: Response) => {
    const bookingId = req.params.id;
 const [booking] = await db
   .select({
-    bookingId: BookingTable.id,
+    bookingId: BookingTable.booking_unique_id,
     bookedAt: BookingTable.booked_at,
+   bookingDate: BookingTable.booking_date,
+   returnDate: BookingTable.return_date,
+      returnTime: BookingTable.return_time,
+    passengers: BookingTable.passengers,
     customerName: BookingTable.customer_name,
     customerNumber: BookingTable.customer_mobile,
     pickupLocation: BookingTable.pickup_location,
@@ -900,6 +904,7 @@ drawLine(doc);
     doc
       .text(`Date: ${issueDate}`)
       .text(`Pick-Up Time: ${booking.time || 'N/A'} Hrs`)
+       .text(`Pick-Up Date: ${booking.bookingDate || 'N/A'} Hrs`)
      .text(`Pick-Up Location: ${booking.pickupLocation || 'N/A'}`)
      .text(`Drop-off Location: ${booking.dropLocation || 'N/A'}`)
      .moveDown();
