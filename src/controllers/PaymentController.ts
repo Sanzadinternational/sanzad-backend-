@@ -835,6 +835,7 @@ const [booking] = await db
     bookingId: BookingTable.booking_unique_id,
     bookedAt: BookingTable.booked_at,
    bookingDate: BookingTable.booking_date,
+   bookingTime: BookingTable.booking_time,
    returnDate: BookingTable.return_date,
       returnTime: BookingTable.return_time,
     passengers: BookingTable.passengers,
@@ -907,7 +908,7 @@ drawLine(doc);
     sectionHeader(doc, 'Transfer Itinerary');
     doc
       .text(`Date: ${issueDate}`)
-      .text(`Pick-Up Time: ${booking.time || 'N/A'} Hrs`)
+      .text(`Pick-Up Time: ${booking.bookingTime || 'N/A'} Hrs`)
        .text(`Pick-Up Date: ${booking.bookingDate || 'N/A'} Hrs`)
      .text(`Pick-Up Location: ${booking.pickupLocation || 'N/A'}`)
      .text(`Drop-off Location: ${booking.dropLocation || 'N/A'}`)
