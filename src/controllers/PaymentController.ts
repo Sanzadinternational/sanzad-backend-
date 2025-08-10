@@ -442,6 +442,14 @@ pickupDetails,
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
+        function generateTxnId() {
+  const randomPart = Math.random().toString(36).substring(2, 10).toUpperCase(); // 8 chars
+  const timePart = Date.now().toString().slice(-4);
+  return `BOOK-${randomPart}-${timePart}`;
+}
+
+const txnid = generateTxnId();
+
      let pickupTypeFields: Record<string, any> = {};
     if (pickupDetails?.pickupType === "airport") {
       pickupTypeFields = {
@@ -498,7 +506,6 @@ pickupDetails,
       }
   
       const bookingId = String(booking.id);
-      const orderId = `BOOK${bookingId}${Date.now()}`;
   
       // Insert payment details
       await db.insert(PaymentsTable).values({
@@ -525,7 +532,7 @@ pickupDetails,
       return res.status(201).json({
         message: 'Payment info saved successfully',
         booking_id: bookingId,
-        orderId: orderId
+        orderId: txnid
       });
   
     } catch (error) {
