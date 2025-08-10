@@ -5,7 +5,9 @@ import {
     decimal, 
     timestamp, 
     integer,
-    text 
+    text,
+    time,
+    date
 } from 'drizzle-orm/pg-core';
 import { registerTable
  } from './SupplierSchema';
@@ -44,6 +46,10 @@ export const BookingTable = pgTable('booking', {
     pickupAddress:varchar({length:255}),
     destinationName:varchar({length:255}),
     destinationAddress:varchar({length:255}),
+    passengers: varchar({ length: 255 }),
+    booking_date: date("booking_date"), // 📅 native DATE type
+    booking_time: time("booking_time"),
+    booking_unique_id: varchar({ length: 255 }),
     completed_at: timestamp('completed_at', { withTimezone: true })
 });
 
