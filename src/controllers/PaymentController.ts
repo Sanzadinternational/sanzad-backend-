@@ -28,6 +28,12 @@ export const PaymentInitiate = async (req: Request, res: Response, next: NextFun
       drop_lng,
       distance_miles,
       price,
+      pax,
+     time,
+     tripType,
+     returnDate,
+     returnTime,
+     date,
       passenger_email,
       passenger_name,
       passenger_phone,
@@ -78,6 +84,13 @@ const [supplier] = await db
 if (!agent || !supplier) {
   return res.status(400).json({ error: "Invalid agent or supplier ID" });
 }
+   function generateTxnId() {
+  const randomPart = Math.random().toString(36).substring(2, 10).toUpperCase(); // 8 chars
+  const timePart = Date.now().toString().slice(-4);
+  return `BOOK-${randomPart}-${timePart}`;
+}
+
+const txnid = generateTxnId();
 
     const [booking] = await db
       .insert(BookingTable)
@@ -95,6 +108,11 @@ if (!agent || !supplier) {
         customer_name: passenger_name,
         customer_email: passenger_email,
         customer_mobile: passenger_phone,
+       passengers: pax,
+       booking_date: date,
+       return_time: returnTime,
+       return_date: returnTime,
+       booking_unique_id: txnid,
         currency,
         ...pickupTypeFields,
         ...dropoffDetails,
@@ -103,7 +121,6 @@ if (!agent || !supplier) {
       .returning({ id: BookingTable.id });
 
     const bookingId = booking.id;
-    const txnid = `BOOK-${bookingId.slice(0, 8)}-${Date.now().toString().slice(-4)}`;
     const productinfo = "RideBooking";
 
   const amount = Number(price).toFixed(2); // Ensure consistent formatting
