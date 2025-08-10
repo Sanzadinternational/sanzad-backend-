@@ -493,7 +493,7 @@ const txnid = generateTxnId();
               passengers: pax,
        booking_date: date,
        return_time: returnTime,
-       return_date: returnTime,
+       return_date: returnDate,
        booking_unique_id: txnid,
      currency,
         ...pickupTypeFields,
