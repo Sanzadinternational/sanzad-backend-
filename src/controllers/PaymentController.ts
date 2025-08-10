@@ -113,6 +113,8 @@ const txnid = generateTxnId();
 return_time: returnTime || null,
 return_date: returnDate ? new Date(returnDate) : null,
        booking_unique_id: txnid,
+       booking_time: time,
+       pickup_type: pickupDetails.pickupType,
         currency,
         ...pickupTypeFields,
         ...dropoffDetails,
@@ -495,6 +497,8 @@ const txnid = generateTxnId();
 return_time: returnTime || null,
 return_date: returnDate ? new Date(returnDate) : null,
        booking_unique_id: txnid,
+        booking_time: time,
+       pickup_type: pickupDetails.pickupType,
      currency,
         ...pickupTypeFields,
        ...dropoffDetails,
@@ -840,7 +844,7 @@ const [booking] = await db
     dropLocation: BookingTable.drop_location,
     paymentId: PaymentsTable.id,
     paymentAmount: PaymentsTable.amount,
-    paymentStatus: PaymentsTable.payment_status
+    paymentStatus: PaymentsTable.payment_status,
   })
   .from(BookingTable)
   .innerJoin(PaymentsTable, eq(PaymentsTable.booking_id, BookingTable.id))
