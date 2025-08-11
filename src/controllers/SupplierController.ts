@@ -1885,7 +1885,10 @@ export const ChangeBookingStatusByBookingId = async (req: Request, res: Response
         id: BookingTable.id,
         status: BookingTable.status,
         agent_id: BookingTable.agent_id,
-        email: AgentTable.Email
+        email: AgentTable.Email,
+        agentName:AgentTable.Company_name,
+        bookingDate:BookingTable.booking_date
+            
     })
     .from(BookingTable)
     .innerJoin(AgentTable,eq(AgentTable.id, BookingTable.agent_id))
@@ -1912,10 +1915,6 @@ export const ChangeBookingStatusByBookingId = async (req: Request, res: Response
             <p>We’re pleased to inform you that your booking request has been <strong style="color: green;">approved</strong>.</p>
             
             <table style="border-collapse: collapse; margin-top: 10px;">
-                <tr>
-                    <td style="padding: 8px; border: 1px solid #ddd;"><strong>Reference</strong></td>
-                    <td style="padding: 8px; border: 1px solid #ddd;">${results[0].bookingRef || 'N/A'}</td>
-                </tr>
                 <tr>
                     <td style="padding: 8px; border: 1px solid #ddd;"><strong>Date</strong></td>
                     <td style="padding: 8px; border: 1px solid #ddd;">${results[0].bookingDate || 'N/A'}</td>
