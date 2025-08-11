@@ -704,38 +704,47 @@ return_date: returnDate ? new Date(returnDate) : null,
 //  };
 
 
+import { Request, Response } from 'express';
+import PDFDocument from 'pdfkit';
+import fs from 'fs';
+import path from 'path';
+import { db } from '../db';
+import { BookingTable, PaymentsTable } from '../db/schema';
+import { eq } from 'drizzle-orm';
+
 export const downloadInvoice = async (req: Request, res: Response) => {
   try {
     const bookingId = req.params.id;
 
-    // Fetch booking
- const [booking] = await db
-  .select({
-    bookingId: BookingTable.booking_unique_id,
-    bookedAt: BookingTable.booked_at,
-   bookingDate: BookingTable.booking_date,
-   bookingTime: BookingTable.booking_time,
-   returnDate: BookingTable.return_date,
-      returnTime: BookingTable.return_time,
-    passengers: BookingTable.passengers,
-    customerName: BookingTable.customer_name,
-    customerNumber: BookingTable.customer_mobile,
-    pickupLocation: BookingTable.pickup_location,
-    dropLocation: BookingTable.drop_location,
-    paymentId: PaymentsTable.id,
-    paymentAmount: PaymentsTable.amount,
-    paymentStatus: PaymentsTable.payment_status,
-  })
-  .from(BookingTable)
-  .innerJoin(PaymentsTable, eq(PaymentsTable.booking_id, BookingTable.id))
-  .where(eq(BookingTable.id, bookingId))
-  .limit(1);
+    // Fetch booking details with payment info
+    const [booking] = await db
+      .select({
+        bookingId: BookingTable.booking_unique_id,
+        bookedAt: BookingTable.booked_at,
+        bookingDate: BookingTable.booking_date,
+        bookingTime: BookingTable.booking_time,
+        returnDate: BookingTable.return_date,
+        returnTime: BookingTable.return_time,
+        passengers: BookingTable.passengers,
+        customerName: BookingTable.customer_name,
+        customerNumber: BookingTable.customer_mobile,
+        pickupLocation: BookingTable.pickup_location,
+        dropLocation: BookingTable.drop_location,
+        paymentId: PaymentsTable.id,
+        paymentAmount: PaymentsTable.amount,
+        paymentStatus: PaymentsTable.payment_status,
+      })
+      .from(BookingTable)
+      .innerJoin(PaymentsTable, eq(PaymentsTable.booking_id, BookingTable.id))
+      .where(eq(BookingTable.id, bookingId))
+      .limit(1);
 
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
     }
 
-    const safeFilename = `invoice_${String(booking.id).replace(/[^a-z0-9]/gi, '_')}.pdf`;
+    const safeFilename = `invoice_${String(booking.bookingId).replace(/[^a-z0-9]/gi, '_')}.pdf`;
+
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=${safeFilename}`);
 
@@ -759,65 +768,56 @@ export const downloadInvoice = async (req: Request, res: Response) => {
 
     doc.pipe(res);
 
-    // === HEADER ===
-    doc.rect(0, 0, doc.page.width, 60).fill('#004aad');
-    doc.fillColor('white')
+    // === HEADER WITH LOGO ===
+    const logoPath = path.join(__dirname, '../assets/logo.png');
+    if (fs.existsSync(logoPath)) {
+      doc.image(logoPath, 50, 45, { width: 50 });
+    }
+    doc
+      .fillColor('#004aad')
       .font('Helvetica-Bold')
-      .fontSize(18)
-      .text('sanzadinternational.in', { align: 'center', valign: 'center',padding:'50px', });
+      .fontSize(20)
+      .text('Sanzad International', 110, 50)
+      .fontSize(10)
+      .fillColor('black')
+      .text('Office No: 5, 1st Floor, H-53, Sector 63 Rd, A Block, Sector 65, Noida, Uttar Pradesh 201301', 110, 70, { width: 400 })
+      .moveDown();
 
-    doc.moveDown(3);
-    doc.fillColor('#004aad')
-      .fontSize(16)
-      .text('PROFORMA INVOICE', {
-        align: 'center',
-        underline: true,
-      });
-
-    // === FROM & TO SECTION ===
-    doc.moveDown(2);
-    doc.font('Helvetica-Bold').fillColor('black').fontSize(10).text('From:');
-    doc.font('Helvetica').fontSize(10).text(
-      'Office No: 5, 1st Floor, H-53, Sector 63 Rd, A Block, Sector 65, Noida, Uttar Pradesh 201301',
-      { lineGap: 2 }
-    );
-
+    // Invoice title
     doc.moveDown(1);
-    doc.font('Helvetica-Bold').text('To:');
-    doc.font('Helvetica').fontSize(10).text('Sanzad International LLC');
+    doc.fillColor('#004aad')
+      .font('Helvetica-Bold')
+      .fontSize(16)
+      .text('PROFORMA INVOICE', { align: 'center', underline: true });
+
+    // === CUSTOMER DETAILS ===
+    doc.moveDown(2);
+    doc.font('Helvetica-Bold').fontSize(10).text('Bill To:');
+    doc.font('Helvetica').fontSize(10).text(booking.customerName);
+    doc.text(`Mobile: ${booking.customerNumber}`);
 
     // === INVOICE INFO ===
-    doc.moveDown(1);
-
     const createdAt = booking.bookedAt ? new Date(booking.bookedAt) : null;
     const formattedDate = createdAt && !isNaN(createdAt.getTime())
-      ? createdAt.toLocaleDateString('en-GB', {
-          weekday: 'short',
-          day: 'numeric',
-          month: 'short',
-          year: 'numeric',
-        })
+      ? createdAt.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
       : 'N/A';
 
-    const timeString = booking.time instanceof Date
-      ? booking.time.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
-      : booking.time || '';
-
+    doc.moveDown(1);
     doc.font('Helvetica-Bold').text(`Invoice #: ${booking.bookingId}`);
-    doc.moveDown();
-    doc.font('Helvetica-Bold').text(`Date: ${formattedDate}`);
+    doc.text(`Date: ${formattedDate}`);
 
     // === SERVICE DETAILS ===
     doc.moveDown(1.5);
     doc.font('Helvetica-Bold').fontSize(12).fillColor('#004aad').text('Service Details');
     doc.moveDown(0.5);
     doc.font('Helvetica').fillColor('black').fontSize(10);
-    doc.text(`Service ID: ${booking.bookingId}`);
-    doc.text(`From: ${booking.pickupLocation}`);
-    doc.text(`To: ${booking.dropLocation}`);
-    doc.text(`Date & Time: ${formattedDate}${timeString ? ' at ' + timeString : ''}`);
+    doc.text(`Pickup Location: ${booking.pickupLocation}`);
+    doc.text(`Drop Location: ${booking.dropLocation}`);
+    doc.text(`Booking Date: ${booking.bookingDate} ${booking.bookingTime || ''}`);
+    doc.text(`Return Date: ${booking.returnDate || 'N/A'} ${booking.returnTime || ''}`);
+    doc.text(`Passengers: ${booking.passengers}`);
 
-    // === TOTAL ===
+    // === TOTAL AMOUNT ===
     const formattedPrice = new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
@@ -833,6 +833,7 @@ export const downloadInvoice = async (req: Request, res: Response) => {
       .text('Thank you for your business!', { align: 'center' });
 
     doc.end();
+
   } catch (error) {
     console.error('Unexpected error during invoice download:', error);
     if (!res.headersSent) {
@@ -840,6 +841,7 @@ export const downloadInvoice = async (req: Request, res: Response) => {
     }
   }
 };
+
 
 
 export const downloadVoucher = async (req: Request, res: Response) => {
