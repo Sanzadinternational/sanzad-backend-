@@ -1873,7 +1873,7 @@ export const ChangeBookingStatusByBookingId = async (req: Request, res: Response
       const Id = req.params.id; 
       const status = req.body.status; 
                                             
-      if (!['pending', 'approved', 'rejected', 'refunded'].includes(status)) {
+      if (!['pending', 'confirmed', 'cancelled', 'completed'].includes(status)) {
         return res.status(400).json({ message: 'Invalid status value' });
       } 
       
@@ -1900,13 +1900,35 @@ export const ChangeBookingStatusByBookingId = async (req: Request, res: Response
         }); 
         
         // Define the email options
-        const mailOptions = {
-            from: 'sanzadinternational5@gmail.com',
-            to: results[0].email,
-            subject: 'Your status by sanzadinternational',
-            text: `Your query is <strong> ${results[0].status}</strong> by the Sanzadinternational.`,
-            html: `Your query is <strong> ${results[0].status}</strong> by the Sanzadinternational.`,
-        };
+   const mailOptions = {
+    from: 'sanzadinternational5@gmail.com',
+    to: results[0].email,
+    subject: 'Booking Approved – Sanzad International',
+    text: `Dear ${results[0].agentName || 'Agent'},\n\nWe’re pleased to inform you that your booking request has been approved.\n\nBooking Details:\nReference: ${results[0].bookingRef || 'N/A'}\nDate: ${results[0].bookingDate || 'N/A'}\n\nThank you for choosing Sanzad International.\n\nBest regards,\nSanzad International Team`,
+    html: `
+        <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+            <h2 style="color: #2E86C1;">Booking Approved</h2>
+            <p>Dear <strong>${results[0].agentName || 'Agent'}</strong>,</p>
+            <p>We’re pleased to inform you that your booking request has been <strong style="color: green;">approved</strong>.</p>
+            
+            <table style="border-collapse: collapse; margin-top: 10px;">
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><strong>Reference</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">${results[0].bookingRef || 'N/A'}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #ddd;"><strong>Date</strong></td>
+                    <td style="padding: 8px; border: 1px solid #ddd;">${results[0].bookingDate || 'N/A'}</td>
+                </tr>
+            </table>
+
+            <p style="margin-top: 15px;">Thank you for choosing <strong>Sanzad International</strong>. We look forward to working with you.</p>
+            
+            <p style="margin-top: 20px;">Best regards,<br>
+            <strong>Sanzad International Team</strong></p>
+        </div>
+    `
+};
 
         // Send the email
         await transporter.sendMail(mailOptions);
