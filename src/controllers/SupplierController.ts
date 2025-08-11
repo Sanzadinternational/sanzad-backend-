@@ -1888,7 +1888,7 @@ export const ChangeBookingStatusByBookingId = async (req: Request, res: Response
         email: AgentTable.Email,
         agentName:AgentTable.Company_name,
         bookingDate:BookingTable.booking_date,
-        bookingRef: Booking.booking_unique_id
+        bookingRef: BookingTable.booking_unique_id
             
     })
     .from(BookingTable)
