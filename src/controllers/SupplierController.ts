@@ -1873,7 +1873,7 @@ export const ChangeBookingStatusByBookingId = async (req: Request, res: Response
       const Id = req.params.id; 
       const status = req.body.status; 
                                             
-      if (!['pending', 'confirmed', 'cancelled', 'completed'].includes(status)) {
+      if (!['pending', 'approved', 'rejected', 'completed'].includes(status)) {
         return res.status(400).json({ message: 'Invalid status value' });
       } 
       
@@ -1887,7 +1887,8 @@ export const ChangeBookingStatusByBookingId = async (req: Request, res: Response
         agent_id: BookingTable.agent_id,
         email: AgentTable.Email,
         agentName:AgentTable.Company_name,
-        bookingDate:BookingTable.booking_date
+        bookingDate:BookingTable.booking_date,
+        bookingRef: Booking.booking_unique_id
             
     })
     .from(BookingTable)
@@ -1902,31 +1903,57 @@ export const ChangeBookingStatusByBookingId = async (req: Request, res: Response
             }, 
         }); 
         
-        // Define the email options
-   const mailOptions = {
+  function createBookingEmail(agentName, bookingStatus, bookingRef, bookingDate) {
+    // Pick a color based on status
+    let statusColor = '#000';
+    switch (bookingStatus.toLowerCase()) {
+        case 'approved':
+            statusColor = 'green';
+            break;
+        case 'cancelled':
+        case 'canceled':
+            statusColor = 'red';
+            break;
+        case 'completed':
+            statusColor = 'blue';
+            break;
+    }
+
+    return {
+        subject: `Booking ${bookingStatus} – Sanzad International`,
+        text: `Dear ${agentName || 'Agent'},\n\nYour booking has been ${bookingStatus}.\n\nBooking Details:\nReference: ${bookingRef || 'N/A'}\nDate: ${bookingDate || 'N/A'}\n\nBest regards,\nSanzad International Team`,
+        html: `
+            <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+                <h2 style="color: #2E86C1;">Booking ${bookingStatus}</h2>
+                <p>Dear <strong>${agentName || 'Agent'}</strong>,</p>
+                <p>Your booking has been <strong style="color: ${statusColor};">${bookingStatus}</strong>.</p>
+                
+                <table style="border-collapse: collapse; margin-top: 10px;">
+                    <tr>
+                        <td style="padding: 8px; border: 1px solid #ddd;"><strong>Booking ID</strong></td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${bookingRef || 'N/A'}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px; border: 1px solid #ddd;"><strong>Date</strong></td>
+                        <td style="padding: 8px; border: 1px solid #ddd;">${bookingDate || 'N/A'}</td>
+                    </tr>
+                </table>
+
+                <p style="margin-top: 15px;">Thank you for choosing <strong>Sanzad International</strong>.</p>
+                
+                <p style="margin-top: 20px;">Best regards,<br>
+                <strong>Sanzad International Team</strong></p>
+            </div>
+        `
+    };
+}
+
+// Example usage in your mail sending code
+const status = results[0].status; // e.g., "Approved"
+const mailOptions = {
     from: 'sanzadinternational5@gmail.com',
     to: results[0].email,
-    subject: 'Booking Approved – Sanzad International',
-    text: `Dear ${results[0].agentName || 'Agent'},\n\nWe’re pleased to inform you that your booking request has been approved.\n\nBooking Details:\nReference: ${results[0].bookingRef || 'N/A'}\nDate: ${results[0].bookingDate || 'N/A'}\n\nThank you for choosing Sanzad International.\n\nBest regards,\nSanzad International Team`,
-    html: `
-        <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
-            <h2 style="color: #2E86C1;">Booking Approved</h2>
-            <p>Dear <strong>${results[0].agentName || 'Agent'}</strong>,</p>
-            <p>We’re pleased to inform you that your booking request has been <strong style="color: green;">approved</strong>.</p>
-            
-            <table style="border-collapse: collapse; margin-top: 10px;">
-                <tr>
-                    <td style="padding: 8px; border: 1px solid #ddd;"><strong>Date</strong></td>
-                    <td style="padding: 8px; border: 1px solid #ddd;">${results[0].bookingDate || 'N/A'}</td>
-                </tr>
-            </table>
-
-            <p style="margin-top: 15px;">Thank you for choosing <strong>Sanzad International</strong>. We look forward to working with you.</p>
-            
-            <p style="margin-top: 20px;">Best regards,<br>
-            <strong>Sanzad International Team</strong></p>
-        </div>
-    `
+    ...createBookingEmail(results[0].agentName, status, results[0].bookingRef, results[0].bookingDate)
 };
 
         // Send the email
