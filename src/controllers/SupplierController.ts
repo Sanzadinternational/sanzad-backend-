@@ -1949,11 +1949,11 @@ export const ChangeBookingStatusByBookingId = async (req: Request, res: Response
 }
 
 // Example usage in your mail sending code
-const status = results[0].status; // e.g., "Approved"
+const statuss = results[0].status; // e.g., "Approved"
 const mailOptions = {
     from: 'sanzadinternational5@gmail.com',
     to: results[0].email,
-    ...createBookingEmail(results[0].agentName, status, results[0].bookingRef, results[0].bookingDate)
+    ...createBookingEmail(results[0].agentName, statuss, results[0].bookingRef, results[0].bookingDate)
 };
 
         // Send the email
