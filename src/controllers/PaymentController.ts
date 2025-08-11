@@ -709,11 +709,27 @@ export const downloadInvoice = async (req: Request, res: Response) => {
     const bookingId = req.params.id;
 
     // Fetch booking
-    const [booking] = await db
-      .select()
-      .from(BookingTable)
-      .where(eq(BookingTable.id, bookingId))
-      .limit(1);
+ const [booking] = await db
+  .select({
+    bookingId: BookingTable.booking_unique_id,
+    bookedAt: BookingTable.booked_at,
+   bookingDate: BookingTable.booking_date,
+   bookingTime: BookingTable.booking_time,
+   returnDate: BookingTable.return_date,
+      returnTime: BookingTable.return_time,
+    passengers: BookingTable.passengers,
+    customerName: BookingTable.customer_name,
+    customerNumber: BookingTable.customer_mobile,
+    pickupLocation: BookingTable.pickup_location,
+    dropLocation: BookingTable.drop_location,
+    paymentId: PaymentsTable.id,
+    paymentAmount: PaymentsTable.amount,
+    paymentStatus: PaymentsTable.payment_status,
+  })
+  .from(BookingTable)
+  .innerJoin(PaymentsTable, eq(PaymentsTable.booking_id, BookingTable.id))
+  .where(eq(BookingTable.id, bookingId))
+  .limit(1);
 
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
@@ -773,7 +789,7 @@ export const downloadInvoice = async (req: Request, res: Response) => {
     // === INVOICE INFO ===
     doc.moveDown(1);
 
-    const createdAt = booking.created_at ? new Date(booking.created_at) : null;
+    const createdAt = booking.bookedAt ? new Date(booking.bookedAt) : null;
     const formattedDate = createdAt && !isNaN(createdAt.getTime())
       ? createdAt.toLocaleDateString('en-GB', {
           weekday: 'short',
@@ -787,7 +803,7 @@ export const downloadInvoice = async (req: Request, res: Response) => {
       ? booking.time.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
       : booking.time || '';
 
-    doc.font('Helvetica-Bold').text(`Invoice #: ${booking.id}`);
+    doc.font('Helvetica-Bold').text(`Invoice #: ${booking.bookingId}`);
     doc.moveDown();
     doc.font('Helvetica-Bold').text(`Date: ${formattedDate}`);
 
@@ -796,16 +812,16 @@ export const downloadInvoice = async (req: Request, res: Response) => {
     doc.font('Helvetica-Bold').fontSize(12).fillColor('#004aad').text('Service Details');
     doc.moveDown(0.5);
     doc.font('Helvetica').fillColor('black').fontSize(10);
-    doc.text(`Service ID: ${booking.id}`);
-    doc.text(`From: ${booking.pickup_location}`);
-    doc.text(`To: ${booking.drop_location}`);
+    doc.text(`Service ID: ${booking.bookingId}`);
+    doc.text(`From: ${booking.pickupLocation}`);
+    doc.text(`To: ${booking.dropLocation}`);
     doc.text(`Date & Time: ${formattedDate}${timeString ? ' at ' + timeString : ''}`);
 
     // === TOTAL ===
     const formattedPrice = new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
-    }).format(Number(booking.price));
+    }).format(Number(booking.paymentAmount));
 
     doc.moveDown(2);
     doc.font('Helvetica-Bold').fontSize(12).fillColor('black')
