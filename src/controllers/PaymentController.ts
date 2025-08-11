@@ -703,15 +703,6 @@ return_date: returnDate ? new Date(returnDate) : null,
 //  }
 //  };
 
-
-import { Request, Response } from 'express';
-import PDFDocument from 'pdfkit';
-import fs from 'fs';
-import path from 'path';
-import { db } from '../db';
-import { BookingTable, PaymentsTable } from '../db/schema';
-import { eq } from 'drizzle-orm';
-
 export const downloadInvoice = async (req: Request, res: Response) => {
   try {
     const bookingId = req.params.id;
