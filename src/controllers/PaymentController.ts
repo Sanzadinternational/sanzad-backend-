@@ -848,6 +848,7 @@ type VoucherBookingData = {
   dropLocation: string;
   paymentAmount: number;
   paymentStatus: string;
+ Currency: string;
 };
 
 export const downloadVoucher = async (req: Request, res: Response) => {
@@ -883,6 +884,7 @@ const fetchBookingData = async (bookingId: string): Promise<VoucherBookingData |
       dropLocation: BookingTable.drop_location,
       paymentAmount: PaymentsTable.amount,
       paymentStatus: PaymentsTable.payment_status,
+     Currency:BookingTable.currency,
     })
     .from(BookingTable)
     .innerJoin(PaymentsTable, eq(PaymentsTable.booking_id, BookingTable.id))
@@ -999,7 +1001,7 @@ const addBookingDetails = (doc: PDFDocument, booking: VoucherBookingData) => {
   labelValueRow(doc, 'Vehicle Type', 'Minivan Or Similar');
   labelValueRow(doc, 'Remark', 'Waiting 15 minutes');
   labelValueRow(doc, 'Payment', booking.paymentStatus === 'Paid' ? 'Paid in Full' : booking.paymentStatus);
-  labelValueRow(doc, 'Amount Paid', `₹${booking.paymentAmount}`);
+  labelValueRow(doc, 'Amount Paid', `${booking.Currency}${booking.paymentAmount}`);
   doc.moveDown(0.5);
 };
 
