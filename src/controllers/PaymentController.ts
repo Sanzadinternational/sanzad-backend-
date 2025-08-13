@@ -835,23 +835,7 @@ export const downloadInvoice = async (req: Request, res: Response) => {
 
 
 
-// Helper functions for PDF generation
-const drawLine = (doc: PDFDocument) => {
-  doc.moveDown(0.5);
-  doc.lineWidth(1)
-     .strokeColor('#ccc')
-     .moveTo(50, doc.y)
-     .lineTo(550, doc.y)
-     .stroke();
-  doc.moveDown(1);
-};
 
-const sectionHeader = (doc: PDFDocument, text: string) => {
-  doc.fontSize(14)
-     .fillColor('#333')
-     .text(text, { underline: true });
-  doc.moveDown(0.5);
-};
 
 type VoucherBookingData = {
   bookingId: string;
@@ -959,14 +943,14 @@ const addDocumentHeader = (doc: PDFDocument, booking: VoucherBookingData) => {
     year: 'numeric',
   });
 
-  const y = doc.y;
-  doc.fontSize(12).fillColor('#000').font('Helvetica-Bold');
-  doc.text(`Transfer ID: ${booking.bookingId}`, 50, y, { width: 250, align: 'left' });
-  doc.text(`Issue Date: ${issueDate}`, 300, y, { width: 250, align: 'right' });
+  const startY = doc.y;
+  doc.font('Helvetica-Bold').fontSize(12);
+  doc.text(`Transfer ID: ${booking.bookingId}`, 50, startY, { width: 250, align: 'left' });
+  doc.text(`Issue Date: ${issueDate}`, 300, startY, { width: 250, align: 'right' });
 
   doc.moveDown(1);
   doc.fontSize(14).font('Helvetica').text(`Transfer ${booking.bookingDate} ${booking.bookingTime} Hrs`, { align: 'center' });
-  doc.moveDown(1);
+  doc.moveDown(0.5);
 };
 
 const addPassengerDetails = (doc: PDFDocument, booking: VoucherBookingData) => {
@@ -982,26 +966,30 @@ const addItinerary = (doc: PDFDocument, booking: VoucherBookingData) => {
   const tableTop = doc.y;
   const colWidths = [80, 80, 200, 200];
   const colX = [50, 130, 210, 410];
-  const headers = ["Date", "Pick-Up Time", "Pick-Up Location", "Drop-off Location"];
+  const rowHeight = 40;
 
-  doc.fontSize(10).fillColor('#000').font('Helvetica-Bold');
-  headers.forEach((header, i) => {
-    doc.text(header, colX[i], tableTop, { width: colWidths[i], align: 'left' });
+  const drawCellBorder = (x: number, y: number, w: number, h: number) => {
+    doc.rect(x, y, w, h).stroke();
+  };
+
+  // Header row
+  doc.fontSize(10).font('Helvetica-Bold');
+  ["Date", "Pick-Up Time", "Pick-Up Location", "Drop-off Location"].forEach((header, i) => {
+    doc.text(header, colX[i] + 5, tableTop + 5, { width: colWidths[i] - 10 });
+    drawCellBorder(colX[i], tableTop, colWidths[i], 20);
   });
 
-  // Draw header line
-  const headerBottom = tableTop + 15;
-  doc.moveTo(50, headerBottom).lineTo(560, headerBottom).stroke();
-
+  // Data row
+  const rowY = tableTop + 20;
   doc.font('Helvetica').fontSize(10);
-  const rowY = headerBottom + 5;
-  doc.text(booking.bookingDate, colX[0], rowY, { width: colWidths[0] });
-  doc.text(`${booking.bookingTime} Hrs`, colX[1], rowY, { width: colWidths[1] });
-  doc.text(booking.pickupLocation, colX[2], rowY, { width: colWidths[2] });
-  doc.text(booking.dropLocation, colX[3], rowY, { width: colWidths[3] });
+  doc.text(booking.bookingDate, colX[0] + 5, rowY + 5, { width: colWidths[0] - 10 });
+  doc.text(`${booking.bookingTime} Hrs`, colX[1] + 5, rowY + 5, { width: colWidths[1] - 10 });
+  doc.text(booking.pickupLocation, colX[2] + 5, rowY + 5, { width: colWidths[2] - 10 });
+  doc.text(booking.dropLocation, colX[3] + 5, rowY + 5, { width: colWidths[3] - 10 });
 
-  // Border bottom
-  doc.moveTo(50, rowY + 15).lineTo(560, rowY + 15).stroke();
+  for (let i = 0; i < colX.length; i++) {
+    drawCellBorder(colX[i], rowY, colWidths[i], rowHeight);
+  }
 
   doc.moveDown(3);
 };
@@ -1063,13 +1051,25 @@ const addFooter = (doc: PDFDocument) => {
     .text('24X7 Customer Support: +91 7880331786', { align: 'center' });
 };
 
+const sectionHeader = (doc: PDFDocument, title: string) => {
+  doc.moveDown(0.5);
+  doc.fontSize(11).fillColor('#000').font('Helvetica-Bold').text(title);
+  doc.font('Helvetica');
+  doc.moveDown(0.2);
+};
+
 const labelValueRow = (doc: PDFDocument, label: string, value: string) => {
   const y = doc.y;
-  doc.fontSize(10).fillColor('#000').text(`${label}:`, 50, y, { width: 150, align: 'left' });
-  doc.text(value, 150, y, { width: 400, align: 'left' });
+  doc.fontSize(10).font('Helvetica-Bold').text(`${label}:`, 50, y, { width: 100, align: 'left' });
+  doc.font('Helvetica').text(value, 150, y, { width: 400, align: 'left' });
   doc.moveDown(0.3);
 };
 
+const drawLine = (doc: PDFDocument) => {
+  const y = doc.y;
+  doc.moveTo(50, y).lineTo(560, y).stroke();
+  doc.moveDown(0.5);
+};
 
 const handleError = (error: unknown, res: Response) => {
   console.error('Voucher generation error:', error);
