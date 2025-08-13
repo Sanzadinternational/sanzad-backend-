@@ -963,8 +963,11 @@ const addItinerary = (doc: PDFDocument, booking: VoucherBookingData) => {
   sectionHeader(doc, 'Transfers Itinerary:');
 
   const tableTop = doc.y;
-  const colWidths = [80, 80, 200, 200];
-  const colX = [50, 130, 210, 410];
+  const padding = 5;
+
+  // Adjusted widths for better fit within margins (total ~510)
+  const colWidths = [80, 80, 170, 180];
+  const colX = [50, 130, 210, 380];
   const headerHeight = 20;
   const rowHeight = 40;
 
@@ -975,25 +978,36 @@ const addItinerary = (doc: PDFDocument, booking: VoucherBookingData) => {
   // Header row
   doc.fontSize(10).font('Helvetica-Bold');
   ["Date", "Pick-Up Time", "Pick-Up Location", "Drop-off Location"].forEach((header, i) => {
-    doc.text(header, colX[i] + 5, tableTop + 5, { width: colWidths[i] - 10 });
+    doc.text(header, colX[i] + padding, tableTop + 5, {
+      width: colWidths[i] - padding * 2
+    });
     drawCellBorder(colX[i], tableTop, colWidths[i], headerHeight);
   });
 
   // Data row
   const rowY = tableTop + headerHeight;
   doc.font('Helvetica').fontSize(10);
-  doc.text(booking.bookingDate, colX[0] + 5, rowY + 5, { width: colWidths[0] - 10 });
-  doc.text(`${booking.bookingTime} Hrs`, colX[1] + 5, rowY + 5, { width: colWidths[1] - 10 });
-  doc.text(booking.pickupLocation, colX[2] + 5, rowY + 5, { width: colWidths[2] - 10 });
-  doc.text(booking.dropLocation, colX[3] + 5, rowY + 5, { width: colWidths[3] - 10 });
+  doc.text(booking.bookingDate, colX[0] + padding, rowY + 5, {
+    width: colWidths[0] - padding * 2
+  });
+  doc.text(`${booking.bookingTime} Hrs`, colX[1] + padding, rowY + 5, {
+    width: colWidths[1] - padding * 2
+  });
+  doc.text(booking.pickupLocation, colX[2] + padding, rowY + 5, {
+    width: colWidths[2] - padding * 2
+  });
+  doc.text(booking.dropLocation, colX[3] + padding, rowY + 5, {
+    width: colWidths[3] - padding * 2
+  });
 
   for (let i = 0; i < colX.length; i++) {
     drawCellBorder(colX[i], rowY, colWidths[i], rowHeight);
   }
 
-  // **Ensure doc.y is set correctly after table**
+  // Move y after table
   doc.y = rowY + rowHeight + 15;
 };
+
 
 const addBookingDetails = (doc: PDFDocument, booking: VoucherBookingData) => {
   sectionHeader(doc, 'Booking Details:');
