@@ -1070,11 +1070,6 @@ const labelValueRow = (doc: PDFDocument, label: string, value: string) => {
   doc.moveDown(0.3);
 };
 
-const drawLine = (doc: PDFDocument) => {
-  const y = doc.y;
-  doc.moveTo(50, y).lineTo(560, y).stroke();
-  doc.moveDown(0.5);
-};
 
 const handleError = (error: unknown, res: Response) => {
   console.error('Voucher generation error:', error);
