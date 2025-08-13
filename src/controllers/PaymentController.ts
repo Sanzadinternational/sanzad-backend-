@@ -919,13 +919,26 @@ const generatePDF = (res: Response, booking: VoucherBookingData) => {
 
   addLogo(doc);
   addDocumentHeader(doc, booking);
-  addTransferDetails(doc, booking);
+  drawLine(doc);
+
   addPassengerDetails(doc, booking);
+  drawLine(doc);
+
   addItinerary(doc, booking);
+  drawLine(doc);
+
   addBookingDetails(doc, booking);
+  drawLine(doc);
+
   addMeetingPoint(doc);
+  drawLine(doc);
+
   addSupportInfo(doc);
+  drawLine(doc);
+
   addTermsAndConditions(doc);
+  drawLine(doc);
+
   addFooter(doc);
 
   doc.end();
@@ -947,32 +960,28 @@ const addDocumentHeader = (doc: PDFDocument, booking: VoucherBookingData) => {
   });
 
   const y = doc.y;
-  doc.fontSize(12).fillColor('#000').text(`Transfer ID: ${booking.bookingId}`, 50, y, { continued: true });
-  doc.text(`Issue Date: ${issueDate}`, { align: 'right' });
+  doc.fontSize(12).fillColor('#000').font('Helvetica-Bold');
+  doc.text(`Transfer ID: ${booking.bookingId}`, 50, y, { width: 250, align: 'left' });
+  doc.text(`Issue Date: ${issueDate}`, 300, y, { width: 250, align: 'right' });
 
   doc.moveDown(1);
-  doc.fontSize(14).text(`Transfer ${booking.bookingDate} ${booking.bookingTime} Hrs`, { align: 'center' });
+  doc.fontSize(14).font('Helvetica').text(`Transfer ${booking.bookingDate} ${booking.bookingTime} Hrs`, { align: 'center' });
   doc.moveDown(1);
-};
-
-const addTransferDetails = (doc: PDFDocument, booking: VoucherBookingData) => {
-  // Just spacer in this layout — info is already in header
-  doc.moveDown(0.5);
 };
 
 const addPassengerDetails = (doc: PDFDocument, booking: VoucherBookingData) => {
   sectionHeader(doc, 'Passenger Details:');
   labelValueRow(doc, 'Name', booking.customerName);
   labelValueRow(doc, 'Mobile Number', booking.customerNumber);
-  doc.moveDown();
+  doc.moveDown(0.5);
 };
 
 const addItinerary = (doc: PDFDocument, booking: VoucherBookingData) => {
   sectionHeader(doc, 'Transfers Itinerary:');
 
   const tableTop = doc.y;
-  const colWidths = [100, 100, 180, 180];
-  const colX = [50, 150, 250, 430];
+  const colWidths = [80, 80, 200, 200];
+  const colX = [50, 130, 210, 410];
   const headers = ["Date", "Pick-Up Time", "Pick-Up Location", "Drop-off Location"];
 
   doc.fontSize(10).fillColor('#000').font('Helvetica-Bold');
@@ -980,12 +989,19 @@ const addItinerary = (doc: PDFDocument, booking: VoucherBookingData) => {
     doc.text(header, colX[i], tableTop, { width: colWidths[i], align: 'left' });
   });
 
-  const rowY = tableTop + 15;
+  // Draw header line
+  const headerBottom = tableTop + 15;
+  doc.moveTo(50, headerBottom).lineTo(560, headerBottom).stroke();
+
   doc.font('Helvetica').fontSize(10);
+  const rowY = headerBottom + 5;
   doc.text(booking.bookingDate, colX[0], rowY, { width: colWidths[0] });
   doc.text(`${booking.bookingTime} Hrs`, colX[1], rowY, { width: colWidths[1] });
   doc.text(booking.pickupLocation, colX[2], rowY, { width: colWidths[2] });
   doc.text(booking.dropLocation, colX[3], rowY, { width: colWidths[3] });
+
+  // Border bottom
+  doc.moveTo(50, rowY + 15).lineTo(560, rowY + 15).stroke();
 
   doc.moveDown(3);
 };
@@ -997,23 +1013,25 @@ const addBookingDetails = (doc: PDFDocument, booking: VoucherBookingData) => {
   labelValueRow(doc, 'Remark', 'Waiting 15 minutes');
   labelValueRow(doc, 'Payment', booking.paymentStatus === 'Paid' ? 'Paid in Full' : booking.paymentStatus);
   labelValueRow(doc, 'Amount Paid', `₹${booking.paymentAmount}`);
-  doc.moveDown();
+  doc.moveDown(0.5);
 };
 
 const addMeetingPoint = (doc: PDFDocument) => {
   sectionHeader(doc, 'Meeting Point:');
   doc.fontSize(10).text(
-    'The driver will meet you at the main entrance of the building or wait in the designated parking area, depending on local access and parking regulations. Please be ready at the scheduled time to ensure a smooth transfer.'
+    'The driver will meet you at the main entrance of the building or wait in the designated parking area, depending on local access and parking regulations. Please be ready at the scheduled time to ensure a smooth transfer.',
+    { align: 'justify' }
   );
-  doc.moveDown();
+  doc.moveDown(0.5);
 };
 
 const addSupportInfo = (doc: PDFDocument) => {
   sectionHeader(doc, '24X7 Customer Support: +91 7880331786');
   doc.fontSize(10).text(
-    'If you are unable to reach your driver directly, please do not leave your pick-up location without first contacting our customer support team at +91 7880331786. We are available 24/7 to assist you.'
+    'If you are unable to reach your driver directly, please do not leave your pick-up location without first contacting our customer support team at +91 7880331786. We are available 24/7 to assist you.',
+    { align: 'justify' }
   );
-  doc.moveDown();
+  doc.moveDown(0.5);
 };
 
 const addTermsAndConditions = (doc: PDFDocument) => {
@@ -1033,7 +1051,7 @@ const addTermsAndConditions = (doc: PDFDocument) => {
     'Smoking Policy: Strictly prohibited in vehicles',
     'Missed Connections Due to Client Delay: Company not liable'
   ]);
-  doc.moveDown();
+  doc.moveDown(0.5);
 };
 
 const addFooter = (doc: PDFDocument) => {
@@ -1047,8 +1065,15 @@ const addFooter = (doc: PDFDocument) => {
 
 const labelValueRow = (doc: PDFDocument, label: string, value: string) => {
   const y = doc.y;
-  doc.fontSize(10).fillColor('#000').text(`${label}:`, 50, y, { continued: true });
-  doc.text(value, 150, y);
+  doc.fontSize(10).fillColor('#000').text(`${label}:`, 50, y, { width: 150, align: 'left' });
+  doc.text(value, 150, y, { width: 400, align: 'left' });
+  doc.moveDown(0.3);
+};
+
+const drawLine = (doc: PDFDocument) => {
+  const y = doc.y;
+  doc.moveTo(50, y).lineTo(560, y).stroke();
+  doc.moveDown(0.5);
 };
 
 const handleError = (error: unknown, res: Response) => {
