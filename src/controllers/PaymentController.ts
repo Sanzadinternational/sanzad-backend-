@@ -1052,11 +1052,20 @@ const addFooter = (doc: PDFDocument) => {
 };
 
 const sectionHeader = (doc: PDFDocument, title: string) => {
-  doc.moveDown(0.5);
-  doc.fontSize(11).fillColor('#000').font('Helvetica-Bold').text(title);
-  doc.font('Helvetica');
-  doc.moveDown(0.2);
+  // Add fixed spacing before header
+  doc.moveDown(1.2);
+
+  // Bold, slightly larger text
+  doc.fontSize(11)
+     .fillColor('#000')
+     .font('Helvetica-Bold')
+     .text(title, { underline: false });
+
+  // Reset font for body text
+  doc.font('Helvetica').fillColor('#000');
+  doc.moveDown(0.4);
 };
+
 
 const labelValueRow = (doc: PDFDocument, label: string, value: string) => {
   const y = doc.y;
