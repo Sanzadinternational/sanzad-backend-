@@ -1008,7 +1008,7 @@ const addMeetingPoint = (doc: PDFDocument) => {
   sectionHeader(doc, 'Meeting Point:');
   doc.fontSize(10).text(
     'The driver will meet you at the main entrance of the building or wait in the designated parking area, depending on local access and parking regulations. Please be ready at the scheduled time to ensure a smooth transfer.',
-    { align: 'justify' }
+    { align: 'left' }
   );
   doc.moveDown(0.5);
 };
