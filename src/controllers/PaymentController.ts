@@ -834,16 +834,6 @@ export const downloadInvoice = async (req: Request, res: Response) => {
 };
 
 
-
-
-import PDFDocument from 'pdfkit';
-import fs from 'fs';
-import path from 'path';
-import { Request, Response } from 'express';
-import { eq } from 'drizzle-orm';
-import { db } from './db';
-import { BookingTable, PaymentsTable } from './schema';
-
 type VoucherBookingData = {
   bookingId: string;
   bookedAt: Date;
