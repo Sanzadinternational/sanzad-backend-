@@ -948,7 +948,7 @@ const addDocumentHeader = (doc: PDFDocument, booking: VoucherBookingData) => {
   doc.text(`Issue Date: ${issueDate}`, 300, startY, { width: 250, align: 'right' });
 
   doc.moveDown(1);
-  doc.fontSize(14).font('Helvetica').text(`Transfer ${booking.bookingDate} ${booking.bookingTime} Hrs`, { align: 'center' });
+  doc.fontSize(14).font('Helvetica').text(`Transfer ${booking.bookingDate} ${booking.bookingTime} Hrs`, { align: 'left' });
   doc.moveDown(0.5);
 };
 
@@ -1001,7 +1001,7 @@ const addBookingDetails = (doc: PDFDocument, booking: VoucherBookingData) => {
   labelValueRow(doc, 'Vehicle Type', 'Minivan Or Similar');
   labelValueRow(doc, 'Remark', 'Waiting 15 minutes');
   labelValueRow(doc, 'Payment', booking.paymentStatus === 'Paid' ? 'Paid in Full' : booking.paymentStatus);
-  labelValueRow(doc, 'Amount Paid', `${booking.Currency}${booking.paymentAmount}`);
+  labelValueRow(doc, 'Amount Paid', `${booking.Currency}\u00A0${booking.paymentAmount}`);
   doc.moveDown(0.5);
 };
 
