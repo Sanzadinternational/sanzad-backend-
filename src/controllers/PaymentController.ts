@@ -943,12 +943,12 @@ const addDocumentHeader = (doc: PDFDocument, booking: VoucherBookingData) => {
   });
 
   const startY = doc.y;
-  doc.font('Helvetica-Bold').fontSize(12);
+  doc.font('Helvetica-Bold').fontSize(10);
   doc.text(`Transfer ID: ${booking.bookingId}`, 50, startY, { width: 250, align: 'left' });
   doc.text(`Issue Date: ${issueDate}`, 300, startY, { width: 250, align: 'right' });
 
   doc.moveDown(1);
-  doc.fontSize(14).font('Helvetica').text(`Transfer ${booking.bookingDate} ${booking.bookingTime} Hrs`, { align: 'left' });
+  doc.fontSize(12).font('Helvetica').text(`Transfer ${booking.bookingDate} ${booking.bookingTime} Hrs`, { align: 'center' });
   doc.moveDown(0.5);
 };
 
@@ -975,7 +975,7 @@ const addItinerary = (doc: PDFDocument, booking: VoucherBookingData) => {
   // Header row
   doc.fontSize(10).font('Helvetica-Bold');
   ["Date", "Pick-Up Time", "Pick-Up Location", "Drop-off Location"].forEach((header, i) => {
-    doc.text(header, colX[i] + 5, tableTop + 5, { width: colWidths[i] - 10 });
+    doc.text(header, colX[i] + 5, tableTop + 5, { width: colWidths[i] - 20 });
     drawCellBorder(colX[i], tableTop, colWidths[i], headerHeight);
   });
 
