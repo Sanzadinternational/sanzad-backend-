@@ -853,7 +853,6 @@ const sectionHeader = (doc: PDFDocument, text: string) => {
   doc.moveDown(0.5);
 };
 
-// Type for booking data
 type VoucherBookingData = {
   bookingId: string;
   bookedAt: Date;
@@ -881,14 +880,12 @@ export const downloadVoucher = async (req: Request, res: Response) => {
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
     }
-
     generatePDF(res, booking);
   } catch (error) {
     handleError(error, res);
   }
 };
 
-// Data fetching function
 const fetchBookingData = async (bookingId: string): Promise<VoucherBookingData | null> => {
   const [booking] = await db
     .select({
@@ -907,21 +904,15 @@ const fetchBookingData = async (bookingId: string): Promise<VoucherBookingData |
       paymentStatus: PaymentsTable.payment_status,
     })
     .from(BookingTable)
-    .innerJoin(
-      PaymentsTable,
-      eq(PaymentsTable.booking_id, BookingTable.id)
-    )
+    .innerJoin(PaymentsTable, eq(PaymentsTable.booking_id, BookingTable.id))
     .where(eq(BookingTable.id, bookingId))
     .limit(1);
 
   return booking || null;
 };
 
-// PDF generation function
 const generatePDF = (res: Response, booking: VoucherBookingData) => {
   const doc = new PDFDocument({ margin: 50 });
-  
-  // Set response headers
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `inline; filename="voucher_${booking.bookingId}.pdf"`);
   doc.pipe(res);
@@ -940,120 +931,139 @@ const generatePDF = (res: Response, booking: VoucherBookingData) => {
   doc.end();
 };
 
-// PDF section components
 const addLogo = (doc: PDFDocument) => {
   const logoPath = path.join(__dirname, 'logo.png');
   if (fs.existsSync(logoPath)) {
     doc.image(logoPath, 50, 45, { width: 100 });
-    doc.moveDown(1.5);
+    doc.moveDown(2);
   }
 };
 
 const addDocumentHeader = (doc: PDFDocument, booking: VoucherBookingData) => {
-  doc.fontSize(20)
-     .fillColor('#333')
-     .text('Transfer Voucher', { align: 'center' })
-     .moveDown(0.5);
-
   const issueDate = booking.bookedAt.toLocaleDateString('en-GB', {
     day: '2-digit',
-    month: 'short',
+    month: 'long',
     year: 'numeric',
   });
 
-  doc.fontSize(12)
-     .fillColor('#666')
-     .text(`Transfer ID: ${booking.bookingId}`)
-     .text(`Issue Date: ${issueDate}`)
-     .moveDown(0.5);
+  const y = doc.y;
+  doc.fontSize(12).fillColor('#000').text(`Transfer ID: ${booking.bookingId}`, 50, y, { continued: true });
+  doc.text(`Issue Date: ${issueDate}`, { align: 'right' });
 
-  drawLine(doc);
+  doc.moveDown(1);
+  doc.fontSize(14).text(`Transfer ${booking.bookingDate} ${booking.bookingTime} Hrs`, { align: 'center' });
+  doc.moveDown(1);
 };
 
 const addTransferDetails = (doc: PDFDocument, booking: VoucherBookingData) => {
-  doc.fillColor('#000')
-     .fontSize(12)
-     .text(`Transfer Date: ${booking.bookingDate}`)
-     .text(`Transfer Time: ${booking.bookingTime} Hrs`)
-     .moveDown(1);
+  // Just spacer in this layout — info is already in header
+  doc.moveDown(0.5);
 };
 
 const addPassengerDetails = (doc: PDFDocument, booking: VoucherBookingData) => {
-  sectionHeader(doc, 'Passenger Details');
-  doc.text(`Name: ${booking.customerName}`)
-     .text(`Mobile: ${booking.customerNumber}`)
-     .moveDown();
+  sectionHeader(doc, 'Passenger Details:');
+  labelValueRow(doc, 'Name', booking.customerName);
+  labelValueRow(doc, 'Mobile Number', booking.customerNumber);
+  doc.moveDown();
 };
 
 const addItinerary = (doc: PDFDocument, booking: VoucherBookingData) => {
-  sectionHeader(doc, 'Transfer Itinerary');
-  doc.text(`Pick-Up Date: ${booking.bookingDate}`)
-     .text(`Pick-Up Time: ${booking.bookingTime} Hrs`)
-     .text(`Pick-Up Location: ${booking.pickupLocation}`)
-     .text(`Drop-off Location: ${booking.dropLocation}`)
-     .moveDown();
+  sectionHeader(doc, 'Transfers Itinerary:');
+
+  const tableTop = doc.y;
+  const colWidths = [100, 100, 180, 180];
+  const colX = [50, 150, 250, 430];
+  const headers = ["Date", "Pick-Up Time", "Pick-Up Location", "Drop-off Location"];
+
+  doc.fontSize(10).fillColor('#000').font('Helvetica-Bold');
+  headers.forEach((header, i) => {
+    doc.text(header, colX[i], tableTop, { width: colWidths[i], align: 'left' });
+  });
+
+  const rowY = tableTop + 15;
+  doc.font('Helvetica').fontSize(10);
+  doc.text(booking.bookingDate, colX[0], rowY, { width: colWidths[0] });
+  doc.text(`${booking.bookingTime} Hrs`, colX[1], rowY, { width: colWidths[1] });
+  doc.text(booking.pickupLocation, colX[2], rowY, { width: colWidths[2] });
+  doc.text(booking.dropLocation, colX[3], rowY, { width: colWidths[3] });
+
+  doc.moveDown(3);
 };
 
 const addBookingDetails = (doc: PDFDocument, booking: VoucherBookingData) => {
-  sectionHeader(doc, 'Booking Details');
-  doc.text(`Passengers: ${booking.passengers}`)
-     .text(`Vehicle Type: Minivan Or Similar`)
-     .text(`Special Instructions: Waiting 15 minutes`)
-     .text(`Payment Status: ${booking.paymentStatus}`)
-     .text(`Amount Paid: ₹${booking.paymentAmount}`)
-     .moveDown();
+  sectionHeader(doc, 'Booking Details:');
+  labelValueRow(doc, 'No. of Passengers', booking.passengers.toString());
+  labelValueRow(doc, 'Vehicle Type', 'Minivan Or Similar');
+  labelValueRow(doc, 'Remark', 'Waiting 15 minutes');
+  labelValueRow(doc, 'Payment', booking.paymentStatus === 'Paid' ? 'Paid in Full' : booking.paymentStatus);
+  labelValueRow(doc, 'Amount Paid', `₹${booking.paymentAmount}`);
+  doc.moveDown();
 };
 
 const addMeetingPoint = (doc: PDFDocument) => {
-  sectionHeader(doc, 'Meeting Point');
-  doc.text('The driver will meet you at the main entrance or designated parking area, depending on local access and parking rules.')
-     .text('Please be ready at the scheduled time to ensure a smooth transfer.')
-     .moveDown();
+  sectionHeader(doc, 'Meeting Point:');
+  doc.fontSize(10).text(
+    'The driver will meet you at the main entrance of the building or wait in the designated parking area, depending on local access and parking regulations. Please be ready at the scheduled time to ensure a smooth transfer.'
+  );
+  doc.moveDown();
 };
 
 const addSupportInfo = (doc: PDFDocument) => {
-  sectionHeader(doc, '24x7 Customer Support');
-  doc.text('Phone: +91 7880331786')
-     .text('If you are unable to reach your driver, do not leave your location without first contacting support.')
-     .moveDown();
+  sectionHeader(doc, '24X7 Customer Support: +91 7880331786');
+  doc.fontSize(10).text(
+    'If you are unable to reach your driver directly, please do not leave your pick-up location without first contacting our customer support team at +91 7880331786. We are available 24/7 to assist you.'
+  );
+  doc.moveDown();
 };
 
 const addTermsAndConditions = (doc: PDFDocument) => {
-  sectionHeader(doc, 'Important Information');
-  doc.fontSize(10)
-     .list([
-        'Airport Pick-Up: 45 min complimentary wait from landing time',
-        'Non-Airport Pick-Up: 15 min free wait time',
-        'Delays: Call emergency number to request extension (subject to availability)',
-        'Driver may leave if waiting time exceeded due to tight schedules',
-        'Booking changes must be requested at least 72 hours in advance',
-        'Exceeding waiting time may result in additional fees or cancellation',
-        'Mobile phone must be active and reachable at pickup time'
-     ]);
+  sectionHeader(doc, 'IMPORTANT INFORMATION\nTransfer Service Terms and Conditions');
+  doc.fontSize(9).list([
+    'Airport Pick-Up Waiting Time: 45 min complimentary wait from landing time',
+    'Other Pick-Up Locations: 15 min free wait time',
+    'Delays at Immigration or Baggage Claim: Call emergency number for extension (subject to availability & charges)',
+    'Point-to-Point Transfers: Driver cannot wait beyond allocated time',
+    'Changes to Booking Details: Request at least 72 hours in advance',
+    'Exceeding Free Waiting Time: May result in additional fees or cancellation',
+    'Service Provider Disclaimer: Agency not responsible for delays from third-party suppliers or client actions',
+    'Availability of Contact Number: Must be active at pickup time',
+    'Amendments & Cancellations: Contact support',
+    'Last-Minute Changes (Within 72 Hours): Call support directly',
+    'Terms of Service: Subject to general terms & local provider terms',
+    'Smoking Policy: Strictly prohibited in vehicles',
+    'Missed Connections Due to Client Delay: Company not liable'
+  ]);
   doc.moveDown();
 };
 
 const addFooter = (doc: PDFDocument) => {
-  drawLine(doc);
-  doc.fontSize(12)
-     .fillColor('#000')
-     .text('*** Thank you! Have a wonderful trip! ***', { align: 'center' })
-     .moveDown(1);
-
-  doc.fontSize(10)
-     .fillColor('#666')
-     .text('FF-4 1st Floor, H-53, Sector-63, Noida, Gautam Buddha Nagar, UP, 201301', { align: 'center' })
-     .text('24X7 Customer Support: +91 7880331786', { align: 'center' });
+  doc.moveDown(1);
+  doc.fontSize(12).fillColor('#000').text('*** Thank you! Have a wonderful trip! ***', { align: 'center' });
+  doc.moveDown(1);
+  doc.fontSize(9).fillColor('#666')
+    .text('FF-4 1st Floor, H-53, Sector-63, Noida, Gautam Buddha Nagar, UP, 201301', { align: 'center' })
+    .text('24X7 Customer Support: +91 7880331786', { align: 'center' });
 };
 
-// Error handling
+const sectionHeader = (doc: PDFDocument, title: string) => {
+  doc.moveDown(0.5);
+  doc.fontSize(11).fillColor('#000').font('Helvetica-Bold').text(title);
+  doc.font('Helvetica');
+  doc.moveDown(0.3);
+};
+
+const labelValueRow = (doc: PDFDocument, label: string, value: string) => {
+  const y = doc.y;
+  doc.fontSize(10).fillColor('#000').text(`${label}:`, 50, y, { continued: true });
+  doc.text(value, 150, y);
+};
+
 const handleError = (error: unknown, res: Response) => {
   console.error('Voucher generation error:', error);
-  
   if (!res.headersSent) {
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Failed to generate voucher',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 };
