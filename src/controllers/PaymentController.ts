@@ -1045,13 +1045,6 @@ const addFooter = (doc: PDFDocument) => {
     .text('24X7 Customer Support: +91 7880331786', { align: 'center' });
 };
 
-const sectionHeader = (doc: PDFDocument, title: string) => {
-  doc.moveDown(0.5);
-  doc.fontSize(11).fillColor('#000').font('Helvetica-Bold').text(title);
-  doc.font('Helvetica');
-  doc.moveDown(0.3);
-};
-
 const labelValueRow = (doc: PDFDocument, label: string, value: string) => {
   const y = doc.y;
   doc.fontSize(10).fillColor('#000').text(`${label}:`, 50, y, { continued: true });
