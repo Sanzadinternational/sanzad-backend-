@@ -948,8 +948,8 @@ const addDocumentHeader = (doc: PDFDocument, booking: VoucherBookingData) => {
   doc.text(`Issue Date: ${issueDate}`, 300, startY, { width: 250, align: 'right' });
 
   doc.moveDown(1);
-  doc.fontSize(12)
-   .font('Helvetica')
+  doc.fontSize(14)
+   .font('Helvetica-bold')
    .text(
      `Transfer ${booking.bookingDate} ${booking.bookingTime} Hrs`,
      50, // X position (left margin)
