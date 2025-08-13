@@ -836,6 +836,13 @@ export const downloadInvoice = async (req: Request, res: Response) => {
 
 
 
+import PDFDocument from 'pdfkit';
+import fs from 'fs';
+import path from 'path';
+import { Request, Response } from 'express';
+import { eq } from 'drizzle-orm';
+import { db } from './db';
+import { BookingTable, PaymentsTable } from './schema';
 
 type VoucherBookingData = {
   bookingId: string;
@@ -966,6 +973,7 @@ const addItinerary = (doc: PDFDocument, booking: VoucherBookingData) => {
   const tableTop = doc.y;
   const colWidths = [80, 80, 200, 200];
   const colX = [50, 130, 210, 410];
+  const headerHeight = 20;
   const rowHeight = 40;
 
   const drawCellBorder = (x: number, y: number, w: number, h: number) => {
@@ -976,11 +984,11 @@ const addItinerary = (doc: PDFDocument, booking: VoucherBookingData) => {
   doc.fontSize(10).font('Helvetica-Bold');
   ["Date", "Pick-Up Time", "Pick-Up Location", "Drop-off Location"].forEach((header, i) => {
     doc.text(header, colX[i] + 5, tableTop + 5, { width: colWidths[i] - 10 });
-    drawCellBorder(colX[i], tableTop, colWidths[i], 20);
+    drawCellBorder(colX[i], tableTop, colWidths[i], headerHeight);
   });
 
   // Data row
-  const rowY = tableTop + 20;
+  const rowY = tableTop + headerHeight;
   doc.font('Helvetica').fontSize(10);
   doc.text(booking.bookingDate, colX[0] + 5, rowY + 5, { width: colWidths[0] - 10 });
   doc.text(`${booking.bookingTime} Hrs`, colX[1] + 5, rowY + 5, { width: colWidths[1] - 10 });
@@ -991,7 +999,8 @@ const addItinerary = (doc: PDFDocument, booking: VoucherBookingData) => {
     drawCellBorder(colX[i], rowY, colWidths[i], rowHeight);
   }
 
-  doc.moveDown(3);
+  // **Ensure doc.y is set correctly after table**
+  doc.y = rowY + rowHeight + 15;
 };
 
 const addBookingDetails = (doc: PDFDocument, booking: VoucherBookingData) => {
@@ -1017,7 +1026,7 @@ const addSupportInfo = (doc: PDFDocument) => {
   sectionHeader(doc, '24X7 Customer Support: +91 7880331786');
   doc.fontSize(10).text(
     'If you are unable to reach your driver directly, please do not leave your pick-up location without first contacting our customer support team at +91 7880331786. We are available 24/7 to assist you.',
-    { align: 'justify' }
+    { align: 'left' }
   );
   doc.moveDown(0.5);
 };
@@ -1052,20 +1061,12 @@ const addFooter = (doc: PDFDocument) => {
 };
 
 const sectionHeader = (doc: PDFDocument, title: string) => {
-  // Add fixed spacing before header
-  doc.moveDown(1.2);
-
-  // Bold, slightly larger text
-  doc.fontSize(11)
-     .fillColor('#000')
-     .font('Helvetica-Bold')
-     .text(title, { underline: false });
-
-  // Reset font for body text
+  if (doc.y < 50) doc.addPage(); // Avoid header too close to page top
+  doc.moveDown(0.8);
+  doc.fontSize(11).fillColor('#000').font('Helvetica-Bold').text(title, 50, doc.y);
   doc.font('Helvetica').fillColor('#000');
-  doc.moveDown(0.4);
+  doc.moveDown(0.3);
 };
-
 
 const labelValueRow = (doc: PDFDocument, label: string, value: string) => {
   const y = doc.y;
