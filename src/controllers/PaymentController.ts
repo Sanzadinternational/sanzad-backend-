@@ -949,7 +949,7 @@ const addDocumentHeader = (doc: PDFDocument, booking: VoucherBookingData) => {
 
   doc.moveDown(1);
   doc.fontSize(14)
-   .font('Helvetica-bold')
+   .font('Helvetica-Bold')
    .text(
      `Transfer ${booking.bookingDate} ${booking.bookingTime} Hrs`,
      50, // X position (left margin)
