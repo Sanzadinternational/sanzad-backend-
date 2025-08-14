@@ -802,7 +802,7 @@ const addInvoiceHeader = (doc: PDFDocument, booking: InvoiceBookingData) => {
   const y = doc.y;
   doc.fontSize(10);
   doc.text(`Invoice #: ${booking.bookingId}`, 50, y, { width: 250 });
-  doc.text(`Date: ${issueDate}`, 300, y, { width: 250, align: 'right' });
+  doc.text(`Invoice Date: ${issueDate}`, 300, y, { width: 250, align: 'right' });
   doc.moveDown(1);
 };
 
