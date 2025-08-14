@@ -704,135 +704,199 @@ return_date: returnDate ? new Date(returnDate) : null,
 //  };
 
 export const downloadInvoice = async (req: Request, res: Response) => {
+  const bookingId = req.params.id;
+  if (!bookingId) {
+    return res.status(400).json({ message: 'Missing booking ID' });
+  }
+
   try {
-    const bookingId = req.params.id;
-
-    // Fetch booking details with payment info
-    const [booking] = await db
-      .select({
-        bookingId: BookingTable.booking_unique_id,
-        bookedAt: BookingTable.booked_at,
-        bookingDate: BookingTable.booking_date,
-        bookingTime: BookingTable.booking_time,
-        returnDate: BookingTable.return_date,
-        returnTime: BookingTable.return_time,
-        passengers: BookingTable.passengers,
-        customerName: BookingTable.customer_name,
-        customerNumber: BookingTable.customer_mobile,
-        pickupLocation: BookingTable.pickup_location,
-        dropLocation: BookingTable.drop_location,
-        paymentId: PaymentsTable.id,
-        paymentAmount: PaymentsTable.amount,
-        paymentStatus: PaymentsTable.payment_status,
-      })
-      .from(BookingTable)
-      .innerJoin(PaymentsTable, eq(PaymentsTable.booking_id, BookingTable.id))
-      .where(eq(BookingTable.id, bookingId))
-      .limit(1);
-
+    const booking = await fetchInvoiceData(bookingId);
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
     }
-
-    const safeFilename = `invoice_${String(booking.bookingId).replace(/[^a-z0-9]/gi, '_')}.pdf`;
-
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=${safeFilename}`);
-
-    const doc = new PDFDocument({ size: 'A4', margin: 50 });
-
-    doc.on('error', (err) => {
-      console.error('PDF generation error:', err);
-      if (!res.headersSent) {
-        res.status(500).json({ message: 'Failed to generate invoice' });
-      } else {
-        res.end();
-      }
-    });
-
-    res.on('close', () => {
-      if (!res.writableEnded) {
-        console.warn('PDF download aborted by client');
-        doc.end();
-      }
-    });
-
-    doc.pipe(res);
-
-    // === HEADER WITH LOGO ===
-    const logoPath = path.join(__dirname, '../assets/logo.png');
-    if (fs.existsSync(logoPath)) {
-      doc.image(logoPath, 50, 45, { width: 50 });
-    }
-    doc
-      .fillColor('#004aad')
-      .font('Helvetica-Bold')
-      .fontSize(20)
-      .text('Sanzad International', 110, 50)
-      .fontSize(10)
-      .fillColor('black')
-      .text('Office No: 5, 1st Floor, H-53, Sector 63 Rd, A Block, Sector 65, Noida, Uttar Pradesh 201301', 110, 70, { width: 400 })
-      .moveDown();
-
-    // Invoice title
-    doc.moveDown(1);
-    doc.fillColor('#004aad')
-      .font('Helvetica-Bold')
-      .fontSize(16)
-      .text('PROFORMA INVOICE', { align: 'center', underline: true });
-
-    // === CUSTOMER DETAILS ===
-    doc.moveDown(2);
-    doc.font('Helvetica-Bold').fontSize(10).text('Bill To:');
-    doc.font('Helvetica').fontSize(10).text(booking.customerName);
-    doc.text(`Mobile: ${booking.customerNumber}`);
-
-    // === INVOICE INFO ===
-    const createdAt = booking.bookedAt ? new Date(booking.bookedAt) : null;
-    const formattedDate = createdAt && !isNaN(createdAt.getTime())
-      ? createdAt.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
-      : 'N/A';
-
-    doc.moveDown(1);
-    doc.font('Helvetica-Bold').text(`Invoice #: ${booking.bookingId}`);
-    doc.text(`Date: ${formattedDate}`);
-
-    // === SERVICE DETAILS ===
-    doc.moveDown(1.5);
-    doc.font('Helvetica-Bold').fontSize(12).fillColor('#004aad').text('Service Details');
-    doc.moveDown(0.5);
-    doc.font('Helvetica').fillColor('black').fontSize(10);
-    doc.text(`Pickup Location: ${booking.pickupLocation}`);
-    doc.text(`Drop Location: ${booking.dropLocation}`);
-    doc.text(`Booking Date: ${booking.bookingDate} ${booking.bookingTime || ''}`);
-    doc.text(`Return Date: ${booking.returnDate || 'N/A'} ${booking.returnTime || ''}`);
-    doc.text(`Passengers: ${booking.passengers}`);
-
-    // === TOTAL AMOUNT ===
-    const formattedPrice = new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-    }).format(Number(booking.paymentAmount));
-
-    doc.moveDown(2);
-    doc.font('Helvetica-Bold').fontSize(12).fillColor('black')
-      .text(`Total Paid: ${formattedPrice}`, { align: 'right' });
-
-    // === FOOTER ===
-    doc.moveDown(2);
-    doc.font('Helvetica-Oblique').fontSize(9).fillColor('gray')
-      .text('Thank you for your business!', { align: 'center' });
-
-    doc.end();
-
+    generateInvoicePDF(res, booking);
   } catch (error) {
-    console.error('Unexpected error during invoice download:', error);
-    if (!res.headersSent) {
-      res.status(500).json({ message: 'Failed to generate invoice' });
-    }
+    handleError(error, res);
   }
 };
 
+type InvoiceBookingData = {
+  bookingId: string;
+  bookedAt: Date;
+  bookingDate: string;
+  bookingTime: string;
+  returnDate: string;
+  returnTime: string;
+  passengers: number;
+  customerName: string;
+  customerNumber: string;
+  pickupLocation: string;
+  dropLocation: string;
+  paymentAmount: number;
+  paymentStatus: string;
+  currency: string;
+};
+
+const fetchInvoiceData = async (bookingId: string): Promise<InvoiceBookingData | null> => {
+  const [booking] = await db
+    .select({
+      bookingId: BookingTable.booking_unique_id,
+      bookedAt: BookingTable.booked_at,
+      bookingDate: BookingTable.booking_date,
+      bookingTime: BookingTable.booking_time,
+      returnDate: BookingTable.return_date,
+      returnTime: BookingTable.return_time,
+      passengers: BookingTable.passengers,
+      customerName: BookingTable.customer_name,
+      customerNumber: BookingTable.customer_mobile,
+      pickupLocation: BookingTable.pickup_location,
+      dropLocation: BookingTable.drop_location,
+      paymentAmount: PaymentsTable.amount,
+      paymentStatus: PaymentsTable.payment_status,
+      currency: BookingTable.currency,
+    })
+    .from(BookingTable)
+    .innerJoin(PaymentsTable, eq(PaymentsTable.booking_id, BookingTable.id))
+    .where(eq(BookingTable.id, bookingId))
+    .limit(1);
+
+  return booking || null;
+};
+
+const generateInvoicePDF = (res: Response, booking: InvoiceBookingData) => {
+  const doc = new PDFDocument({ margin: 50 });
+  const safeFilename = `invoice_${String(booking.bookingId).replace(/[^a-z0-9]/gi, '_')}.pdf`;
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `inline; filename="${safeFilename}"`);
+  doc.pipe(res);
+
+  addLogo(doc);
+  addInvoiceHeader(doc, booking);
+  drawLine(doc);
+
+  addBillTo(doc, booking);
+  drawLine(doc);
+
+  addServiceDetailsTable(doc, booking);
+  drawLine(doc);
+
+  addPaymentSummary(doc, booking);
+  drawLine(doc);
+
+  addFooter(doc);
+
+  doc.end();
+};
+
+const addLogo = (doc: PDFDocument) => {
+  const logoPath = path.join(__dirname, '../assets/logo.png');
+  if (fs.existsSync(logoPath)) {
+    doc.image(logoPath, 50, 45, { width: 80 });
+    doc.moveDown(2);
+  }
+};
+
+const addInvoiceHeader = (doc: PDFDocument, booking: InvoiceBookingData) => {
+  const issueDate = booking.bookedAt.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  });
+
+  doc.font('Helvetica-Bold').fontSize(16).text('PROFORMA INVOICE', { align: 'center', underline: true });
+  doc.moveDown(0.5);
+
+  const y = doc.y;
+  doc.fontSize(10);
+  doc.text(`Invoice #: ${booking.bookingId}`, 50, y, { width: 250 });
+  doc.text(`Date: ${issueDate}`, 300, y, { width: 250, align: 'right' });
+  doc.moveDown(1);
+};
+
+const addBillTo = (doc: PDFDocument, booking: InvoiceBookingData) => {
+  sectionHeader(doc, 'Bill To:');
+  labelValueRow(doc, 'Name', booking.customerName);
+  labelValueRow(doc, 'Mobile', booking.customerNumber);
+};
+
+const addServiceDetailsTable = (doc: PDFDocument, booking: InvoiceBookingData) => {
+  sectionHeader(doc, 'Service Details:');
+
+  const tableTop = doc.y;
+  const padding = 5;
+  const colWidths = [130, 130, 130, 130];
+  const colX = [50, 180, 310, 440];
+  const headerHeight = 20;
+  const rowHeight = 40;
+
+  const drawCell = (x: number, y: number, w: number, h: number) => doc.rect(x, y, w, h).stroke();
+
+  const headers = ["Pickup Location", "Drop Location", "Booking Date/Time", "Return Date/Time"];
+  doc.fontSize(10).font('Helvetica-Bold');
+  headers.forEach((header, i) => {
+    doc.text(header, colX[i] + padding, tableTop + 5, { width: colWidths[i] - padding * 2 });
+    drawCell(colX[i], tableTop, colWidths[i], headerHeight);
+  });
+
+  const rowY = tableTop + headerHeight;
+  doc.font('Helvetica').fontSize(9);
+  doc.text(booking.pickupLocation, colX[0] + padding, rowY + 5, { width: colWidths[0] - padding * 2 });
+  doc.text(booking.dropLocation, colX[1] + padding, rowY + 5, { width: colWidths[1] - padding * 2 });
+  doc.text(`${booking.bookingDate} ${booking.bookingTime || ''}`, colX[2] + padding, rowY + 5, { width: colWidths[2] - padding * 2 });
+  doc.text(`${booking.returnDate || 'N/A'} ${booking.returnTime || ''}`, colX[3] + padding, rowY + 5, { width: colWidths[3] - padding * 2 });
+
+  for (let i = 0; i < colX.length; i++) drawCell(colX[i], rowY, colWidths[i], rowHeight);
+
+  doc.y = rowY + rowHeight + 15;
+};
+
+const addPaymentSummary = (doc: PDFDocument, booking: InvoiceBookingData) => {
+  sectionHeader(doc, 'Payment Summary:');
+  labelValueRow(doc, 'Payment Status', booking.paymentStatus);
+  labelValueRow(doc, 'Amount Paid', `${booking.currency} ${booking.paymentAmount.toFixed(2)}`);
+};
+
+const addFooter = (doc: PDFDocument) => {
+  doc.moveDown(2);
+  doc.fontSize(9).fillColor('#666')
+    .text('Thank you for your business!', { align: 'center' })
+    .moveDown(0.5)
+    .text('FF-4 1st Floor, H-53, Sector-63, Noida, UP, 201301', { align: 'center' })
+    .text('24X7 Customer Support: +91 7880331786', { align: 'center' });
+};
+
+// Shared helpers
+const sectionHeader = (doc: PDFDocument, title: string) => {
+  if (doc.y < 50) doc.addPage();
+  doc.moveDown(0.8);
+  doc.fontSize(11).fillColor('#000').font('Helvetica-Bold').text(title, 50, doc.y);
+  doc.font('Helvetica').fillColor('#000');
+  doc.moveDown(0.3);
+};
+
+const labelValueRow = (doc: PDFDocument, label: string, value: string) => {
+  const y = doc.y;
+  doc.fontSize(10).font('Helvetica-Bold').text(`${label}:`, 50, y, { width: 120 });
+  doc.font('Helvetica').text(value, 170, y, { width: 400 });
+  doc.moveDown(0.3);
+};
+
+const drawLine = (doc: PDFDocument) => {
+  const y = doc.y;
+  doc.moveTo(50, y).lineTo(560, y).stroke();
+  doc.moveDown(0.5);
+};
+
+const handleError = (error: unknown, res: Response) => {
+  console.error('Invoice generation error:', error);
+  if (!res.headersSent) {
+    res.status(500).json({
+      message: 'Failed to generate invoice',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+};
 
 type VoucherBookingData = {
   bookingId: string;
