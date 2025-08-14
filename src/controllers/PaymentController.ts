@@ -789,14 +789,6 @@ const generateInvoicePDF = (res: Response, booking: InvoiceBookingData) => {
   doc.end();
 };
 
-const addLogo = (doc: PDFDocument) => {
-  const logoPath = path.join(__dirname, '../assets/logo.png');
-  if (fs.existsSync(logoPath)) {
-    doc.image(logoPath, 50, 45, { width: 80 });
-    doc.moveDown(2);
-  }
-};
-
 const addInvoiceHeader = (doc: PDFDocument, booking: InvoiceBookingData) => {
   const issueDate = booking.bookedAt.toLocaleDateString('en-GB', {
     day: '2-digit',
@@ -855,37 +847,6 @@ const addPaymentSummary = (doc: PDFDocument, booking: InvoiceBookingData) => {
   sectionHeader(doc, 'Payment Summary:');
   labelValueRow(doc, 'Payment Status', booking.paymentStatus);
   labelValueRow(doc, 'Amount Paid', `${booking.currency} ${booking.paymentAmount.toFixed(2)}`);
-};
-
-const addFooter = (doc: PDFDocument) => {
-  doc.moveDown(2);
-  doc.fontSize(9).fillColor('#666')
-    .text('Thank you for your business!', { align: 'center' })
-    .moveDown(0.5)
-    .text('FF-4 1st Floor, H-53, Sector-63, Noida, UP, 201301', { align: 'center' })
-    .text('24X7 Customer Support: +91 7880331786', { align: 'center' });
-};
-
-// Shared helpers
-const sectionHeader = (doc: PDFDocument, title: string) => {
-  if (doc.y < 50) doc.addPage();
-  doc.moveDown(0.8);
-  doc.fontSize(11).fillColor('#000').font('Helvetica-Bold').text(title, 50, doc.y);
-  doc.font('Helvetica').fillColor('#000');
-  doc.moveDown(0.3);
-};
-
-const labelValueRow = (doc: PDFDocument, label: string, value: string) => {
-  const y = doc.y;
-  doc.fontSize(10).font('Helvetica-Bold').text(`${label}:`, 50, y, { width: 120 });
-  doc.font('Helvetica').text(value, 170, y, { width: 400 });
-  doc.moveDown(0.3);
-};
-
-const drawLine = (doc: PDFDocument) => {
-  const y = doc.y;
-  doc.moveTo(50, y).lineTo(560, y).stroke();
-  doc.moveDown(0.5);
 };
 
 const handleError = (error: unknown, res: Response) => {
