@@ -849,15 +849,6 @@ const addPaymentSummary = (doc: PDFDocument, booking: InvoiceBookingData) => {
   labelValueRow(doc, 'Amount Paid', `${booking.currency} ${booking.paymentAmount.toFixed(2)}`);
 };
 
-const handleError = (error: unknown, res: Response) => {
-  console.error('Invoice generation error:', error);
-  if (!res.headersSent) {
-    res.status(500).json({
-      message: 'Failed to generate invoice',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
-  }
-};
 
 type VoucherBookingData = {
   bookingId: string;
