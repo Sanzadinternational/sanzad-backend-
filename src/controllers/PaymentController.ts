@@ -1085,7 +1085,7 @@ const addFooter = (doc: PDFDocument) => {
   doc.fontSize(12).fillColor('#000').text('*** Thank you! Have a wonderful trip! ***', { align: 'center' });
   doc.moveDown(1);
   doc.fontSize(9).fillColor('#666')
-    .text('FF-4 1st Floor, H-53, Sector-63, Noida, Gautam Buddha Nagar, UP, 201301', { align: 'center' })
+    .text('Corporate Office: Suite No. 4, H-143, Sector-63, Noida, Gautam Buddha Nagar, UP, 201301', { align: 'center' })
     .text('24X7 Customer Support: +91 7880331786', { align: 'center' });
 };
 
