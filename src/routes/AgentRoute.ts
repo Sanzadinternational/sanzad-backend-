@@ -4,33 +4,33 @@ import { ForgetPassword,resetPassword } from '../controllers/AgentController';
 import { CreateAgent,GetAgent,loginAgent,QuickEmail,GetBookingByAgentId,GetBill,OneWayTrip,RoundTrip,GetOneWayTrip,GetRoundTrip,UpdateOneWayTrip, sendOtp, verifyOtp } from '../controllers'; 
 import { Emailotps } from '../controllers/EmailotpsController'; 
 import { dashboard } from '../controllers/LoginController';
-// import { v2 as cloudinary } from 'cloudinary';
-// import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import { v2 as cloudinary } from 'cloudinary';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
 const multer = require('multer');
 import fs from 'fs';
 import path from 'path';
-// // Configure Cloudinary with your credentials
-// cloudinary.config({
-//   cloud_name: 'drj14x20h',
-//   api_key: '142682146824431',
-//   api_secret: process.env.CLOUDINARY_API_SECRET,
-// });
+// Configure Cloudinary with your credentials
+cloudinary.config({
+  cloud_name: 'drj14x20h',
+  api_key: '142682146824431',
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
-// // Configure Cloudinary storage for Multer
-// const storage = new CloudinaryStorage({
-//   cloudinary,
-//   params: {
-//     folder: 'documents', // your Cloudinary folder
-//     resource_type: 'auto', // auto handles images, pdfs, docs, etc.
-//     allowed_formats: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt'], // restrict formats if needed
-//   },
-// });
+// Configure Cloudinary storage for Multer
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: 'documents', // your Cloudinary folder
+    resource_type: 'auto', // auto handles images, pdfs, docs, etc.
+    allowed_formats: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt'], // restrict formats if needed
+  },
+});
 
-// // Multer middleware
-// const upload = multer({ storage });
+// Multer middleware
+const upload = multer({ storage });
 const router = express.Router(); 
 
-// router.post('/registration',upload.single('Gst_Tax_Certificate'),  CreateAgent); 
+router.post('/registration',upload.single('Gst_Tax_Certificate'),  CreateAgent); 
 // router.post('/forgotpassword',forgotPassword); 
 // router.post('/resetpassword',resetpassword);
 router.post('/ForgetPassword',ForgetPassword); 
