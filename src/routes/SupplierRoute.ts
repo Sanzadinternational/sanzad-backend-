@@ -21,8 +21,8 @@ const storage = new CloudinaryStorage({
   cloudinary,
   params: {
     folder: 'documents', // your Cloudinary folder
-    resource_type: 'raw', // auto handles images, pdfs, docs, etc.
-    allowed_formats: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt'], // restrict formats if needed
+    resource_type: 'raw',
+    format: "pdf",// auto handles images, pdfs, docs, etc.
   },
 });
 
