@@ -6,32 +6,32 @@ import { CreateSupplier,CreateDriver,DeleteSupplierApi,GetSupplierApi,GetDriver,
 import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
-import { v2 as cloudinary } from 'cloudinary';
-import { CloudinaryStorage } from 'multer-storage-cloudinary';
+// import { v2 as cloudinary } from 'cloudinary';
+// import { CloudinaryStorage } from 'multer-storage-cloudinary';
 
-// Configure Cloudinary with your credentials
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+// // Configure Cloudinary with your credentials
+// cloudinary.config({
+//   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+//   api_key: process.env.CLOUDINARY_API_KEY,
+//   api_secret: process.env.CLOUDINARY_API_SECRET,
+// });
 
-// Configure Cloudinary storage for Multer
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: 'documents', // your Cloudinary folder
-    resource_type: 'auto', // auto handles images, pdfs, docs, etc.
-    allowed_formats: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt'], // restrict formats if needed
-  },
-});
+// // Configure Cloudinary storage for Multer
+// const storage = new CloudinaryStorage({
+//   cloudinary,
+//   params: {
+//     folder: 'documents', // your Cloudinary folder
+//     resource_type: 'auto', // auto handles images, pdfs, docs, etc.
+//     allowed_formats: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt'], // restrict formats if needed
+//   },
+// });
 
-// Multer middleware
-const upload = multer({ storage });
+// // Multer middleware
+// const upload = multer({ storage });
 
 const router = express.Router(); 
 
-router.post('/registration',upload.single('Gst_Tax_Certificate'), CreateSupplier); 
+// router.post('/registration',upload.single('Gst_Tax_Certificate'), CreateSupplier); 
 router.post('/send-otp', suppliersendOtp); 
 router.post('/verify-otp', supplierverifyOtp); 
 router.post('/ForgetPassword',ForgetPasswords);
