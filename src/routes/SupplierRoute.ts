@@ -6,27 +6,27 @@ import { CreateSupplier,CreateDriver,DeleteSupplierApi,GetSupplierApi,GetDriver,
 import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
+import { v2 as cloudinary } from 'cloudinary';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
 
-// Absolute path to save uploads outside the app
-const uploadDir = '/home/ubuntu/uploads'; 
-
-// Ensure the uploads folder exists
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// Configure Multer
-const storage = multer.diskStorage({
-    destination: (req: Request, file: any, cb: (error: Error | null, destination: string) => void) => {
-        cb(null, uploadDir);
-    },
-    filename: (req: Request, file: any, cb: (error: Error | null, filename: string) => void) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const sanitizedOriginalName = file.originalname.replace(/\s+/g, '-'); // Replace spaces with -
-        cb(null, `${uniqueSuffix}-${sanitizedOriginalName}`);
-    }
+// Configure Cloudinary with your credentials
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// Configure Cloudinary storage for Multer
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: 'documents', // your Cloudinary folder
+    resource_type: 'auto', // auto handles images, pdfs, docs, etc.
+    allowed_formats: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt'], // restrict formats if needed
+  },
+});
+
+// Multer middleware
 const upload = multer({ storage });
 
 const router = express.Router(); 
