@@ -29,7 +29,7 @@ import path from 'path';
 // // Multer middleware
 // const upload = multer({ storage });
 
-const router = express.Router(); 
+const router = express.Router();  
 
 // router.post('/registration',upload.single('Gst_Tax_Certificate'), CreateSupplier); 
 router.post('/send-otp', suppliersendOtp); 
