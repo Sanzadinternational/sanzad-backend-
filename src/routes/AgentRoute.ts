@@ -4,24 +4,29 @@ import { ForgetPassword,resetPassword } from '../controllers/AgentController';
 import { CreateAgent,GetAgent,loginAgent,QuickEmail,GetBookingByAgentId,GetBill,OneWayTrip,RoundTrip,GetOneWayTrip,GetRoundTrip,UpdateOneWayTrip, sendOtp, verifyOtp } from '../controllers'; 
 import { Emailotps } from '../controllers/EmailotpsController'; 
 import { dashboard } from '../controllers/LoginController';
+import { v2 as cloudinary } from 'cloudinary';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
 const multer = require('multer');
 import fs from 'fs';
 import path from 'path';
-const uploadDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// Configure Multer
-const storage = multer.diskStorage({
-    destination: (req: Request, file: any, cb: (error: Error | null, destination: string) => void) => {
-        cb(null, uploadDir);
-    },
-    filename: (req: Request, file: any, cb: (error: Error | null, filename: string) => void) => {
-        cb(null, `${Date.now()}-${file.originalname}`);
-    }
+// Configure Cloudinary with your credentials
+cloudinary.config({
+  cloud_name: 'drj14x20h',
+  api_key: '142682146824431',
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// Configure Cloudinary storage for Multer
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: 'documents', // your Cloudinary folder
+    resource_type: 'auto', // auto handles images, pdfs, docs, etc.
+    allowed_formats: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt'], // restrict formats if needed
+  },
+});
+
+// Multer middleware
 const upload = multer({ storage });
 const router = express.Router(); 
 
