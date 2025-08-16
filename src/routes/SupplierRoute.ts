@@ -13,7 +13,7 @@ import { CloudinaryStorage } from 'multer-storage-cloudinary';
 cloudinary.config({
   cloud_name: 'drj14x20h',
   api_key: '142682146824431',
-  api_secret: 's3uLKiLpYlzCh1IX7IJ4gURiSOc',
+  api_secret: 's3uLKiLpYlzCh1IX7IJ4gURiSOc', 
 });
 
 // Configure Cloudinary storage for Multer
