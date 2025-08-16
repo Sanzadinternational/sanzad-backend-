@@ -16,15 +16,15 @@ cloudinary.config({
   api_secret: 's3uLKiLpYlzCh1IX7IJ4gURiSOc', 
 });
 
+// Configure Cloudinary storage for Multer
 const storage = new CloudinaryStorage({
   cloudinary,
-  params: async (req, file) => ({
-    folder: "documents",
-    resource_type: "raw",   // since it's PDF
-    format: "pdf",          // enforce .pdf extension
-    type: "authenticated",  // 👈 this is important
-    public_id: `${Date.now()}-${file.originalname.split(".")[0]}`,
-  }),
+  params: {
+    folder: 'documents', // your Cloudinary folder
+    resource_type: 'auto', // auto handles images, pdfs, docs, etc.
+    allowed_formats: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt'],
+    transformation: [{ flags: "inline" }]// restrict formats if needed
+  },
 });
 
 // Multer middleware
