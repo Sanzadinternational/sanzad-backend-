@@ -58,7 +58,9 @@ export const CreateAgent = async(req: Request, res: Response, next: NextFunction
         });
     }
         // const id = uuidv4();
-        const Gst_Tax_Certificate = (req as any).file ? (req as any).file.filename : null;
+       const Gst_Tax_Certificate = (req as any).file 
+  ? (req as any).file.path  // <-- this is the Cloudinary URL
+  : null;
         // Hash the password before storing 
         const hashedPassword = await bcrypt.hash(Password, 10);  
         const Approval_status = {
