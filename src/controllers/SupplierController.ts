@@ -72,9 +72,7 @@ export const CreateSupplier = async (req: Request, res: Response, next: NextFunc
     
         const id = uuidv4(); 
 
-             const Gst_Tax_Certificate = (req as any).file 
-  ? (req as any).file.path  // <-- this is the Cloudinary URL
-  : null;
+ const Gst_Tax_Certificate = (req as any).file ? (req as any).file.filename : null;
 
         const hashedPassword = await bcrypt.hash(Password, 10); 
         const newSupplier = await db
