@@ -13,7 +13,7 @@ const nodemailer = require("nodemailer");
 const Crypto = require("crypto");
 const jwt = require('jsonwebtoken'); 
 import { registerTable } from "../db/schema/SupplierSchema";
-var Mailgen = require('mailgen'); 
+var Mailgen = require('mailgen');  
 var randomstring = require("randomstring");
 var passwordHash = require('password-hash');
 import { BookingTable,PaymentsTable  } from "../db/schema/BookingSchema";
