@@ -9,24 +9,21 @@ import { CloudinaryStorage } from 'multer-storage-cloudinary';
 const multer = require('multer');
 import fs from 'fs';
 import path from 'path';
-// Configure Cloudinary with your credentials
-cloudinary.config({
-  cloud_name: 'drj14x20h',
-  api_key: '142682146824431',
-  api_secret: 's3uLKiLpYlzCh1IX7IJ4gURiSOc',
+const uploadDir = "/uploads";
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Configure Multer
+const storage = multer.diskStorage({
+    destination: (req: Request, file: any, cb: (error: Error | null, destination: string) => void) => {
+        cb(null, uploadDir);
+    },
+    filename: (req: Request, file: any, cb: (error: Error | null, filename: string) => void) => {
+        cb(null, `${Date.now()}-${file.originalname}`);
+    }
 });
 
-// Configure Cloudinary storage for Multer
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: 'documents', // your Cloudinary folder
-    resource_type: "raw", // auto handles images, pdfs, docs, etc.
-    allowed_formats: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt'], // restrict formats if needed
-  },
-});
-
-// Multer middleware
 const upload = multer({ storage });
 const router = express.Router(); 
 
