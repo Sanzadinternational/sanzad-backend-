@@ -7,9 +7,6 @@ import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 const uploadDir = "/uploads";
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
 
 // Configure Multer
 const storage = multer.diskStorage({
