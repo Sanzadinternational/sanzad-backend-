@@ -947,7 +947,7 @@ const addLogo = (doc: PDFDocument) => {
   const logoPath = path.join(__dirname, 'logo.png');
   if (fs.existsSync(logoPath)) {
     const logoWidth = 80;   // smaller width
-    const logoHeight = 40;  // smaller height
+    const logoHeight = 80;  // smaller height
     const pageWidth = doc.page.width;
 
     // center the logo at the top
