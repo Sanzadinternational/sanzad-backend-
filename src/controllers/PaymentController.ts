@@ -944,7 +944,7 @@ const generatePDF = (res: Response, booking: VoucherBookingData) => {
 };
 
 const addLogo = (doc: PDFDocument) => {
-  const logoPath = path.join(__dirname, 'logo.webp');
+  const logoPath = path.join(__dirname, 'logo.png');
   if (fs.existsSync(logoPath)) {
     doc.image(logoPath, 50, 45, { width: 100 });
     doc.moveDown(2);
