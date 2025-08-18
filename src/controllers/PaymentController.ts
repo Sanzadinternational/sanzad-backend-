@@ -946,8 +946,17 @@ const generatePDF = (res: Response, booking: VoucherBookingData) => {
 const addLogo = (doc: PDFDocument) => {
   const logoPath = path.join(__dirname, 'logo.png');
   if (fs.existsSync(logoPath)) {
-    doc.image(logoPath, 50, 45, { width: 100 });
-    doc.moveDown(2);
+    const logoWidth = 120;
+    const logoHeight = 60;
+    const pageWidth = doc.page.width;
+    const xCenter = (pageWidth - logoWidth) / 2;
+
+    // Place logo centered
+    doc.image(logoPath, xCenter, 40, { width: logoWidth });
+
+    // Move cursor below the logo so header starts after it
+    doc.moveDown(5);
+    doc.y = 40 + logoHeight + 20; // push down cursor explicitly
   }
 };
 
