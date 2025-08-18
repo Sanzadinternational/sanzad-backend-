@@ -946,19 +946,21 @@ const generatePDF = (res: Response, booking: VoucherBookingData) => {
 const addLogo = (doc: PDFDocument) => {
   const logoPath = path.join(__dirname, 'logo.png');
   if (fs.existsSync(logoPath)) {
-    const logoWidth = 120;
-    const logoHeight = 60;
+    const logoWidth = 80;   // smaller width
+    const logoHeight = 40;  // smaller height
     const pageWidth = doc.page.width;
+
+    // center the logo at the top
     const xCenter = (pageWidth - logoWidth) / 2;
+    const topMargin = 40;
 
-    // Place logo centered
-    doc.image(logoPath, xCenter, 40, { width: logoWidth });
+    doc.image(logoPath, xCenter, topMargin, { width: logoWidth, height: logoHeight });
 
-    // Move cursor below the logo so header starts after it
-    doc.moveDown(5);
-    doc.y = 40 + logoHeight + 20; // push down cursor explicitly
+    // move cursor below the logo
+    doc.y = topMargin + logoHeight + 20;
   }
 };
+
 
 const addDocumentHeader = (doc: PDFDocument, booking: VoucherBookingData) => {
   const issueDate = booking.bookedAt.toLocaleDateString('en-GB', {
