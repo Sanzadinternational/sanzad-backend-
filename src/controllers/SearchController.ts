@@ -46,9 +46,10 @@ export async function convertCurrency(amount: number, from: string, to: string):
     if (!rate) throw new Error(`Missing rate for ${to}`);
 
     // Apply 1.5% exchange fee
-    rate *= 1.015;
+    // rate *= 1.015;
 
-    return amount * rate;
+    // return amount * rate;
+   return amount;
   } catch (err) {
     console.error(`Error converting from ${from} to ${to}`, err);
     return amount; // fallback to original
