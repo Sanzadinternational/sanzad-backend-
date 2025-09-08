@@ -56,7 +56,7 @@ app.use("/api/V1/data", SearchRouter);
 app.use('/api/V1/view', ProfileRoute);
 app.use('/api/V1/payment', PaymentRoute);
 app.use('/api/V1/data', CountryRoute);
-app.use('api/V1/uploads', express.static('/uploads'));
+app.use('/api/V1/uploads', express.static('/uploads'));
 
 // Start Server
 server.listen(4000, () => {
