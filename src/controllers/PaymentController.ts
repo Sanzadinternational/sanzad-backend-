@@ -65,9 +65,14 @@ export const PaymentInitiate = async (req: Request, res: Response, next: NextFun
         trainName: pickupDetails.trainName,
         trainOperator: pickupDetails.trainOperator,
       };
-    } else if (pickupDetails?.pickupType === "others") {
+    } else if (pickupDetails?.pickupType === "hotel") {
       pickupTypeFields = {
         hotelName: pickupDetails.hotelName,
+      };
+    }
+   else if (pickupDetails?.pickupType === "others") { 
+      pickupTypeFields = {
+        venueAddress: pickupDetails.venueAddress,
       };
     }
 
@@ -469,9 +474,13 @@ const txnid = generateTxnId();
         trainName: pickupDetails.trainName,
         trainOperator: pickupDetails.trainOperator,
       };
-    } else if (pickupDetails?.pickupType === "others") {
+    } else if (pickupDetails?.pickupType === "hotel") {
       pickupTypeFields = {
         hotelName: pickupDetails.hotelName,
+      };
+    } else if (pickupDetails?.pickupType === "others") { 
+      pickupTypeFields = {
+        venueAddress: pickupDetails.venueAddress,
       };
     }
 
