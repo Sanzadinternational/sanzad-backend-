@@ -882,8 +882,8 @@ const addServiceDetailsTable = (doc: PDFDocument, booking: InvoiceBookingData) =
   // Format booking date and time
 doc.text(booking.pickupLocation, colX[0] + padding, rowY + 5, { width: colWidths[0] - padding * 2 });
 doc.text(booking.dropLocation, colX[1] + padding, rowY + 5, { width: colWidths[1] - padding * 2 });
-doc.text(${booking.bookingDate} ${booking.bookingTime || ''}, colX[2] + padding, rowY + 5, { width: colWidths[2] - padding * 2 });
-doc.text(${booking.returnDate || 'N/A'} ${booking.returnTime || ''}, colX[3] + padding, rowY + 5, { width: colWidths[3] - padding * 2 });
+doc.text(`${booking.bookingDate} ${booking.bookingTime || ''}`, colX[2] + padding, rowY + 5, { width: colWidths[2] - padding * 2 });
+doc.text(`${booking.returnDate || 'N/A'} ${booking.returnTime || ''}`, colX[3] + padding, rowY + 5, { width: colWidths[3] - padding * 2 });
 
   for (let i = 0; i < colX.length; i++) drawCell(colX[i], rowY, colWidths[i], rowHeight);
 
