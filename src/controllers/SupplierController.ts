@@ -1202,6 +1202,7 @@ export const GetVehicleType = async (req: Request, res: Response, next: NextFunc
         const result = await db.select({
             id: VehicleTypeTable.id,
             VehicleType: VehicleTypeTable.VehicleType,
+            vehicleImage: VehicleTypeTable.vehicleImage,
         }).from(VehicleTypeTable);
 
         // Standardized response
