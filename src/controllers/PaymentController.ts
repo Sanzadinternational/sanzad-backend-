@@ -758,6 +758,12 @@ type InvoiceBookingData = {
   paymentAmount: number;
   paymentStatus: string;
   currency: string;
+  GstRequired: string;    // Added
+  GstNumber?: string;  
+ agentName: string;
+ agentAddress: string;
+ agentMobile: string;
+ agnetEmail: string;
 };
 
 const fetchInvoiceData = async (bookingId: string): Promise<InvoiceBookingData | null> => {
@@ -828,7 +834,8 @@ const addInvoiceHeader = (doc: PDFDocument, booking: InvoiceBookingData) => {
     year: 'numeric',
   });
 
-  doc.font('Helvetica-Bold').fontSize(16).text('PROFORMA INVOICE', { align: 'center', underline: true });
+   const title = booking.GstRequired.toLowerCase() === 'yes' ? 'TAX INVOICE' : 'INVOICE';
+  doc.font('Helvetica-Bold').fontSize(16).text(title, { align: 'center', underline: true });
   doc.moveDown(0.5);
 
   const y = doc.y;
@@ -836,12 +843,19 @@ const addInvoiceHeader = (doc: PDFDocument, booking: InvoiceBookingData) => {
   doc.text(`Invoice #: ${booking.bookingId}`, 50, y, { width: 250 });
   doc.text(`Invoice Date: ${issueDate}`, 300, y, { width: 250, align: 'right' });
   doc.moveDown(1);
+   // Show GST number if required
+  if (booking.GstRequired.toLowerCase() === 'yes' && booking.GstNumber) {
+    doc.fontSize(10).font('Helvetica').text(`GST Number: ${booking.GstNumber}`, 50, doc.y);
+    doc.moveDown(1);
+  }
 };
+
+
 
 const addBillTo = (doc: PDFDocument, booking: InvoiceBookingData) => {
   sectionHeader(doc, 'Bill To:');
-  labelValueRow(doc, 'Name', booking.customerName);
-  labelValueRow(doc, 'Mobile', booking.customerNumber);
+  labelValueRow(doc, 'Name', booking.agentName);
+  labelValueRow(doc, 'Mobile', booking.agentNumber);
 };
 
 const addServiceDetailsTable = (doc: PDFDocument, booking: InvoiceBookingData) => {
@@ -865,10 +879,29 @@ const addServiceDetailsTable = (doc: PDFDocument, booking: InvoiceBookingData) =
 
   const rowY = tableTop + headerHeight;
   doc.font('Helvetica').fontSize(9);
+  // Format booking date and time
+  const bookingDate = new Date(booking.bookingDate);
+  const formattedBookingDate = bookingDate.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+  const bookingDateTime = `${formattedBookingDate} ${booking.bookingTime || ''}`;
+
+  // Format return date and time
+  const returnDate = booking.returnDate ? new Date(booking.returnDate) : null;
+  const formattedReturnDate = returnDate ? returnDate.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  }) : 'N/A';
+  const returnDateTime = `${formattedReturnDate} ${booking.returnTime || ''}`;
+
+  // Fill table rows
   doc.text(booking.pickupLocation, colX[0] + padding, rowY + 5, { width: colWidths[0] - padding * 2 });
   doc.text(booking.dropLocation, colX[1] + padding, rowY + 5, { width: colWidths[1] - padding * 2 });
-  doc.text(`${booking.bookingDate} ${booking.bookingTime || ''}`, colX[2] + padding, rowY + 5, { width: colWidths[2] - padding * 2 });
-  doc.text(`${booking.returnDate || 'N/A'} ${booking.returnTime || ''}`, colX[3] + padding, rowY + 5, { width: colWidths[3] - padding * 2 });
+  doc.text(bookingDateTime, colX[2] + padding, rowY + 5, { width: colWidths[2] - padding * 2 });
+  doc.text(returnDateTime, colX[3] + padding, rowY + 5, { width: colWidths[3] - padding * 2 });
 
   for (let i = 0; i < colX.length; i++) drawCell(colX[i], rowY, colWidths[i], rowHeight);
 
