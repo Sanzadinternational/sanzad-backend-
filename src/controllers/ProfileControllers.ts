@@ -22,7 +22,7 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
         role = role.toLowerCase(); // Normalize Role input 
         let updateResult; 
         if (role === "agent") {  
-           
+           const profileImage = (req as any).file ? (req as any).file.filename : null;
             const agentData = req.body as AgentInput; 
             updateResult = await db
                 .update(AgentTable)
@@ -41,7 +41,7 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
                     Currency: agentData.Currency,
                     Gst_Tax_Certificate: agentData.Gst_Tax_Certificate, 
                     Role:agentData.Role,
-                    profileImage: agentData.profileImage
+                    profileImage
                 })
                 .where(eq(AgentTable.id, id))
                 .returning(); 
