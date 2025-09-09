@@ -2019,3 +2019,17 @@ const mailOptions = {
         next(error)
     }
   }
+
+export const UpdateDriverdata = async(req:Request,res:Response,next:NextFunction)=>{
+    try{
+        const {id} = req.params;
+        const { driver_id } = req.body as Driverdata;
+        const result = await db.update(BookingTable).set({
+            driver_id
+        })
+        .where(eq(BookingTable.id,id)); 
+        return res.status(200).json({result,message:"Driver Data Updated Successfully"}); 
+    }catch(error){
+        next(error)
+    }
+  }
