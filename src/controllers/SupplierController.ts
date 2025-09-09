@@ -22,6 +22,8 @@ const nodemailer = require("nodemailer");
 import * as turf from "@turf/turf";
 import { transfers_Vehicle } from "../db/schema/SupplierSchema";
 import { BookingTable,PaymentsTable } from "../db/schema/BookingSchema";
+import fs from "fs";
+import path from "path";
 
 export const CreateSupplier = async (req: Request, res: Response, next: NextFunction) => { 
     try {   
@@ -1199,10 +1201,20 @@ export const UpdateVehicleTypes=async(req:Request,res:Response,next:NextFunction
 
 export const GetVehicleType = async (req: Request, res: Response, next: NextFunction) => {
     try {
+         // const {VehicleType}=<VehicleType>req.body; 
+        const uploadDir = path.join(__dirname, "../uploads"); // same as multer destination 
+
+    // Read all files from uploads directory
+    const files = fs.readdirSync(uploadDir);
+
+    // Generate full URLs for each file
+    const baseUrl = `https://api.sanzadinternational.in/api/V1/uploads/`;
+    const imageUrls = files.map((file) => baseUrl + file);
+        
         const result = await db.select({
             id: VehicleTypeTable.id,
             VehicleType: VehicleTypeTable.VehicleType,
-            vehicleImage: VehicleTypeTable.vehicleImage,
+            vehicleImage: imageUrls,
         }).from(VehicleTypeTable);
 
         // Standardized response
