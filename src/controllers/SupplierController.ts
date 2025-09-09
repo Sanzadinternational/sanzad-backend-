@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express"; 
 import { CreateSupplierInput,UpdateVehicleType,UpdateVehicleModel,UpdateServiceType,UpdateVehicleBrand,VehicleType,SurgeCharge,VehicleBrand,ServiceType,UpdateTransferCars,VehicleModel,CreateTransferCars,UpdateCreateCartDetails,
-    CreateCartDetails,CreateSupplierDetailServicesInput,CreateExtraSpace,UpdateExtraSpace,CreateTransportNodesInput,SupplierPriceInput, CreateSupplierOneWayInput,CreateSupplierApidata,DriversModel } from "../dto";
+    CreateCartDetails,Driverdata,CreateSupplierDetailServicesInput,CreateExtraSpace,UpdateExtraSpace,CreateTransportNodesInput,SupplierPriceInput, CreateSupplierOneWayInput,CreateSupplierApidata,DriversModel } from "../dto";
 import { and,desc, eq } from "drizzle-orm"; 
 const { v4: uuidv4 } = require('uuid'); 
 import { Create_Vehicles } from "../db/schema/SupplierSchema";
