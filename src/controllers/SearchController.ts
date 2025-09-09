@@ -64,6 +64,8 @@ export async function convertCurrency(amount: number, from: string, to: string):
   targetCurrency: string,
   time: string,
   date: string,
+  returnDate?: string,
+  returnTime?: string
 ): Promise<{ vehicles: any[]; distance: any; estimatedTime: string}> => {
   // Parse pickup location coordinates
   const [fromLat, fromLng] = pickupLocation.split(",").map(Number);
@@ -186,8 +188,66 @@ const surgeCharges = surgeChargesResult.rows as any[];
   
           return totalPrice;
       }
+     const isReturnTrip = !!returnDate && !!returnTime;
+
+// Function to calculate return trip extra cost
+async function calculateReturnPrice() {
+  if (!isReturnTrip) {
+    return 0;
+  }
+
+  let returnPrice = Number(transfer.price); // base price
+  if (fromZone && !toZone) {
+              console.log(`'From' location is inside '${fromZone.name}', but 'To' location is outside any zone.`);
+              if (distance == null) {
+                distance = 0;
+              }
+              // const boundaryDistance = await getDistanceFromZoneBoundary(fromLng, fromLat, toLng, toLat, fromZone);
+           const boundaryDistance = distance - fromZone.radius_km;
+              const extraCharge = Number(boundaryDistance) * (Number(transfer.extra_price_per_mile) || 0);
+              returnPrice += extraCharge;
+  
+              console.log(`Extra Distance: ${boundaryDistance} miles | Extra Charge: ${extraCharge} On return`);
+          }
+  // Check if return time is night time
+  const [returnHour, returnMinute] = returnTime.split(":").map(Number);
+  const isReturnNightTime = (returnHour >= 22 || returnHour < 6);
+
+  if (isReturnNightTime && transfer.NightTime_Price) {
+    returnPrice += Number(transfer.NightTime_Price);
+    console.log(`Return night time pricing applied: ${transfer.NightTime_Price}`);
+  }
+
+  // Check if surge charge applies for return date
+  const returnSurge = surgeCharges.find(surge =>
+    surge.vehicle_id === transfer.vehicle_id &&
+    surge.supplier_id === transfer.SupplierId &&
+    surge.From <= returnDate &&
+    surge.To >= returnDate
+  );
+
+  if (returnSurge && returnSurge.SurgeChargePrice) {
+    returnPrice += Number(returnSurge.SurgeChargePrice);
+    console.log(`Return surge pricing applied: ${returnSurge.SurgeChargePrice}`);
+  }
+
+  // Add fixed charges again for the return trip
+  returnPrice += Number(transfer.vehicleTax) || 0;
+  returnPrice += Number(transfer.parking) || 0;
+  returnPrice += Number(transfer.tollTax) || 0;
+  returnPrice += Number(transfer.driverCharge) || 0;
+  returnPrice += Number(transfer.driverTips) || 0;
+
+  // Apply margin again if needed
+  const margin = supplierMargins.get(transfer.SupplierId) || 0;
+  returnPrice += transfer.price * (Number(margin) / 100 || 0);
+
+  return returnPrice;
+}
+
   
       totalPrice = await calculateTotalPrice();
+     const returnPrice = await calculateReturnPrice();
       const margin = supplierMargins.get(transfer.SupplierId) || 0;
        // Add fixed charges
   totalPrice += Number(transfer.vehicleTax) || 0;
@@ -218,6 +278,8 @@ if (vehicleSurge && vehicleSurge.SurgeChargePrice) {
   console.log(`Surge pricing applied → Vehicle ID: ${transfer.vehicle_id} | Surge: ${surgeAmount}`);
 }
        totalPrice += transfer.price * (Number(margin) / 100 || 0);
+     totalPrice += returnPrice;
+     console.log(`Return price for vehicle ${transfer.vehicle_id}: ${returnPrice}`);
 
       const convertedPrice = await convertCurrency(totalPrice, transfer.Currency, targetCurrency);
 
@@ -459,7 +521,7 @@ export const Search = async (req: Request, res: Response, next: NextFunction) =>
      targetCurrency
     );
 
-    const DatabaseData = await fetchFromDatabase(pickupLocation, dropoffLocation,targetCurrency,time, date);
+    const DatabaseData = await fetchFromDatabase(pickupLocation, dropoffLocation,targetCurrency,time, date,returnDate, returnTime );
     const [pickupLat, pickupLon] = pickupLocation.split(",").map(Number);
     const [dropLat, dropLon] = dropoffLocation.split(",").map(Number);
     // Merge database and API data
