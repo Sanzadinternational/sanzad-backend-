@@ -1165,9 +1165,9 @@ export const UpdateTransferCar = async(req:Request,res:Response,next:NextFunctio
 
 export const CreateVehicleType=async(req:Request,res:Response,next:NextFunction)=>{
    try{
-        const {VehicleType}=<VehicleType>req.body; 
+        const {VehicleType, vehicleImage}=<VehicleType>req.body; 
         const NewVehicleType = await db.insert(VehicleTypeTable) 
-        .values({VehicleType}) 
+        .values({VehicleType, vehicleImage}) 
         .returning();
         return res.status(200).json(NewVehicleType)
    }catch(error){
@@ -1180,11 +1180,11 @@ export const UpdateVehicleTypes=async(req:Request,res:Response,next:NextFunction
     try{
          const {id} = req.params;
          const {
-            VehicleType
+            VehicleType, vehicleImage
          }=<UpdateVehicleType>req.body;
          const UpdateVehicleType=await db.update(VehicleTypeTable)
          .set({
-            VehicleType
+            VehicleType, vehicleImage
          })
          .where(eq(VehicleTypeTable.id,id))
          .returning();
