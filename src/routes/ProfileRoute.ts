@@ -1,6 +1,7 @@
 import express, {Request, Response, NextFunction, Router} from 'express'; 
 const { updateProfile } = require("../controllers/ProfileControllers");
 import authMiddleware from '../middlewares/authMiddleware';
+const multer = require('multer');
 import fs from 'fs';
 import path from 'path';
 const uploadDir = "/uploads";
@@ -16,7 +17,6 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
-
 const router = express.Router(); 
  
 router.put('/UpdateProfile/:id', upload.single('profileImage'),updateProfile); 
