@@ -40,6 +40,7 @@ export const PaymentInitiate = async (req: Request, res: Response, next: NextFun
       currency,
      pickupDetails,
        dropoffDetails,
+     gstDetails,
     } = req.body;
 
     const key = 'FYWyBY';
@@ -75,7 +76,13 @@ export const PaymentInitiate = async (req: Request, res: Response, next: NextFun
         venueAddress: pickupDetails.venueAddress,
       };
     }
-
+let gstTypeFields: Record<string, any> = {};
+if (gstDetails?.gstRequired === "yes") {
+  gstTypeFields = {
+    gstNumber: gstDetails.gstNumber,
+    gstRequired: gstDetails.gstRequired,
+  };
+}
 const [agent] = await db
   .select({ name: AgentTable.Company_name, email: AgentTable.Email })
   .from(AgentTable)
@@ -123,6 +130,7 @@ return_date: returnDate ? new Date(returnDate) : null,
         currency,
         ...pickupTypeFields,
         ...dropoffDetails,
+        ...gstDetails,
         status: "pending"
       })
       .returning({ id: BookingTable.id });
@@ -443,6 +451,7 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
        currency,
 pickupDetails,
        dropoffDetails,
+       gstDetails,
       } = req.body;
   
       if (!agent_id || !suplier_id || !pickup_location || !drop_location || !price || !reference_number) {
@@ -483,7 +492,13 @@ const txnid = generateTxnId();
         venueAddress: pickupDetails.venueAddress,
       };
     }
-
+let gstTypeFields: Record<string, any> = {};
+if (gstDetails?.gstRequired === "yes") {
+  gstTypeFields = {
+    gstNumber: gstDetails.gstNumber,
+    gstRequired: gstDetails.gstRequired,
+  };
+}
       const customerEmail = "abhinavgu34@gmail.com";
         const customerPhone = "8433169822";
       // Insert booking and get the generated ID
@@ -511,6 +526,7 @@ return_date: returnDate ? new Date(returnDate) : null,
      currency,
         ...pickupTypeFields,
        ...dropoffDetails,
+       ...gstDetails,
         status: 'pending',
       }).returning({ id: BookingTable.id });
   
