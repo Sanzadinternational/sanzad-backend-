@@ -40,8 +40,8 @@ export const PaymentInitiate = async (req: Request, res: Response, next: NextFun
       currency,
      pickupDetails,
        dropoffDetails,
-       gstNumber,
-       gstRequired,
+       // gstNumber,
+       // gstRequired,
     } = req.body;
 
     const key = 'FYWyBY';
@@ -125,8 +125,8 @@ return_date: returnDate ? new Date(returnDate) : null,
         currency,
         ...pickupTypeFields,
         ...dropoffDetails,
-        gstNumber,
-        gstRequired,
+        // gstNumber,
+        // gstRequired,
         status: "pending"
       })
       .returning({ id: BookingTable.id });
@@ -447,8 +447,8 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
        currency,
 pickupDetails,
        dropoffDetails,
-      gstNumber,
-    gstRequired,
+    //   gstNumber,
+    // gstRequired,
       } = req.body;
   
       if (!agent_id || !suplier_id || !pickup_location || !drop_location || !price || !reference_number) {
@@ -517,8 +517,8 @@ return_date: returnDate ? new Date(returnDate) : null,
      currency,
         ...pickupTypeFields,
        ...dropoffDetails,
-    gstNumber,
-    gstRequired,
+    // gstNumber,
+    // gstRequired,
         status: 'pending',
       }).returning({ id: BookingTable.id });
   
