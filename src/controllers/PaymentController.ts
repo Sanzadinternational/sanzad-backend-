@@ -764,13 +764,17 @@ const fetchInvoiceData = async (bookingId: string): Promise<InvoiceBookingData |
   const [booking] = await db
     .select({
       bookingId: BookingTable.booking_unique_id,
-     GstRequired: BookingTable.gstRequired,
-     GstNumber: BookingTable.gstNumber,
-     AgentID: BookingTable.Agent_Id,
+      GstRequired: BookingTable.gstRequired,
+      GstNumber: BookingTable.gstNumber,
+      AgentID: BookingTable.Agent_Id,
+      agentName: AgentTable.Company_name,          // Added from AgentTable
+      agentMobile: AgentTable.Mobile_number,     
+     agentEmail: AgentTable.Email,
+      agentAddress: AgentTable.Address,// Added from AgentTable
       bookedAt: BookingTable.booked_at,
       bookingDate: BookingTable.booking_date,
       bookingTime: BookingTable.booking_time,
-     driver: BookingTable.driver_id,
+      driver: BookingTable.driver_id,
       returnDate: BookingTable.return_date,
       returnTime: BookingTable.return_time,
       passengers: BookingTable.passengers,
@@ -784,6 +788,7 @@ const fetchInvoiceData = async (bookingId: string): Promise<InvoiceBookingData |
     })
     .from(BookingTable)
     .innerJoin(PaymentsTable, eq(PaymentsTable.booking_id, BookingTable.id))
+    .leftJoin(AgentTable, eq(AgentTable.id, BookingTable.Agent_Id))  // Joined AgentTable here
     .where(eq(BookingTable.id, bookingId))
     .limit(1);
 
