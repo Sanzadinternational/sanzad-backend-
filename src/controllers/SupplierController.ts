@@ -1165,7 +1165,8 @@ export const UpdateTransferCar = async(req:Request,res:Response,next:NextFunctio
 
 export const CreateVehicleType=async(req:Request,res:Response,next:NextFunction)=>{
    try{
-        const {VehicleType, vehicleImage}=<VehicleType>req.body; 
+        const {VehicleType}=<VehicleType>req.body; 
+        const vehicleImage = (req as any).file ? (req as any).file.filename : null;
         const NewVehicleType = await db.insert(VehicleTypeTable) 
         .values({VehicleType, vehicleImage}) 
         .returning();
@@ -1180,8 +1181,9 @@ export const UpdateVehicleTypes=async(req:Request,res:Response,next:NextFunction
     try{
          const {id} = req.params;
          const {
-            VehicleType, vehicleImage
+            VehicleType
          }=<UpdateVehicleType>req.body;
+         const vehicleImage = (req as any).file ? (req as any).file.filename : null;
          const UpdateVehicleType=await db.update(VehicleTypeTable)
          .set({
             VehicleType, vehicleImage
