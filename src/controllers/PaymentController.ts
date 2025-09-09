@@ -76,13 +76,7 @@ export const PaymentInitiate = async (req: Request, res: Response, next: NextFun
         venueAddress: pickupDetails.venueAddress,
       };
     }
-let gstTypeFields: Record<string, any> = {};
-if (gstDetails?.gstRequired === "yes") {
-  gstTypeFields = {
-    gstNumber: gstDetails.gstNumber,
-    gstRequired: gstDetails.gstRequired,
-  };
-}
+
 const [agent] = await db
   .select({ name: AgentTable.Company_name, email: AgentTable.Email })
   .from(AgentTable)
@@ -492,13 +486,7 @@ const txnid = generateTxnId();
         venueAddress: pickupDetails.venueAddress,
       };
     }
-let gstTypeFields: Record<string, any> = {};
-if (gstDetails?.gstRequired === "yes") {
-  gstTypeFields = {
-    gstNumber: gstDetails.gstNumber,
-    gstRequired: gstDetails.gstRequired,
-  };
-}
+
       const customerEmail = "abhinavgu34@gmail.com";
         const customerPhone = "8433169822";
       // Insert booking and get the generated ID
