@@ -260,7 +260,8 @@ export const SurgeChargeTable=pgTable('SurgeCharge',{
      
   export const VehicleTypeTable=pgTable('VehicleType',{
     id: integer('id').primaryKey().generatedAlwaysAsIdentity(), 
-    VehicleType:varchar({length:255})
+    VehicleType:varchar({length:255}),
+    vehicleImage:varchar({length:255}),
   })
 
   export const VehicleBrandTable=pgTable('VehicleBrand',{
