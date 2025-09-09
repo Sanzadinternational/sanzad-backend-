@@ -764,9 +764,13 @@ const fetchInvoiceData = async (bookingId: string): Promise<InvoiceBookingData |
   const [booking] = await db
     .select({
       bookingId: BookingTable.booking_unique_id,
+     GstRequired: BookingTable.gstRequired,
+     GstNumber: BookingTable.gstNumber,
+     AgentID: BookingTable.Agent_Id,
       bookedAt: BookingTable.booked_at,
       bookingDate: BookingTable.booking_date,
       bookingTime: BookingTable.booking_time,
+     driver: BookingTable.driver_id,
       returnDate: BookingTable.return_date,
       returnTime: BookingTable.return_time,
       passengers: BookingTable.passengers,
