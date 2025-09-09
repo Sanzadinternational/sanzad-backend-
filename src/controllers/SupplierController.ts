@@ -1202,21 +1202,18 @@ export const UpdateVehicleTypes=async(req:Request,res:Response,next:NextFunction
 export const GetVehicleType = async (req: Request, res: Response, next: NextFunction) => {
     try {
          // const {VehicleType}=<VehicleType>req.body; 
-        const uploadDir = path.join(__dirname, "../uploads"); // same as multer destination 
-
-    // Read all files from uploads directory
-    const files = fs.readdirSync(uploadDir);
-
-    // Generate full URLs for each file
-    const baseUrl = `https://api.sanzadinternational.in/api/V1/uploads/`;
-    const imageUrls = files.map((file) => baseUrl + file);
         
         const result = await db.select({
             id: VehicleTypeTable.id,
             VehicleType: VehicleTypeTable.VehicleType,
-            vehicleImage: imageUrls,
+            vehicleImage:  VehicleTypeTable.vehicleImage,
         }).from(VehicleTypeTable);
+const baseUrl = `https://api.sanzadinternational.in/api/V1/uploads/`;
 
+    const updatedResult = result.map((item) => ({
+      ...item,
+      vehicleImage: item.vehicleImage ? baseUrl + item.vehicleImage : null,
+    }));
         // Standardized response
         return res.status(200).json({
             success: true,
