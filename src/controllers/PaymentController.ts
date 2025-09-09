@@ -763,7 +763,7 @@ type InvoiceBookingData = {
  agentName: string;
  agentAddress: string;
  agentMobile: string;
- agnetEmail: string;
+ agentEmail: string;
 };
 
 const fetchInvoiceData = async (bookingId: string): Promise<InvoiceBookingData | null> => {
@@ -855,7 +855,7 @@ const addInvoiceHeader = (doc: PDFDocument, booking: InvoiceBookingData) => {
 const addBillTo = (doc: PDFDocument, booking: InvoiceBookingData) => {
   sectionHeader(doc, 'Bill To:');
   labelValueRow(doc, 'Name', booking.agentName);
-  labelValueRow(doc, 'Mobile', booking.agentNumber);
+  labelValueRow(doc, 'Mobile', booking.agentMobile);
 };
 
 const addServiceDetailsTable = (doc: PDFDocument, booking: InvoiceBookingData) => {
