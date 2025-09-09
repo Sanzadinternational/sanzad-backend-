@@ -360,3 +360,7 @@ export interface DriversModel{
   DriverCarInfo:string, 
   SupplierId:string      
 }
+
+export interface Driverdata{
+  driver_id:string,
+}
