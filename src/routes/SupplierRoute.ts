@@ -52,9 +52,9 @@ router.post('/CreateRows',CreateTransferCarDetails);
 router.post('/CreateExtraSpaces',CreateExtraSp); 
 router.get('/GetAllCarDetails',GetAllCarDetails);
 // router.get('/ExtraSpace',ExtraSpace);
-router.post('/CreateVehicleType',CreateVehicleType); 
+router.post('/CreateVehicleType',upload.single('vehicleImage'),CreateVehicleType); 
 router.get('/GetVehicleType',GetVehicleType); 
-router.put('/UpdateVehicleTypes/:id',UpdateVehicleTypes);
+router.put('/UpdateVehicleTypes/:id',upload.single('vehicleImage'),,UpdateVehicleTypes);
 router.delete('/DeleteVehicleType/:id',DeleteVehicleType);
 router.post('/CreateVehicleBrand',CreateVehicleBrand); 
 router.get('/GetVehicleBrand',GetVehicleBrand),
