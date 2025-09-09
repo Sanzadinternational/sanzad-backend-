@@ -46,6 +46,7 @@ export const BookingTable = pgTable('booking', {
     venueAddress:varchar({length:255}),
     gstNumber:varchar({length:255}),
     gstRequired:varchar({length:255}),
+    driver_id:varchar({length:255}),
     pickupAddress:varchar({length:255}),
     destinationName:varchar({length:255}),
     destinationAddress:varchar({length:255}),
