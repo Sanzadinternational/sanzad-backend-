@@ -1,13 +1,9 @@
 import express, {Request, Response, NextFunction, Router} from 'express'; 
 const { updateProfile } = require("../controllers/ProfileControllers");
 import authMiddleware from '../middlewares/authMiddleware';
-const multer = require('multer');
 import fs from 'fs';
 import path from 'path';
-const uploadDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
+const uploadDir = "/uploads";
 
 // Configure Multer
 const storage = multer.diskStorage({
@@ -19,7 +15,7 @@ const storage = multer.diskStorage({
     }
 });
 
-const upload = multer({ storage }); 
+const upload = multer({ storage });
 
 const router = express.Router(); 
  
