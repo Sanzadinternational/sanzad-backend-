@@ -322,11 +322,13 @@ supplier_id:string
 }
 
 export interface VehicleType{
-  VehicleType:string
+  VehicleType:string,
+   vehicleImage:string
 }
 
 export interface UpdateVehicleType{
-  VehicleType:string
+  VehicleType:string,
+   vehicleImage:string
 }
 
 export interface VehicleBrand{
