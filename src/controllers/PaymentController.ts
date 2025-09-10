@@ -1158,13 +1158,31 @@ const addTermsAndConditions = (doc: PDFDocument) => {
 };
 
 const addFooter = (doc: PDFDocument) => {
+  const pageHeight = doc.page.height;
+  const margin = 50;
+  const footerHeight = 120; // Increased to fit the extra line
+
+  // Move cursor to near the bottom of the page
+  doc.y = pageHeight - footerHeight;
+
+  doc.fontSize(12)
+     .fillColor('#000')
+     .text('*** Thank you! Have a wonderful trip! ***', { align: 'center' });
+
+  doc.moveDown(0.5);
+
+  doc.fontSize(9)
+     .fillColor('#000')
+     .text('This is a computer-generated document and does not require a signature.', { align: 'center' });
+
   doc.moveDown(1);
-  doc.fontSize(12).fillColor('#000').text('*** Thank you! Have a wonderful trip! ***', { align: 'center' });
-  doc.moveDown(1);
-  doc.fontSize(9).fillColor('#666')
-    .text('Corporate Office: Suite No. 4, H-143, Sector-63, Noida, Gautam Buddha Nagar, UP, 201301', { align: 'center' })
-    .text('24X7 Customer Support: +91 7880331786', { align: 'center' });
+
+  doc.fontSize(9)
+     .fillColor('#666')
+     .text('Corporate Office: Suite No. 4, H-143, Sector-63, Noida, Gautam Buddha Nagar, UP, 201301', { align: 'center' })
+     .text('24X7 Customer Support: +91 7880331786', { align: 'center' });
 };
+
 
 const sectionHeader = (doc: PDFDocument, title: string) => {
   if (doc.y < 50) doc.addPage(); // Avoid header too close to page top
