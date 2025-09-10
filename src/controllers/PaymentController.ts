@@ -866,7 +866,7 @@ const addServiceDetailsTable = (doc: PDFDocument, booking: InvoiceBookingData) =
   const colWidths = [130, 130, 130, 130];
   const colX = [50, 180, 310, 440];
   const headerHeight = 20;
-  const rowHeight = 40;
+  const rowHeight = 80;
 
   const drawCell = (x: number, y: number, w: number, h: number) => doc.rect(x, y, w, h).stroke();
 
