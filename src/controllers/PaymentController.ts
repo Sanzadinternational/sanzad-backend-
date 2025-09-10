@@ -464,7 +464,7 @@ pickupDetails,
         function generateTxnId() {
   const randomPart = Math.random().toString(36).substring(2, 10).toUpperCase(); // 8 chars
   const timePart = Date.now().toString().slice(-4);
-  return `BOOK-${randomPart}-${timePart}`;
+  return `SIT-${randomPart}-${timePart}`;
 }
 
 const txnid = generateTxnId();
