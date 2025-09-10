@@ -130,14 +130,14 @@ if (!zones || zones.length === 0) {
 
     const transfers = transfersResult.rows as any[];
    // Fetch all vehicle types once before mapping
-const vehicleTypesResult = await db.execute(
-  sql`SELECT id, vehicleImage FROM "VehicleType"`
-);
-const vehicleTypes = vehicleTypesResult.rows as any[];
-const vehicleTypeMap = new Map<string, string>(); // id -> image
-for (const vt of vehicleTypes) {
-  vehicleTypeMap.set(vt.id, vt.vehicleImage);
-}
+// const vehicleTypesResult = await db.execute(
+//   sql`SELECT id, vehicleImage FROM "VehicleType"`
+// );
+// const vehicleTypes = vehicleTypesResult.rows as any[];
+// const vehicleTypeMap = new Map<string, string>(); // id -> image
+// for (const vt of vehicleTypes) {
+//   vehicleTypeMap.set(vt.id, vt.vehicleImage);
+// }
 
 
     // Step 4: Calculate Distance
@@ -177,7 +177,7 @@ const surgeCharges = surgeChargesResult.rows as any[];
 
     // Step 6: Calculate Pricing for Each Vehicle
     const vehiclesWithPricing = await Promise.all(transfers.map(async (transfer) => {
-     const image = vehicleTypeMap.get(transfer.VehicleType);
+     // const image = vehicleTypeMap.get(transfer.VehicleType);
       let totalPrice = Number(transfer.price); // Base price
 
       // Function to calculate total price asynchronously
