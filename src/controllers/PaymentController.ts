@@ -912,7 +912,7 @@ const addServiceDetailsTable = (doc: PDFDocument, booking: InvoiceBookingData) =
 const addPaymentSummary = (doc: PDFDocument, booking: InvoiceBookingData) => {
   sectionHeader(doc, 'Payment Summary:');
   labelValueRow(doc, 'Payment Status', booking.paymentStatus);
-  labelValueRow(doc, 'Amount Paid', `${booking.currency} ${booking.paymentAmount}`);
+  // labelValueRow(doc, 'Amount Paid', `${booking.currency} ${booking.paymentAmount}`);
 };
 
 
