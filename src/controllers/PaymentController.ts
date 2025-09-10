@@ -887,7 +887,7 @@ doc.text(`${booking.returnDate || 'N/A'} ${booking.returnTime || ''}`, colX[3] +
 
   for (let i = 0; i < colX.length; i++) drawCell(colX[i], rowY, colWidths[i], rowHeight);
 
-  doc.y = rowY + rowHeight + 15;
+  doc.y = rowY + rowHeight + 20;
 };
 
 const addPaymentSummary = (doc: PDFDocument, booking: InvoiceBookingData) => {
