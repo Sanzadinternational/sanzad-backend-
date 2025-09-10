@@ -880,10 +880,29 @@ const addServiceDetailsTable = (doc: PDFDocument, booking: InvoiceBookingData) =
   const rowY = tableTop + headerHeight;
   doc.font('Helvetica').fontSize(9);
   // Format booking date and time
-doc.text(booking.pickupLocation, colX[0] + padding, rowY + 5, { width: colWidths[0] - padding * 2 });
-doc.text(booking.dropLocation, colX[1] + padding, rowY + 5, { width: colWidths[1] - padding * 2 });
-doc.text(`${booking.bookingDate} ${booking.bookingTime || ''}`, colX[2] + padding, rowY + 5, { width: colWidths[2] - padding * 2 });
-doc.text(`${booking.returnDate || 'N/A'} ${booking.returnTime || ''}`, colX[3] + padding, rowY + 5, { width: colWidths[3] - padding * 2 });
+ // Format booking date and time
+  const bookingDate = new Date(booking.bookingDate);
+  const formattedBookingDate = bookingDate.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+  const bookingDateTime = `${formattedBookingDate} ${booking.bookingTime || ''}`;
+
+  // Format return date and time
+  const returnDate = booking.returnDate ? new Date(booking.returnDate) : null;
+  const formattedReturnDate = returnDate ? returnDate.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  }) : 'N/A';
+  const returnDateTime = `${formattedReturnDate} ${booking.returnTime || ''}`;
+
+  // Fill table rows
+  doc.text(booking.pickupLocation, colX[0] + padding, rowY + 5, { width: colWidths[0] - padding * 2 });
+  doc.text(booking.dropLocation, colX[1] + padding, rowY + 5, { width: colWidths[1] - padding * 2 });
+  doc.text(bookingDateTime, colX[2] + padding, rowY + 5, { width: colWidths[2] - padding * 2 });
+  doc.text(returnDateTime, colX[3] + padding, rowY + 5, { width: colWidths[3] - padding * 2 });
 
   for (let i = 0; i < colX.length; i++) drawCell(colX[i], rowY, colWidths[i], rowHeight);
 
