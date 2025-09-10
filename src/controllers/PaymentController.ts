@@ -794,7 +794,7 @@ const fetchInvoiceData = async (bookingId: string): Promise<InvoiceBookingData |
     })
     .from(BookingTable)
     .innerJoin(PaymentsTable, eq(PaymentsTable.booking_id, BookingTable.id))
-    .leftJoin(AgentTable, eq(AgentTable.id, BookingTable.Agent_Id))  // Joined AgentTable here
+    .leftJoin(AgentTable, eq(AgentTable.id, BookingTable.Agent_id))  // Joined AgentTable here
     .where(eq(BookingTable.id, bookingId))
     .limit(1);
 
