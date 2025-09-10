@@ -240,7 +240,7 @@ async function calculateReturnPrice() {
 
   // Apply margin again if needed
   const margin = supplierMargins.get(transfer.SupplierId) || 0;
-  returnPrice += transfer.price * (Number(margin) / 100 || 0);
+  returnPrice += returnPrice * (Number(margin) / 100 || 0);
 
   return returnPrice;
 }
@@ -277,7 +277,7 @@ if (vehicleSurge && vehicleSurge.SurgeChargePrice) {
   totalPrice += surgeAmount;
   console.log(`Surge pricing applied → Vehicle ID: ${transfer.vehicle_id} | Surge: ${surgeAmount}`);
 }
-       totalPrice += transfer.price * (Number(margin) / 100 || 0);
+       totalPrice += totalPrice * (Number(margin) / 100 || 0);
      totalPrice += returnPrice;
      console.log(`Return price for vehicle ${transfer.vehicle_id}: ${returnPrice}`);
 
