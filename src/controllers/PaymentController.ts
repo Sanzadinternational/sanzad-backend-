@@ -9,7 +9,7 @@ import { PaymentsTable, BookingTable
 import { notifications } from "../db/schema/schema";
 import { io } from "../..";
 import { AgentTable } from "../db/schema/AgentSchema";
-import { registerTable } from "../db/schema/SupplierSchema";
+import { registerTable, DriversTable } from "../db/schema/SupplierSchema";
 const nodemailer = require("nodemailer"); 
 import PDFDocument from 'pdfkit';
 import fs from 'fs';
@@ -931,13 +931,15 @@ type VoucherBookingData = {
   paymentAmount: number;
   paymentStatus: string;
  Currency: string;
-   GstRequired: string;    // Added
-  GstNumber?: string;  
+ GstRequired: string;    // Added
+ GstNumber?: string;  
  agentName: string;
  agentAddress: string;
  agentMobile: string;
  agentEmail: string;
- driver: string
+ driverName: string,            // Added from DriversTable
+ driverContact: string,
+ CarNumber: string,
 };
 
 export const downloadVoucher = async (req: Request, res: Response) => {
@@ -964,14 +966,17 @@ const [booking] = await db
       GstRequired: BookingTable.gstRequired,
       GstNumber: BookingTable.gstNumber,
       AgentID: BookingTable.agent_id,
-      agentName: AgentTable.Company_name,          // Added from AgentTable
+      agentName: AgentTable.Company_name,        
       agentMobile: AgentTable.Office_number,     
-     agentEmail: AgentTable.Email,
-      agentAddress: AgentTable.Address,// Added from AgentTable
+      agentEmail: AgentTable.Email,
+      agentAddress: AgentTable.Address,          
       bookedAt: BookingTable.booked_at,
       bookingDate: BookingTable.booking_date,
       bookingTime: BookingTable.booking_time,
-      driver: BookingTable.driver_id,
+      driverId: BookingTable.driver_id,          // Original reference
+      driverName: DriversTable.DriverName,            // Added from DriversTable
+      driverContact: DriversTable.DriverContact,
+     CarNumber: DriverTable.DriverCarInfo,// Added from DriversTable
       returnDate: BookingTable.return_date,
       returnTime: BookingTable.return_time,
       passengers: BookingTable.passengers,
@@ -985,12 +990,12 @@ const [booking] = await db
     })
     .from(BookingTable)
     .innerJoin(PaymentsTable, eq(PaymentsTable.booking_id, BookingTable.id))
-    .leftJoin(AgentTable, eq(AgentTable.id, BookingTable.agent_id))  // Joined AgentTable here
+    .leftJoin(AgentTable, eq(AgentTable.id, BookingTable.agent_id))
+    .leftJoin(DriversTable, eq(DriversTable.id, BookingTable.driver_id))  // Join added here
     .where(eq(BookingTable.id, bookingId))
     .limit(1);
 
-  return booking || null;
-};
+return booking || null;
 
 const generatePDF = (res: Response, booking: VoucherBookingData) => {
   const doc = new PDFDocument({ margin: 50 });
@@ -1132,6 +1137,10 @@ const addBookingDetails = (doc: PDFDocument, booking: VoucherBookingData) => {
   labelValueRow(doc, 'Remark', 'Waiting 15 minutes');
   labelValueRow(doc, 'Payment', booking.paymentStatus === 'Paid' ? 'Paid in Full' : booking.paymentStatus);
   // labelValueRow(doc, 'Amount Paid', `${booking.Currency}\u00A0${booking.paymentAmount}`);
+labelValueRow(doc, 'Driver Name', `${booking.driverName ?? 'N/A'}`);
+labelValueRow(doc, 'Driver Contact', `${booking.driverContact ?? 'N/A'}`);
+labelValueRow(doc, 'Car Number', `${booking.CarNumber ?? 'N/A'}`);
+
   doc.moveDown(0.5);
 };
 
