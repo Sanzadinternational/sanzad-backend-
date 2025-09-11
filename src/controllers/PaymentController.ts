@@ -991,7 +991,7 @@ const [booking] = await db
     .from(BookingTable)
     .innerJoin(PaymentsTable, eq(PaymentsTable.booking_id, BookingTable.id))
     .leftJoin(AgentTable, eq(AgentTable.id, BookingTable.agent_id))
-    .leftJoin(DriversTable, eq(DriversTable.id, cast(BookingTable.driver_id, 'integer')))  // Join added here
+    .leftJoin(DriversTable, eq(DriversTable.id, BookingTable.driver_id)) 
     .where(eq(BookingTable.id, bookingId))
     .limit(1);
 
