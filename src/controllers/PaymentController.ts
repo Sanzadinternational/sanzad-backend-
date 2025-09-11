@@ -976,7 +976,7 @@ const [booking] = await db
       driverId: BookingTable.driver_id,          // Original reference
       driverName: DriversTable.DriverName,            // Added from DriversTable
       driverContact: DriversTable.DriverContact,
-     CarNumber: DriverTable.DriverCarInfo,// Added from DriversTable
+     CarNumber: DriversTable.DriverCarInfo,// Added from DriversTable
       returnDate: BookingTable.return_date,
       returnTime: BookingTable.return_time,
       passengers: BookingTable.passengers,
