@@ -774,7 +774,7 @@ const fetchInvoiceData = async (bookingId: string): Promise<InvoiceBookingData |
       GstNumber: BookingTable.gstNumber,
       AgentID: BookingTable.agent_id,
       agentName: AgentTable.Company_name,          // Added from AgentTable
-      agentMobile: AgentTable.Mobile_number,     
+      agentMobile: AgentTable.Office_number,     
      agentEmail: AgentTable.Email,
       agentAddress: AgentTable.Address,// Added from AgentTable
       bookedAt: BookingTable.booked_at,
