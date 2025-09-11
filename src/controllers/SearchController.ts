@@ -294,7 +294,7 @@ if (vehicleSurge && vehicleSurge.SurgeChargePrice) {
 
       return {
         vehicleId: transfer.vehicle_id,
-       vehixleImage: image.vehicleImage,
+       vehicleImage: image.vehicleImage,
         vehicalType: transfer.VehicleType,
         brand: transfer.VehicleBrand,
         vehicleName: transfer.name,
