@@ -131,7 +131,7 @@ if (!zones || zones.length === 0) {
     const transfers = transfersResult.rows as any[];
    // Fetch all vehicle types once before mapping
 const vehicleTypesResult = await db.execute(
-  sql`SELECT id, vehicleImage FROM "VehicleType"`
+  sql`SELECT id, VehicleType, vehicleImage FROM "VehicleType"`
 );
 const vehicleTypes = vehicleTypesResult.rows as any[];
 
