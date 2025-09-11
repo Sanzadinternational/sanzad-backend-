@@ -1055,11 +1055,7 @@ const addDocumentHeader = (doc: PDFDocument, booking: VoucherBookingData) => {
     month: 'long',
     year: 'numeric',
   });
- const bookingDate = booking.bookingDate.toLocaleDateString('en-GB', {
-  day: 'numeric',   // no leading zero
-  month: 'long',
-  year: 'numeric',
-});
+
 
   const startY = doc.y;
   doc.font('Helvetica-Bold').fontSize(10);
@@ -1070,7 +1066,7 @@ const addDocumentHeader = (doc: PDFDocument, booking: VoucherBookingData) => {
   doc.fontSize(14)
    .font('Helvetica-Bold')
    .text(
-     `Transfer ${bookingDate} ${booking.bookingTime} Hrs`,
+     `Transfer ${booking.bookingDate} ${booking.bookingTime} Hrs`,
      50, // X position (left margin)
      doc.y, // Current Y position
      { width: 510, align: 'center' } // Full page width, center align
@@ -1113,7 +1109,7 @@ const addItinerary = (doc: PDFDocument, booking: VoucherBookingData) => {
   // Data row
   const rowY = tableTop + headerHeight;
   doc.font('Helvetica').fontSize(10);
-  doc.text(bookingDate, colX[0] + padding, rowY + 5, {
+  doc.text(booking.bookingDate, colX[0] + padding, rowY + 5, {
     width: colWidths[0] - padding * 2
   });
   doc.text(`${booking.bookingTime} Hrs`, colX[1] + padding, rowY + 5, {
