@@ -931,6 +931,13 @@ type VoucherBookingData = {
   paymentAmount: number;
   paymentStatus: string;
  Currency: string;
+   GstRequired: string;    // Added
+  GstNumber?: string;  
+ agentName: string;
+ agentAddress: string;
+ agentMobile: string;
+ agentEmail: string;
+ driver: string
 };
 
 export const downloadVoucher = async (req: Request, res: Response) => {
@@ -951,12 +958,20 @@ export const downloadVoucher = async (req: Request, res: Response) => {
 };
 
 const fetchBookingData = async (bookingId: string): Promise<VoucherBookingData | null> => {
-  const [booking] = await db
+const [booking] = await db
     .select({
       bookingId: BookingTable.booking_unique_id,
+      GstRequired: BookingTable.gstRequired,
+      GstNumber: BookingTable.gstNumber,
+      AgentID: BookingTable.agent_id,
+      agentName: AgentTable.Company_name,          // Added from AgentTable
+      agentMobile: AgentTable.Office_number,     
+     agentEmail: AgentTable.Email,
+      agentAddress: AgentTable.Address,// Added from AgentTable
       bookedAt: BookingTable.booked_at,
       bookingDate: BookingTable.booking_date,
       bookingTime: BookingTable.booking_time,
+      driver: BookingTable.driver_id,
       returnDate: BookingTable.return_date,
       returnTime: BookingTable.return_time,
       passengers: BookingTable.passengers,
@@ -966,10 +981,11 @@ const fetchBookingData = async (bookingId: string): Promise<VoucherBookingData |
       dropLocation: BookingTable.drop_location,
       paymentAmount: PaymentsTable.amount,
       paymentStatus: PaymentsTable.payment_status,
-     Currency:BookingTable.currency,
+      currency: BookingTable.currency,
     })
     .from(BookingTable)
     .innerJoin(PaymentsTable, eq(PaymentsTable.booking_id, BookingTable.id))
+    .leftJoin(AgentTable, eq(AgentTable.id, BookingTable.agent_id))  // Joined AgentTable here
     .where(eq(BookingTable.id, bookingId))
     .limit(1);
 
@@ -1115,7 +1131,7 @@ const addBookingDetails = (doc: PDFDocument, booking: VoucherBookingData) => {
   labelValueRow(doc, 'Vehicle Type', 'Minivan Or Similar');
   labelValueRow(doc, 'Remark', 'Waiting 15 minutes');
   labelValueRow(doc, 'Payment', booking.paymentStatus === 'Paid' ? 'Paid in Full' : booking.paymentStatus);
-  labelValueRow(doc, 'Amount Paid', `${booking.Currency}\u00A0${booking.paymentAmount}`);
+  // labelValueRow(doc, 'Amount Paid', `${booking.Currency}\u00A0${booking.paymentAmount}`);
   doc.moveDown(0.5);
 };
 
