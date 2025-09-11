@@ -996,7 +996,7 @@ const [booking] = await db
     .limit(1);
 
 return booking || null;
-
+};
 const generatePDF = (res: Response, booking: VoucherBookingData) => {
   const doc = new PDFDocument({ margin: 50 });
   res.setHeader('Content-Type', 'application/pdf');
