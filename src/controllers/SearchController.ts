@@ -277,8 +277,9 @@ const vehicleSurge = surgeCharges.find(surge =>
   surge.vehicle_id === transfer.vehicle_id &&
   surge.supplier_id === transfer.SupplierId
 );
-     const image = vehicleTypes.find(type =>
-  type.VehicleType === transfer.VehicleType);
+const image = vehicleTypes.find(type =>
+  type.VehicleType.toLowerCase().trim() === transfer.VehicleType.toLowerCase().trim()
+) || { vehicleImage: 'default-image-url-or-path' };
 
 if (vehicleSurge && vehicleSurge.SurgeChargePrice) {
   const surgeAmount = Number(vehicleSurge.SurgeChargePrice);
