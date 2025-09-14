@@ -1100,6 +1100,13 @@ const addItinerary = (doc: PDFDocument, booking: VoucherBookingData) => {
   const tableTop = doc.y;
   const padding = 5;
 
+  const dateObj = new Date(booking.bookingDate);
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  const formattedDate = `${dateObj.getDate()} ${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+
   // Adjusted widths for better fit within margins (total ~510)
   const colWidths = [80, 80, 170, 180];
   const colX = [50, 130, 210, 380];
