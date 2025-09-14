@@ -1062,16 +1062,29 @@ const addDocumentHeader = (doc: PDFDocument, booking: VoucherBookingData) => {
   doc.text(`Transfer ID: ${booking.bookingId}`, 50, startY, { width: 250, align: 'left' });
   doc.text(`Issue Date: ${issueDate}`, 300, startY, { width: 250, align: 'right' });
 
-  doc.moveDown(1);
-  doc.fontSize(14)
+// Parse the date
+const dateObj = new Date(booking.bookingDate);
+
+// Array of month names
+const monthNames = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
+// Format the date as "1 November 2025"
+const formattedDate = `${dateObj.getDate()} ${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+
+doc.moveDown(1);
+doc.fontSize(14)
    .font('Helvetica-Bold')
    .text(
-     `Transfer ${booking.bookingDate} ${booking.bookingTime} Hrs`,
+     `Transfer ${formattedDate} ${booking.bookingTime} Hrs`,
      50, // X position (left margin)
      doc.y, // Current Y position
      { width: 510, align: 'center' } // Full page width, center align
    );
-  doc.moveDown(0.5);
+doc.moveDown(0.5);
+
 };
 
 const addPassengerDetails = (doc: PDFDocument, booking: VoucherBookingData) => {
