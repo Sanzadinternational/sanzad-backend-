@@ -1122,7 +1122,7 @@ const addItinerary = (doc: PDFDocument, booking: VoucherBookingData) => {
   // Data row
   const rowY = tableTop + headerHeight;
   doc.font('Helvetica').fontSize(10);
-  doc.text(booking.bookingDate, colX[0] + padding, rowY + 5, {
+  doc.text(formattedDate, colX[0] + padding, rowY + 5, {
     width: colWidths[0] - padding * 2
   });
   doc.text(`${booking.bookingTime} Hrs`, colX[1] + padding, rowY + 5, {
