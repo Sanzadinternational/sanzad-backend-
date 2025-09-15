@@ -1,7 +1,7 @@
 import { Supplier_price, TransportNode,resetPasswords,ForgetPasswords, CreateVehicles, GetVehiclebyId, CreateZone, createTransfer, updateZone, GetVehicleBySupplierId, GetZoneBySupplierId } from '../controllers/SupplierController';
 import authMiddleware from '../middlewares/authMiddleware';
 import express, {Request, Response, NextFunction, Router} from 'express'; 
-import { CreateSupplier,CreateDriver,DeleteSupplierApi,GetSupplierApi,GetDriver,UpdateDriver,DeleteDriver,UpdateVehicle,ChangeBookingStatusByBookingId,GetBookingBySupplierId,DeleteVehicle,UpdateVehicleTypes,UpdateVehicleModels,deleteZone,UpdateVehicleBrands,UpdateServiceTypes,DeleteVehicleType,GetSupplier,SurgeCharges,GetVehicleCarDetails,GetAllCarDetails,GetTransferCarDetails,UpdateTransferCar,UpdateExtra,CreateVehicleType,GetVehicleBrand,CreateVehicleBrand,CreateServiceType,CreateVehicleModel,GetVehicleType,
+import { CreateSupplier,SupplierDocumentsData,CreateDriver,DeleteSupplierApi,GetSupplierApi,GetDriver,UpdateDriver,DeleteDriver,UpdateVehicle,ChangeBookingStatusByBookingId,GetBookingBySupplierId,DeleteVehicle,UpdateVehicleTypes,UpdateVehicleModels,deleteZone,UpdateVehicleBrands,UpdateServiceTypes,DeleteVehicleType,GetSupplier,SurgeCharges,GetVehicleCarDetails,GetAllCarDetails,GetTransferCarDetails,UpdateTransferCar,UpdateExtra,CreateVehicleType,GetVehicleBrand,CreateVehicleBrand,CreateServiceType,CreateVehicleModel,GetVehicleType,
     GetCarDetails,DeleteSurgeCharges,AssignDriverToBooking,UpdateSurgeCharges,GetSurgeCharges,GetServiceType,DeleteVehicleModel,DeleteServiceType,DeleteVehicleBrand,CreateExtraSp,UpdatedSignleCarDetails,GetVehicleModel,DeleteSingleCarDetails,CreateTransferCarDetails,suppliersendOtp,supplierverifyOtp,CreateCartDetail,Supplier_details, GetSupplier_details, deleteUserById,  One_Way_Details, CreateSupplierApi, updateTransfer,getTransferById,deleteTransfer,getTransferBySupplierId} from '../controllers'; 
 import multer from 'multer';
 import fs from 'fs';
@@ -35,6 +35,7 @@ router.post('One_Way_Service_Details', One_Way_Details);
 router.post('/CreateSupplierApi',CreateSupplierApi); 
 router.get('/GetSupplierApi',GetSupplierApi);
 router.delete('/DeleteSupplierApi/:id',DeleteSupplierApi);
+router.post('CreateSupplierDocuments',upload.single('Image'),SupplierDocumentsData);
 router.post('/Supplier_price',Supplier_price); 
 router.post('/TransportNode',TransportNode); 
 router.post('/Createcardetail',CreateCartDetail); 
