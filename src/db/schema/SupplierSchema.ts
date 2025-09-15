@@ -291,3 +291,9 @@ export const DriversTable = pgTable('Drivers',{
   DriverCarInfo:varchar({length:255}), 
   SupplierId:varchar({length:255})      
 })
+
+export const SupplierDocumentsTable = pgTable('SupplierDocuments',{
+  id: integer('id').primaryKey().generatedAlwaysAsIdentity(), 
+  supplier_id: varchar({length:255}),
+  Image:varchar({length:255})
+})
