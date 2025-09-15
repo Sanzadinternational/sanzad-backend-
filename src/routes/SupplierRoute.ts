@@ -2,7 +2,7 @@ import { Supplier_price, TransportNode,resetPasswords,ForgetPasswords, CreateVeh
 import authMiddleware from '../middlewares/authMiddleware';
 import express, {Request, Response, NextFunction, Router} from 'express'; 
 import { CreateSupplier,SupplierDocumentsData,CreateDriver,DeleteSupplierApi,GetSupplierApi,GetDriver,UpdateDriver,DeleteDriver,UpdateVehicle,ChangeBookingStatusByBookingId,GetBookingBySupplierId,DeleteVehicle,UpdateVehicleTypes,UpdateVehicleModels,deleteZone,UpdateVehicleBrands,UpdateServiceTypes,DeleteVehicleType,GetSupplier,SurgeCharges,GetVehicleCarDetails,GetAllCarDetails,GetTransferCarDetails,UpdateTransferCar,UpdateExtra,CreateVehicleType,GetVehicleBrand,CreateVehicleBrand,CreateServiceType,CreateVehicleModel,GetVehicleType,
-    GetCarDetails,DeleteSurgeCharges,DeleteSupplierDocuments,AssignDriverToBooking,UpdateSurgeCharges,GetSurgeCharges,GetServiceType,DeleteVehicleModel,DeleteServiceType,DeleteVehicleBrand,CreateExtraSp,UpdatedSignleCarDetails,GetVehicleModel,DeleteSingleCarDetails,CreateTransferCarDetails,suppliersendOtp,supplierverifyOtp,CreateCartDetail,Supplier_details, GetSupplier_details, deleteUserById,  One_Way_Details, CreateSupplierApi, updateTransfer,getTransferById,deleteTransfer,getTransferBySupplierId} from '../controllers'; 
+    GetCarDetails,DeleteSurgeCharges,GetSupplierDocuments,DeleteSupplierDocuments,AssignDriverToBooking,UpdateSurgeCharges,GetSurgeCharges,GetServiceType,DeleteVehicleModel,DeleteServiceType,DeleteVehicleBrand,CreateExtraSp,UpdatedSignleCarDetails,GetVehicleModel,DeleteSingleCarDetails,CreateTransferCarDetails,suppliersendOtp,supplierverifyOtp,CreateCartDetail,Supplier_details, GetSupplier_details, deleteUserById,  One_Way_Details, CreateSupplierApi, updateTransfer,getTransferById,deleteTransfer,getTransferBySupplierId} from '../controllers'; 
 import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
@@ -36,6 +36,7 @@ router.post('/CreateSupplierApi',CreateSupplierApi);
 router.get('/GetSupplierApi',GetSupplierApi);
 router.delete('/DeleteSupplierApi/:id',DeleteSupplierApi);
 router.post('/SupplierDocumentsData',upload.single('Image'),SupplierDocumentsData);
+router.get('/GetSupplierDocuments',GetSupplierDocuments);
 router.delete('/DeleteSupplierDocuments/:id',DeleteSupplierDocuments);
 router.post('/Supplier_price',Supplier_price); 
 router.post('/TransportNode',TransportNode); 
