@@ -2053,7 +2053,13 @@ export const AssignDriverToBooking = async(req:Request,res:Response,next:NextFun
          const result = await db.insert(SupplierDocumentsTable).values({ 
             supplier_id, Image 
          }) 
-        return res.status(200).json({result,message:'Supplier Documents Created Successfully'})
+         .returning();
+
+    return res.status(201).json({
+      success: true,
+      data: result[0] ?? null,
+      message: "Supplier Document Created Successfully",
+    });
    }catch(error){
        next(error)
    }
