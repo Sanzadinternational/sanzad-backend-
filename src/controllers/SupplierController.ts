@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express"; 
-import { CreateSupplierInput,UpdateVehicleType,UpdateVehicleModel,UpdateServiceType,UpdateVehicleBrand,VehicleType,SurgeCharge,VehicleBrand,ServiceType,UpdateTransferCars,VehicleModel,CreateTransferCars,UpdateCreateCartDetails,
+import { CreateSupplierInput,SupplierDocuments,UpdateVehicleType,UpdateVehicleModel,UpdateServiceType,UpdateVehicleBrand,VehicleType,SurgeCharge,VehicleBrand,ServiceType,UpdateTransferCars,VehicleModel,CreateTransferCars,UpdateCreateCartDetails,
     CreateCartDetails,Driverdata,CreateSupplierDetailServicesInput,CreateExtraSpace,UpdateExtraSpace,CreateTransportNodesInput,SupplierPriceInput, CreateSupplierOneWayInput,CreateSupplierApidata,DriversModel } from "../dto";
 import { and,desc, eq } from "drizzle-orm"; 
 const { v4: uuidv4 } = require('uuid'); 
@@ -10,7 +10,7 @@ import {AdminTable} from "../db/schema/adminSchema";
 import { notifications } from "../db/schema/schema";
 import { io } from "../..";
 import { db } from "../db/db"; 
-const { registerTable,SurgeChargeTable,DriversTable, One_WayTable,CreateExtraSpaces,VehicleTypeTable,VehicleBrandTable,ServiceTypeTable,VehicleModelTable,CreateTransferCar,
+const { registerTable,SurgeChargeTable,SupplierDocumentsTable,DriversTable, One_WayTable,CreateExtraSpaces,VehicleTypeTable,VehicleBrandTable,ServiceTypeTable,VehicleModelTable,CreateTransferCar,
     supplier_otps,PriceTable,SupplierApidataTable,TransportNodes,SupplierCarDetailsTable} = require('../db/schema/SupplierSchema'); 
 import { zones } from "../db/schema/SupplierSchema";
 import { generateOTP, sendOTPEmail } from "../utils"; 
@@ -2045,4 +2045,16 @@ export const AssignDriverToBooking = async(req:Request,res:Response,next:NextFun
     }catch(error){
         next(error)
     }
+  }
+
+  export const SupplierDocumentsData = async(req:Request,res:Response,next:NextFunction)=>{
+   try{ 
+         const { supplier_id,Image }= req.body as SupplierDocuments; 
+         const result = await db.insert(SupplierDocumentsTable).values({ 
+            supplier_id, Image 
+         }) 
+        return res.status(200).json({result,message:'Supplier Documents Created Successfully'})
+   }catch(error){
+       next(error)
+   }
   }
