@@ -366,3 +366,9 @@ export interface DriversModel{
 export interface Driverdata{
   driver_id:string,
 }
+
+export interface SupplierDocuments{ 
+  id:string,
+  supplier_id:string,
+  Image:string
+}
