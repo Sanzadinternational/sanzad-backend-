@@ -36,6 +36,7 @@ router.post('/CreateSupplierApi',CreateSupplierApi);
 router.get('/GetSupplierApi',GetSupplierApi);
 router.delete('/DeleteSupplierApi/:id',DeleteSupplierApi);
 router.post('CreateSupplierDocuments',upload.single('Image'),SupplierDocumentsData);
+router.delete('/DeleteSupplierDocuments/:id',DeleteSupplierDocuments);
 router.post('/Supplier_price',Supplier_price); 
 router.post('/TransportNode',TransportNode); 
 router.post('/Createcardetail',CreateCartDetail); 
