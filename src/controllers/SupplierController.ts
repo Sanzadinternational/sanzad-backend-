@@ -2049,7 +2049,8 @@ export const AssignDriverToBooking = async(req:Request,res:Response,next:NextFun
 
   export const SupplierDocumentsData = async(req:Request,res:Response,next:NextFunction)=>{
    try{ 
-         const { supplier_id,Image }= req.body as SupplierDocuments; 
+         const { supplier_id }= req.body as SupplierDocuments; 
+        const Image = (req as any).file ? (req as any).file.filename : null;
          const result = await db.insert(SupplierDocumentsTable).values({ 
             supplier_id, Image 
          }) 
