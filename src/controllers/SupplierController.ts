@@ -2058,3 +2058,13 @@ export const AssignDriverToBooking = async(req:Request,res:Response,next:NextFun
        next(error)
    }
   }
+ export const DeleteSupplierDocuments = async(req:Request,res:Response,next:NextFunction)=>{
+    try{
+         const {id} = req.params;
+         const result = await db.delete(SupplierDocumentsTable)
+         .where(eq(SupplierDocumentsTable.id,id));
+          return res.status(200).json({message:"Supplier Documents Deleted Successfully"})
+    } catch(error){
+        next(error)
+    }
+  }
