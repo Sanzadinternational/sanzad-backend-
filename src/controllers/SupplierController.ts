@@ -2065,6 +2065,19 @@ export const AssignDriverToBooking = async(req:Request,res:Response,next:NextFun
        next(error)
    }
   }
+ export const GetSupplierDocuments = async(req:Request,res:Response,next:NextFunction)=>{
+  try{
+    const data = await db.select()
+    .from(SupplierDocumentsTable)
+    return res.status(200).json({
+      message: "Supplier Documents data fetched successfully",
+        data: data
+    })
+  }catch(error){
+    next(error)
+  }
+  }
+
  export const DeleteSupplierDocuments = async(req:Request,res:Response,next:NextFunction)=>{
     try{
          const {id} = req.params;
