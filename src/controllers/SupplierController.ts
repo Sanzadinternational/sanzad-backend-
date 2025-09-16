@@ -2071,7 +2071,11 @@ export const GetSupplierDocuments = async (req: Request, res: Response, next: Ne
     const baseUrl = `https://api.sanzadinternational.in/api/V1/uploads/`;
 
     const data = await db
-      .select()
+      .select({
+        id: SupplierDocumentsTable.id,
+        supplier_id: SupplierDocumentsTable.supplier_id,
+        Image: SupplierDocumentsTable.Image,
+      })
       .from(SupplierDocumentsTable)
       .where(eq(SupplierDocumentsTable.supplier_id, id));
 
