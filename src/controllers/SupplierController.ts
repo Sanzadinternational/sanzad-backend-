@@ -2094,6 +2094,40 @@ export const GetSupplierDocuments = async (req: Request, res: Response, next: Ne
   }
 };
 
+export const DownloadSupplierDocumentById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params; // supplier_id milega
+
+    // Database se supplier document fetch karo
+    const data = await db
+      .select({
+        Image: SupplierDocumentsTable.Image,
+      })
+      .from(SupplierDocumentsTable)
+      .where(eq(SupplierDocumentsTable.supplier_id, id))
+      .limit(1);
+
+    if (!data || data.length === 0 || !data[0].Image) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    const filename = data[0].Image;
+    const filePath = path.join(__dirname, "../uploads/", filename);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: "File not found on server" });
+    }
+
+    // Force download
+    res.download(filePath, filename);
+  } catch (error) {
+    next(error);
+  }
+};
 
  export const DeleteSupplierDocuments = async(req:Request,res:Response,next:NextFunction)=>{
     try{
