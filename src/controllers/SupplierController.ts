@@ -2101,12 +2101,13 @@ export const DownloadSupplierDocumentById = async (
 ) => {
   try {
     const { id } = req.params;
+
+    // Base URL
     const baseUrl = `https://api.sanzadinternational.in/api/V1/uploads/`;
-    // Database se document fetch
+
+    // DB se image record fetch
     const data = await db
-      .select({
-        Image: SupplierDocumentsTable.Image,
-      })
+      .select({ Image: SupplierDocumentsTable.Image })
       .from(SupplierDocumentsTable)
       .where(eq(SupplierDocumentsTable.supplier_id, id))
       .limit(1);
@@ -2115,20 +2116,31 @@ export const DownloadSupplierDocumentById = async (
       return res.status(404).json({ message: "Document not found" });
     }
 
-   const filename = path.basename(data[0].Image);
+    // filename extract karo
+    const filename = path.basename(data[0].Image);
 
-    // Full URL banalo (agar client me URL chahiye to)
-    const fileUrl = `${baseUrl}${filename}`;
+    const filePath = path.join(process.cwd(), "public/uploads", filename);
 
-    // Local server path
-    const filePath = path.join(process.cwd(), "public", "uploads", filename);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        message: "File not found on server",
+        triedPath: filePath,
+      });
+    }
 
-    // File ko force download karvao
+    const downloadUrl = `${baseUrl}${filename}`;
+
+    // Response me URL bhi send kar sakte ho
+    // res.json({ downloadUrl });
+
+    // Ya force download
     return res.download(filePath, filename);
+
   } catch (error) {
     next(error);
   }
 };
+
 
 
  export const DeleteSupplierDocuments = async(req:Request,res:Response,next:NextFunction)=>{
