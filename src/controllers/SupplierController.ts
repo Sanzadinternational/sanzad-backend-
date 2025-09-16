@@ -2100,9 +2100,9 @@ export const DownloadSupplierDocumentById = async (
   next: NextFunction
 ) => {
   try {
-    const { id } = req.params; // supplier_id milega
+    const { id } = req.params;
 
-    // Database se supplier document fetch karo
+    // Database se document fetch
     const data = await db
       .select({
         Image: SupplierDocumentsTable.Image,
@@ -2116,18 +2116,21 @@ export const DownloadSupplierDocumentById = async (
     }
 
     const filename = data[0].Image;
-    const filePath = path.join(__dirname, "../uploads/", filename);
+
+    // ✅ uploads folder ka absolute path banao
+    const filePath = path.join(process.cwd(), "uploads", filename);
 
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ message: "File not found on server" });
     }
 
-    // Force download
-    res.download(filePath, filename);
+    // File ko force download karvao
+    return res.download(filePath, filename);
   } catch (error) {
     next(error);
   }
 };
+
 
  export const DeleteSupplierDocuments = async(req:Request,res:Response,next:NextFunction)=>{
     try{
