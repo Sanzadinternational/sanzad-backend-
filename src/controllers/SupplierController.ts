@@ -2148,6 +2148,7 @@ export const DownloadSupplierDocumentById = async (
 ) => {
   try {
     const { id } = req.params;
+    const baseUrl = `https://api.sanzadinternational.in/api/V1/uploads/`;
 
     const data = await db
       .select({ Image: SupplierDocumentsTable.Image })
@@ -2155,28 +2156,24 @@ export const DownloadSupplierDocumentById = async (
       .where(eq(SupplierDocumentsTable.supplier_id, id))
       .limit(1);
 
-    if (!data || data.length === 0 || !data[0].Image) {
+    if (!data || !data[0]?.Image) {
       return res.status(404).json({ message: "Document not found" });
     }
 
     const filename = path.basename(data[0].Image);
 
-    const filePath = path.join(process.cwd(), "public/uploads", filename);
+    const downloadUrl = `${baseUrl}${filename}`;
 
-    
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({
-        message: "File not found on server",
-        triedPath: filePath,
-      });
-    }
-
-    return res.download(filePath, filename);
+    return res.json({
+      success: true,
+      downloadUrl,
+    });
 
   } catch (error) {
     next(error);
   }
 };
+
 
 
  export const DeleteSupplierDocuments = async(req:Request,res:Response,next:NextFunction)=>{
