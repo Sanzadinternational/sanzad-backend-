@@ -2131,7 +2131,7 @@ export const DownloadSupplierDocumentById = async (
     const downloadUrl = `${baseUrl}${filename}`;
 
     // Response me URL bhi send kar sakte ho
-    res.json({ downloadUrl });
+    // res.json({ downloadUrl });
 
     // Ya force download
     return res.download(filePath, filename);
