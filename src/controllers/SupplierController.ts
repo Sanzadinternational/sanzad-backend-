@@ -2115,10 +2115,10 @@ export const DownloadSupplierDocumentById = async (
       return res.status(404).json({ message: "Document not found" });
     }
 
-    const filename = data[0].Image;
+    const filename = path.basename(data[0].Image);
 
-    // ✅ uploads folder ka absolute path banao
-    const filePath = path.join(process.cwd(), "uploads", filename);
+    // ✅ Correct uploads path
+    const filePath = path.join(process.cwd(), "public", "uploads", filename);
 
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ message: "File not found on server" });
