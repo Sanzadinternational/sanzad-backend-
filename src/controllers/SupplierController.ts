@@ -2119,7 +2119,7 @@ export const DownloadSupplierDocumentById = async (
     // filename extract karo
     const filename = path.basename(data[0].Image);
 
-    const filePath = path.join(process.cwd(), "public/uploads", filename);
+    const filePath = path.join(process.cwd(), "uploads", filename);
 
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({
