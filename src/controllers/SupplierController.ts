@@ -2179,8 +2179,9 @@ export const DownloadSupplierDocumentById = async (
  export const DeleteSupplierDocuments = async(req:Request,res:Response,next:NextFunction)=>{
     try{
          const {id} = req.params;
+        const docId = Number(id);
          const result = await db.delete(SupplierDocumentsTable)
-         .where(eq(SupplierDocumentsTable.id,id));
+         .where(eq(SupplierDocumentsTable.id,docId));
           return res.status(200).json({message:"Supplier Documents Deleted Successfully"})
     } catch(error){
         next(error)
