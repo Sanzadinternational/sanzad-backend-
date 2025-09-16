@@ -2065,18 +2065,31 @@ export const AssignDriverToBooking = async(req:Request,res:Response,next:NextFun
        next(error)
    }
   }
- export const GetSupplierDocuments = async(req:Request,res:Response,next:NextFunction)=>{
-  try{
-    const data = await db.select()
-    .from(SupplierDocumentsTable)
+export const GetSupplierDocuments = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const baseUrl = `https://api.sanzadinternational.in/api/V1/uploads/`;
+
+    const data = await db
+      .select()
+      .from(SupplierDocumentsTable)
+      .where(eq(SupplierDocumentsTable.supplier_id, id));
+
+    const updatedData = data.map((item) => ({
+      ...item,
+      Image: item.Image ? `${baseUrl}${item.Image}` : null, 
+    }));
+
     return res.status(200).json({
+      success: true, 
       message: "Supplier Documents data fetched successfully",
-        data: data
-    })
-  }catch(error){
-    next(error)
+      data: updatedData,
+    });
+  } catch (error) {
+    next(error);
   }
-  }
+};
+
 
  export const DeleteSupplierDocuments = async(req:Request,res:Response,next:NextFunction)=>{
     try{
