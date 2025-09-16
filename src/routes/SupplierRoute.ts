@@ -17,9 +17,16 @@ const storage = multer.diskStorage({
         cb(null, `${Date.now()}-${file.originalname}`);
     }
 });
+const fileFilter = (req: Request, file: any, cb: (error: Error | null, acceptFile?: boolean) => void) => {
+  if (file.mimetype === "application/pdf") {
+    cb(null, true);
+  } else {
+    cb(new Error("Only PDF files are allowed!"), false);
+  }
+};
 
 const upload = multer({ storage });
-
+const uploads = multer({ storage, fileFilter });
 const router = express.Router();  
 
 router.post('/registration',upload.single('Gst_Tax_Certificate'), CreateSupplier); 
@@ -35,7 +42,7 @@ router.post('One_Way_Service_Details', One_Way_Details);
 router.post('/CreateSupplierApi',CreateSupplierApi); 
 router.get('/GetSupplierApi',GetSupplierApi);
 router.delete('/DeleteSupplierApi/:id',DeleteSupplierApi);
-router.post('/SupplierDocumentsData',upload.single('Image'),SupplierDocumentsData);
+router.post('/SupplierDocumentsData',uploads.single('Image'),SupplierDocumentsData);
 router.get('/GetSupplierDocuments/:id',GetSupplierDocuments);
 router.get("/documents/:id/download", DownloadSupplierDocumentById);
 router.delete('/DeleteSupplierDocuments/:id',DeleteSupplierDocuments);
