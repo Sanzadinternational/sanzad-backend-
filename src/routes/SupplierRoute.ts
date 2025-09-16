@@ -37,7 +37,7 @@ router.get('/GetSupplierApi',GetSupplierApi);
 router.delete('/DeleteSupplierApi/:id',DeleteSupplierApi);
 router.post('/SupplierDocumentsData',upload.single('Image'),SupplierDocumentsData);
 router.get('/GetSupplierDocuments/:id',GetSupplierDocuments);
-router.get("/supplier/documents/download/:id", DownloadSupplierDocumentById);
+router.get("/supplier/documents/:id/download", DownloadSupplierDocumentById);
 router.delete('/DeleteSupplierDocuments/:id',DeleteSupplierDocuments);
 router.post('/Supplier_price',Supplier_price); 
 router.post('/TransportNode',TransportNode); 
