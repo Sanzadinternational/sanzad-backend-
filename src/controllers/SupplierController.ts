@@ -2101,7 +2101,7 @@ export const DownloadSupplierDocumentById = async (
 ) => {
   try {
     const { id } = req.params;
-
+    const baseUrl = `https://api.sanzadinternational.in/api/V1/uploads/`;
     // Database se document fetch
     const data = await db
       .select({
@@ -2115,14 +2115,13 @@ export const DownloadSupplierDocumentById = async (
       return res.status(404).json({ message: "Document not found" });
     }
 
-    const filename = path.basename(data[0].Image);
+   const filename = path.basename(data[0].Image);
 
-    // ✅ Correct uploads path
+    // Full URL banalo (agar client me URL chahiye to)
+    const fileUrl = `${baseUrl}${filename}`;
+
+    // Local server path
     const filePath = path.join(process.cwd(), "public", "uploads", filename);
-
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ message: "File not found on server" });
-    }
 
     // File ko force download karvao
     return res.download(filePath, filename);
