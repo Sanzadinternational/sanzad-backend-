@@ -600,13 +600,23 @@ return_date: returnDate ? new Date(returnDate) : null,
               }); 
               
               // Define the email options
-              const mailOptions = {
-                  from: 'sanzadinternational5@gmail.com',
-                  to: results[0].email,
-                  subject: 'Your status by sanzadinternational',
-                  text: `Your query is <strong> ${results[0].payment_status}</strong> by the Sanzadinternational.`,
-                  html: `Your query is <strong> ${results[0].payment_status}</strong> by the Sanzadinternational.`,
-              };
+       const mailOptions = {
+    from: 'sanzadinternational5@gmail.com',
+    to: results[0].email,
+    subject: 'Your Booking Payment Status Update - Sanzadinternational',
+    text: `Dear Customer,\n\nWe would like to inform you that your booking payment status has been updated to: ${results[0].payment_status}.\n\nThank you for choosing Sanzadinternational. If you have any questions, feel free to contact us.\n\nBest regards,\nSanzadinternational Team`,
+    html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <h2 style="color: #0056b3;">Booking Payment Status Update</h2>
+            <p>Dear Customer,</p>
+            <p>We would like to inform you that your booking payment status has been updated to:</p>
+            <p style="font-size: 18px; font-weight: bold; color: #000;">${results[0].payment_status}</p>
+            <p>Thank you for choosing <strong>Sanzadinternational</strong>. If you have any questions or need further assistance, feel free to contact us.</p>
+            <p>Best regards,<br><strong>Sanzadinternational Team</strong></p>
+        </div>
+    `,
+};
+
       
               // Send the email
               await transporter.sendMail(mailOptions);
