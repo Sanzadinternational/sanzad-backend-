@@ -213,6 +213,11 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
      udf5
     } = req.body;
 
+   const [booking] = await db
+  .select({ pickup: BookingTable.pickup_location, drop: BookingTable.drop_location, customerEmail: BookingTable.customer_email, customerMobile: BookingTable.customer_mobile, customerName: BookingTable.customer_name })
+  .from(BookingTable)
+  .where(eq(BookingTable.id, udf1));
+
     const key = 'FYWyBY';
     const salt = 'QlrgPqGiOlYGXn7eQ0eIx2VpyEJBjfL1';
 
@@ -311,14 +316,17 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
   <div style="margin: 20px 0; padding: 15px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.05);">
     <h3 style="color: #2c3e50;">📦 Order Information</h3>
     <ul style="list-style: none; padding: 0; font-size: 15px; color: #555;">
-      <li><strong>Customer Name:</strong> ${udf2}</li>
-      <li><strong>Email:</strong> ${udf3}</li>
+      <li><strong>Customer Name:</strong> ${booking.customerName}</li>
+      <li><strong>Customer Email:</strong> ${booking.customerEmail}</li>
+       <li><strong>Customer Number:</strong> ${booking.customerMobile}</li>
       <li><strong>Order ID:</strong> ${txnid}</li>
       <li><strong>Transaction ID:</strong> ${mihpayid}</li>
       <li><strong>Product/Service:</strong> ${productinfo}</li>
       <li><strong>Amount:</strong> ₹${amount}</li>
       <li><strong>Payment Mode:</strong> ${mode}</li>
       <li><strong>Payment Status:</strong> ${status}</li>
+      <li><strong>Pickup Location:</strong> ${booking.pickup}</li>
+      <li><strong>Drop Location:</strong> ${booking.drop}</li>
     </ul>
   </div>
 
@@ -350,14 +358,17 @@ export const PaymentStatusUpdate = async (req: Request, res: Response, next: Nex
   <div style="margin: 20px 0; padding: 15px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.05);">
     <h3 style="color: #2c3e50;">📦 Order Information</h3>
     <ul style="list-style: none; padding: 0; font-size: 15px; color: #555;">
-      <li><strong>Customer Name:</strong> ${udf2}</li>
-      <li><strong>Email:</strong> ${udf3}</li>
+       <li><strong>Customer Name:</strong> ${booking.customerName}</li>
+      <li><strong>Customer Email:</strong> ${booking.customerEmail}</li>
+       <li><strong>Customer Number:</strong> ${booking.customerMobile}</li>
       <li><strong>Order ID:</strong> ${txnid}</li>
       <li><strong>Transaction ID:</strong> ${mihpayid}</li>
       <li><strong>Product/Service:</strong> ${productinfo}</li>
       <li><strong>Amount:</strong> ₹${amount}</li>
       <li><strong>Payment Mode:</strong> ${mode}</li>
       <li><strong>Payment Status:</strong> ${status}</li>
+      <li><strong>Pickup Location:</strong> ${booking.pickup}</li>
+      <li><strong>Drop Location:</strong> ${booking.drop}</li>
     </ul>
   </div>
 
@@ -461,6 +472,20 @@ pickupDetails,
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
+     const [agent] = await db
+  .select({ name: AgentTable.Company_name, email: AgentTable.Email })
+  .from(AgentTable)
+  .where(eq(AgentTable.id, agent_id));
+
+const [supplier] = await db
+  .select({ name: registerTable.Company_name, email: registerTable.Email })
+  .from(registerTable)
+  .where(eq(registerTable.id, suplier_id));
+
+if (!agent || !supplier) {
+  return res.status(400).json({ error: "Invalid agent or supplier ID" });
+}
+
         function generateTxnId() {
   const randomPart = Math.random().toString(36).substring(2, 10).toUpperCase(); // 8 chars
   const timePart = Date.now().toString().slice(-4);
@@ -495,9 +520,6 @@ const txnid = generateTxnId();
         venueAddress: pickupDetails.venueAddress,
       };
     }
-
-      const customerEmail = "abhinavgu34@gmail.com";
-        const customerPhone = "8433169822";
       // Insert booking and get the generated ID
       const [booking] = await db.insert(BookingTable).values({
         agent_id,
@@ -555,7 +577,89 @@ return_date: returnDate ? new Date(returnDate) : null,
             io.emit("Order", {
                 message: `New Order`,
               });
-  
+
+      const transporter = nodemailer.createTransport({
+        service: 'Gmail',
+        auth: {
+          user: 'sanzadinternational5@gmail.com',
+          pass: 'betf euwp oliy tooq', // Use environment variables in production
+        },
+      });
+
+      await transporter.sendMail({
+        from: '"Sanzadinternational" <sanzadinternational5@gmail.com>',
+        to: supplier.email, // Email address from udf3
+        subject: "New Booking",
+        text: `New Booking`,
+        html: `
+         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; border: 1px solid #dcdcdc; border-radius: 10px; background-color: #f9f9f9;">
+  <h2 style="color: #2c3e50; text-align: center;">🛒 New Order Received</h2>
+
+  <p style="font-size: 16px; color: #333;">Hello ${supplier.name},</p>
+
+  <p style="font-size: 16px; color: #333;">
+    A new Booking has been placed through the Sanzad International platform. Below are the order details:
+  </p>
+
+  <div style="margin: 20px 0; padding: 15px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.05);">
+    <h3 style="color: #2c3e50;">📦 Order Information</h3>
+    <ul style="list-style: none; padding: 0; font-size: 15px; color: #555;">
+      <li><strong>Customer Name:</strong> ${passenger_name}</li>
+      <li><strong>Customer Email:</strong> ${passenger_email}</li>
+       <li><strong>Customer Number:</strong> ${passenger_phone}</li>
+      <li><strong>Amount:</strong> ₹${price}</li>
+      <li><strong>Pickup Location:</strong> ${pickup_location}</li>
+      <li><strong>Drop Location:</strong> ${drop_location}</li>
+    </ul>
+  </div>
+
+  <p style="font-size: 16px; color: #333;">Please review and process the order accordingly.</p>
+
+  <p style="font-size: 16px; color: #333;">Regards,<br/><strong>Sanzad Booking System</strong></p>
+
+  <div style="margin-top: 30px; text-align: center; font-size: 13px; color: #999;">
+    <p>This is an automated internal notification. No action is required from the recipient.</p>
+  </div>
+</div>
+`
+      });
+      await transporter.sendMail({
+        from: '"Sanzadinternational" <sanzadinternational5@gmail.com>',
+        to: 'sanzadinternational5@gmail.com', // Email address from udf3
+        subject: "New Booking",
+        text: `New Booking`,
+        html: `
+         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 30px; border: 1px solid #dcdcdc; border-radius: 10px; background-color: #f9f9f9;">
+  <h2 style="color: #2c3e50; text-align: center;">🛒 New Order Received</h2>
+
+  <p style="font-size: 16px; color: #333;">Hello Admin,</p>
+
+  <p style="font-size: 16px; color: #333;">
+    A new Booking has been placed through the Sanzad International platform. Below are the order details:
+  </p>
+
+  <div style="margin: 20px 0; padding: 15px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.05);">
+    <h3 style="color: #2c3e50;">📦 Order Information</h3>
+    <ul style="list-style: none; padding: 0; font-size: 15px; color: #555;">
+    <li><strong>Customer Name:</strong> ${passenger_name}</li>
+      <li><strong>Customer Email:</strong> ${passenger_email}</li>
+       <li><strong>Customer Number:</strong> ${passenger_phone}</li>
+      <li><strong>Amount:</strong> ₹${price}</li>
+      <li><strong>Pickup Location:</strong> ${pickup_location}</li>
+      <li><strong>Drop Location:</strong> ${drop_location}</li>
+    </ul>
+  </div>
+
+  <p style="font-size: 16px; color: #333;">Please review and process the order accordingly.</p>
+
+  <p style="font-size: 16px; color: #333;">Regards,<br/><strong>Sanzad Booking System</strong></p>
+
+  <div style="margin-top: 30px; text-align: center; font-size: 13px; color: #999;">
+    <p>This is an automated internal notification. No action is required from the recipient.</p>
+  </div>
+</div>
+`
+      });
       return res.status(201).json({
         message: 'Payment info saved successfully',
         booking_id: bookingId,
