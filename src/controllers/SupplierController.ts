@@ -2237,7 +2237,7 @@ export const send_driver_assignment_reminder = async (req: Request,res: Response
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
               <h2 style="color: #2c3e50;">Driver Assignment Reminder</h2>
-              <p style="font-size: 16px; color: #555;">Dear User,</p>
+              <p style="font-size: 16px; color: #555;">Dear ${supplier[0].Email},</p>
               <ul style="font-size: 16px; color: #555; padding-left: 20px;">
                   <li>Your booking <strong>#${bookingId}</strong> is scheduled for <strong>${booking_date}</strong> (pickup at <strong>${pickup_location}</strong>) and does not have a driver assigned yet.</li>
                   <li>Please assign a driver immediately to avoid service disruption.</li>
