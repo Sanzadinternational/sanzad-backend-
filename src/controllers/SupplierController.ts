@@ -1905,7 +1905,7 @@ export const ChangeBookingStatusByBookingId = async (req: Request, res: Response
             
     })
     .from(BookingTable)
-    .innerJoin(AgentTable,eq(AgentTable.id, BookingTable.agent_id))
+    .innerJoin(AgentTable,eq(AgentTable.id, BookingTable.agent_id)).where(eq(BookingTable.id, Id));
 
          
         const transporter = nodemailer.createTransport({ 
