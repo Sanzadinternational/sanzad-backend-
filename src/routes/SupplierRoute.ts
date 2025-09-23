@@ -103,7 +103,7 @@ router.get('/GetDriver/:id',GetDriver);
 router.delete('/DeleteDriver/:id',DeleteDriver);
 router.put('/UpdateDriver/:id',UpdateDriver);
 router.put('/AssignDriverToBooking/:id',AssignDriverToBooking);
-router.get('/email/send_driver_assignment_reminder',send_driver_assignment_reminder)
+router.post('/email/send_driver_assignment_reminder',send_driver_assignment_reminder)
 // router.get('/products', GetProducts); 
 // router.get('/product/:id', GetProductById);
 // router.get('/product/:Keyword', SearchProduct); 
