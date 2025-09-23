@@ -2189,38 +2189,39 @@ export const DownloadSupplierDocumentById = async (
   }
 export const send_driver_assignment_reminder = async (req: Request,res: Response,next: NextFunction) => {
   try {
-    const latestBooking = await db
-      .select({
-        bookingId: BookingTable.id,
-        driverId: BookingTable.driver_id,
-        supplierId: BookingTable.suplier_id,
-        booking_date: BookingTable.booking_date,
-        pickup_location: BookingTable.pickup_location,
-      })
-      .from(BookingTable)
-      .orderBy(desc(BookingTable.id))
-      .limit(1);
+      const {supplierEmail, bookingTime, pickupLocation} = req.body;
+    // const latestBooking = await db
+    //   .select({
+    //     bookingId: BookingTable.id,
+    //     driverId: BookingTable.driver_id,
+    //     supplierId: BookingTable.suplier_id,
+    //     booking_date: BookingTable.booking_date,
+    //     pickup_location: BookingTable.pickup_location,
+    //   })
+    //   .from(BookingTable)
+    //   .orderBy(desc(BookingTable.id))
+    //   .limit(1);
 
-    if (!latestBooking || latestBooking.length === 0) {
-      return res.status(404).json({ message: "No booking found" });
-    }
+    // if (!latestBooking || latestBooking.length === 0) {
+    //   return res.status(404).json({ message: "No booking found" });
+    // }
 
-    const { bookingId, driverId, supplierId, booking_date, pickup_location } =
-      latestBooking[0];
+    // const { bookingId, driverId, supplierId, booking_date, pickup_location } =
+    //   latestBooking[0];
 
-    if (!driverId && supplierId) {
+    // if (!driverId && supplierId) {
     
-      const supplier = await db
-        .select({
-          Email: registerTable.Email,
-        })
-        .from(registerTable)
-        .where(eq(registerTable.id, supplierId))
-        .limit(1);
+    //   const supplier = await db
+    //     .select({
+    //       Email: registerTable.Email,
+    //     })
+    //     .from(registerTable)
+    //     .where(eq(registerTable.id, supplierId))
+    //     .limit(1);
 
-      if (!supplier || supplier.length === 0) {
-        return res.status(404).json({ message: "Supplier email not found" });
-      }
+    //   if (!supplier || supplier.length === 0) {
+    //     return res.status(404).json({ message: "Supplier email not found" });
+    //   }
 
       const transporter = nodemailer.createTransport({
         service: "Gmail",
@@ -2232,14 +2233,14 @@ export const send_driver_assignment_reminder = async (req: Request,res: Response
 
       const info = await transporter.sendMail({
         from: '"Sanzadinternational" <sanzadinternational5@gmail.com>',
-        to: supplier[0].Email,
+        to: supplierEmail,
         subject: "Urgent: Driver Assignment Required",
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
               <h2 style="color: #2c3e50;">Driver Assignment Reminder</h2>
-              <p style="font-size: 16px; color: #555;">Dear ${supplier[0].Email},</p>
+              <p style="font-size: 16px; color: #555;">Dear Supplier,</p>
               <ul style="font-size: 16px; color: #555; padding-left: 20px;">
-                  <li>Your booking <strong>#${bookingId}</strong> is scheduled for <strong>${booking_date}</strong> (pickup at <strong>${pickup_location}</strong>) and does not have a driver assigned yet.</li>
+                  <li>Your booking is scheduled for <strong>${bookingTime}</strong> (pickup at <strong>${pickupLocation}</strong>) and does not have a driver assigned yet.</li>
                   <li>Please assign a driver immediately to avoid service disruption.</li>
               </ul>
               <p style="font-size: 16px; color: #555;">Best regards,</p>
@@ -2252,8 +2253,7 @@ export const send_driver_assignment_reminder = async (req: Request,res: Response
     }
 
     return res.status(200).json({
-      message: "Driver assignment reminder processed successfully",
-      booking: latestBooking[0],
+      message: "Driver assignment reminder processed successfully";
     });
   } catch (error) {
     next(error);
