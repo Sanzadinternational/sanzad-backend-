@@ -2252,9 +2252,9 @@ export const send_driver_assignment_reminder = async (req: Request,res: Response
       console.log("Message sent: %s", info.messageId);
     }
 
-    return res.status(200).json({
-      message: "Driver assignment reminder processed successfully";
-    });
+  return res.status(200).json({
+  message: "Driver assignment reminder processed successfully"
+});
   } catch (error) {
     next(error);
   }
