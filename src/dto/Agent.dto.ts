@@ -15,6 +15,7 @@ export interface CreateAgentInput {
   Mobile_number: string;
   Currency: string;
   Gst_Tax_Certificate: string;
+  COI_Certificate:string;
   Role:string,
   IsApproved:number,
   Token:string,
