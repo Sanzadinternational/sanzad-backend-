@@ -9,7 +9,13 @@ import { CloudinaryStorage } from 'multer-storage-cloudinary';
 const multer = require('multer');
 import fs from 'fs';
 import path from 'path';
-const uploadDir = "/uploads";
+// const uploadDir = "/uploads";
+
+const uploadDir = path.join(__dirname, '..', 'uploads');
+
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 // Configure Multer
 const storage = multer.diskStorage({
