@@ -58,7 +58,8 @@ export const CreateAgent = async(req: Request, res: Response, next: NextFunction
         });
     }
         // const id = uuidv4();
-const Gst_Tax_Certificate = (req as any).file ? (req as any).file.filename : null;
+        const Gst_Tax_Certificate = (req as any).file ? (req as any).file.filename : null;
+        const COI_Certificate = (req as any).file ? (req as any).file.filename : null;
         // Hash the password before storing 
         const hashedPassword = await bcrypt.hash(Password, 10);  
         const Approval_status = {
@@ -84,6 +85,7 @@ const Gst_Tax_Certificate = (req as any).file ? (req as any).file.filename : nul
                 Mobile_number,
                 Currency,
                 Gst_Tax_Certificate,
+                COI_Certificate,
                 Role: Role || "agent",
                 IsApproved: IsApproved || Approval_status.Pending
             })
