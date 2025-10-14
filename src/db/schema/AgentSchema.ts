@@ -17,6 +17,7 @@ export const AgentTable = pgTable('Agent_registration', {
   Mobile_number: varchar({ length: 255 }).notNull(),
   Currency: varchar({ length: 255 }).notNull(),
   Gst_Tax_Certificate: varchar({ length: 255 }).notNull(),
+  COI_Certificate: varchar({ length: 255 }), 
   profileImage:varchar({length:255}),
   Role:varchar({length:255}), 
   IsApproved:integer(),
