@@ -9,13 +9,13 @@ import { CloudinaryStorage } from 'multer-storage-cloudinary';
 const multer = require('multer');
 import fs from 'fs';
 import path from 'path';
-// const uploadDir = "/uploads";
+const uploadDir = "/uploads";
 
-const uploadDir = path.join(__dirname, '..', 'uploads');
+// const uploadDir = path.join(__dirname, '..', 'uploads');
 
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+// if (!fs.existsSync(uploadDir)) {
+//   fs.mkdirSync(uploadDir, { recursive: true });
+// }
 
 // Configure Multer
 const storage = multer.diskStorage({
@@ -30,11 +30,11 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 const router = express.Router(); 
 
-router.post('/registration',upload.fields([
-    { name: 'Gst_Tax_Certificate', maxCount: 1 },
-    { name: 'COI_Certificate', maxCount: 1 }
-  ]),  CreateAgent); 
-// router.post('/registration',upload.single('Gst_Tax_Certificate') ,upload.single('COI_Certificate'), CreateAgent); 
+// router.post('/registration',upload.fields([
+//     { name: 'Gst_Tax_Certificate', maxCount: 1 },
+//     { name: 'COI_Certificate', maxCount: 1 }
+//   ]),  CreateAgent); 
+router.post('/registration',upload.single('Gst_Tax_Certificate') ,upload.single('COI_Certificate'), CreateAgent); 
 // router.post('/forgotpassword',forgotPassword); 
 // router.post('/resetpassword',resetpassword);
 router.post('/ForgetPassword',ForgetPassword); 
