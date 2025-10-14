@@ -24,7 +24,11 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 const router = express.Router(); 
 
-router.post('/registration',upload.single('Gst_Tax_Certificate'),  CreateAgent); 
+router.post('/registration',upload.fields([
+    { name: 'Gst_Tax_Certificate', maxCount: 1 },
+    { name: 'COI_Certificate', maxCount: 1 }
+  ]),  CreateAgent); 
+// router.post('/registration',upload.single('Gst_Tax_Certificate') ,upload.single('COI_Certificate'), CreateAgent); 
 // router.post('/forgotpassword',forgotPassword); 
 // router.post('/resetpassword',resetpassword);
 router.post('/ForgetPassword',ForgetPassword); 
