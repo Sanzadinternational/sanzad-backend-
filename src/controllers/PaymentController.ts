@@ -1026,7 +1026,7 @@ const addServiceDetailsTable = (doc: PDFDocument, booking: InvoiceBookingData) =
 const addPaymentSummary = (doc: PDFDocument, booking: InvoiceBookingData) => {
   sectionHeader(doc, 'Payment Summary:');
   labelValueRow(doc, 'Payment Status', booking.paymentStatus);
-  // labelValueRow(doc, 'Amount Paid', `${booking.currency} ${booking.paymentAmount}`);
+  labelValueRow(doc, 'Amount Paid', `${booking.currency} ${booking.paymentAmount}`);
 };
 
 
@@ -1272,9 +1272,9 @@ const addBookingDetails = (doc: PDFDocument, booking: VoucherBookingData) => {
   labelValueRow(doc, 'Remark', 'Waiting 15 minutes');
   labelValueRow(doc, 'Payment', booking.paymentStatus === 'Paid' ? 'Paid in Full' : booking.paymentStatus);
   // labelValueRow(doc, 'Amount Paid', `${booking.Currency}\u00A0${booking.paymentAmount}`);
-labelValueRow(doc, 'Driver Name', `${booking.driverName ?? 'N/A'}`);
-labelValueRow(doc, 'Driver Contact', `${booking.driverContact ?? 'N/A'}`);
-labelValueRow(doc, 'Car Number', `${booking.CarNumber ?? 'N/A'}`);
+labelValueRow(doc, 'Driver Name', `${booking.driverName ?? 'TBA'}`);
+labelValueRow(doc, 'Driver Contact', `${booking.driverContact ?? 'TBA'}`);
+labelValueRow(doc, 'Car Number', `${booking.CarNumber ?? 'TBA'}`);
 
   doc.moveDown(0.5);
 };
