@@ -58,8 +58,14 @@ export const CreateAgent = async(req: Request, res: Response, next: NextFunction
         });
     }
         // const id = uuidv4();
-        const Gst_Tax_Certificate = (req as any).file ? (req as any).file.filename : null;
-        const COI_Certificate = (req as any).file ? (req as any).file.filename : null;
+        const gstFile = (req.files as any)?.['Gst_Tax_Certificate']?.[0];
+        const coiFile = (req.files as any)?.['COI_Certificate']?.[0];
+
+        const Gst_Tax_Certificate = gstFile ? gstFile.filename : null;
+        const COI_Certificate = coiFile ? coiFile.filename : null;
+
+        // const Gst_Tax_Certificate = (req as any).file ? (req as any).file.filename : null;
+        // const COI_Certificate = (req as any).file ? (req as any).file.filename : null;
         // Hash the password before storing 
         const hashedPassword = await bcrypt.hash(Password, 10);  
         const Approval_status = {
