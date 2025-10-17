@@ -948,7 +948,9 @@ const addInvoiceHeader = (doc: PDFDocument, booking: InvoiceBookingData) => {
     year: 'numeric',
   });
 
-   const title = booking.GstRequired.toLowerCase() === 'yes' ? 'TAX INVOICE' : 'INVOICE';
+  const gstRequired = booking.GstRequired?.toLowerCase?.() === 'yes';
+  const title = gstRequired ? 'TAX INVOICE' : 'INVOICE';
+
   doc.font('Helvetica-Bold').fontSize(16).text(title, { align: 'center', underline: true });
   doc.moveDown(0.5);
 
@@ -957,8 +959,8 @@ const addInvoiceHeader = (doc: PDFDocument, booking: InvoiceBookingData) => {
   doc.text(`Invoice #: ${booking.bookingId}`, 50, y, { width: 250 });
   doc.text(`Invoice Date: ${issueDate}`, 300, y, { width: 250, align: 'right' });
   doc.moveDown(1);
-   // Show GST number if required
-  if (booking.GstRequired.toLowerCase() === 'yes' && booking.GstNumber) {
+
+  if (gstRequired && booking.GstNumber) {
     doc.fontSize(10).font('Helvetica').text(`GST Number: ${booking.GstNumber}`, 50, doc.y);
     doc.moveDown(1);
   }
