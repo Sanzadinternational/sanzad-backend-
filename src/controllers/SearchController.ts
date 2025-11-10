@@ -324,6 +324,7 @@ if (vehicleSurge && vehicleSurge.SurgeChargePrice) {
 };
 
 // Function to check if a point is inside a polygon (GeoJSON)
+// Function to check if a point is inside a polygon (GeoJSON)
 function isPointInsideZone(lng, lat, geojson) {
   try {
     if (!geojson?.geometry?.coordinates) {
@@ -331,19 +332,27 @@ function isPointInsideZone(lng, lat, geojson) {
       return false;
     }
 
+    // Handle MultiPolygon by taking the first polygon (assuming the zone is simple)
     if (geojson.geometry.type === "MultiPolygon") {
+      // Reassign coordinates to the first polygon array for turf.js consumption
       geojson.geometry.coordinates = geojson.geometry.coordinates[0];
     }
-
+    
+    // Ensure the type is correctly set for the turf.polygon function
     const polygon = turf.polygon(geojson.geometry.coordinates);
     const point = turf.point([lng, lat]);
-
-    const inside = turf.booleanPointInPolygon(point, polygon, { ignoreBoundary: true });
-    console.log(`Point [${lng}, ${lat}] inside zone (ignoreBoundary): ${inside}`);
+    
+    // FIX: Remove { ignoreBoundary: true } to prevent points exactly on 
+    // the boundary (or slightly outside due to floating point math) from 
+    // being incorrectly classified as inside.
+    const inside = turf.booleanPointInPolygon(point, polygon); 
+    
+    console.log(`Point [${lng}, ${lat}] inside zone (strict check): ${inside}`);
 
     return inside;
   } catch (error) {
     console.error("Error checking point inside zone:", error);
+    // If turf.js throws an error (e.g., malformed polygon), default to false
     return false;
   }
 }
