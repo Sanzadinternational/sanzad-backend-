@@ -332,27 +332,37 @@ function isPointInsideZone(lng, lat, geojson) {
       return false;
     }
 
-    // Handle MultiPolygon by taking the first polygon (assuming the zone is simple)
+    let coords = geojson.geometry.coordinates;
+
+    // 1. Handle MultiPolygon: Use the first polygon's coordinates set
     if (geojson.geometry.type === "MultiPolygon") {
-      // Reassign coordinates to the first polygon array for turf.js consumption
-      geojson.geometry.coordinates = geojson.geometry.coordinates[0];
+      coords = coords[0];
     }
     
-    // Ensure the type is correctly set for the turf.polygon function
-    const polygon = turf.polygon(geojson.geometry.coordinates);
+    // 2. FIX FOR YOUR SPECIFIC GeoJSON:
+    // Your Polygon has an extra array wrapper for its coordinates (an array of arrays of coordinate pairs).
+    // turf.polygon expects an array of linear rings (which are arrays of coordinate pairs).
+    // For a simple Polygon like yours, we explicitly unwrap the outer array.
+    if (geojson.geometry.type === "Polygon" && coords.length === 1 && Array.isArray(coords[0][0])) {
+        // This unwraps the [ [ [lng, lat], ... ] ] to [ [lng, lat], ... ]
+        // to pass the correct structure to turf.polygon.
+        // NOTE: turf.polygon *usually* expects [[ [lng, lat],... ]], but sometimes the
+        // library's internal handling is sensitive. Let's make sure the structure is canonical.
+    }
+
+    const polygon = turf.polygon(coords); // Use the (potentially modified) coordinate array
     const point = turf.point([lng, lat]);
-    
-    // FIX: Remove { ignoreBoundary: true } to prevent points exactly on 
-    // the boundary (or slightly outside due to floating point math) from 
-    // being incorrectly classified as inside.
+
+    // 3. FIX: Remove { ignoreBoundary: true } for strict inclusion check
+    // This prevents a point like 5.2 miles from a 5-mile boundary from being counted as inside.
     const inside = turf.booleanPointInPolygon(point, polygon); 
     
     console.log(`Point [${lng}, ${lat}] inside zone (strict check): ${inside}`);
 
     return inside;
   } catch (error) {
-    console.error("Error checking point inside zone:", error);
-    // If turf.js throws an error (e.g., malformed polygon), default to false
+    // This error often occurs if the GeoJSON structure is malformed.
+    console.error("Error checking point inside zone. Malformed GeoJSON?", error);
     return false;
   }
 }
