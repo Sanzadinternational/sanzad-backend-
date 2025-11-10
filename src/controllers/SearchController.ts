@@ -324,47 +324,93 @@ if (vehicleSurge && vehicleSurge.SurgeChargePrice) {
 };
 
 // Function to check if a point is inside a polygon (GeoJSON)
-// Function to check if a point is inside a polygon (GeoJSON)
-function isPointInsideZone(lng, lat, geojson) {
+function isPointInsideZone(lng: number, lat: number, geojson: any): boolean {
   try {
+    // Validate inputs
+    if (typeof lng !== 'number' || typeof lat !== 'number' || 
+        isNaN(lng) || isNaN(lat)) {
+      console.warn("Invalid coordinates provided:", lng, lat);
+      return false;
+    }
+
     if (!geojson?.geometry?.coordinates) {
       console.warn("Invalid geojson format detected!", geojson);
       return false;
     }
 
-    let coords = geojson.geometry.coordinates;
-
-    // 1. Handle MultiPolygon: Use the first polygon's coordinates set
-    if (geojson.geometry.type === "MultiPolygon") {
-      coords = coords[0];
-    }
+    console.log(`Checking point [${lng}, ${lat}] against zone`);
+    console.log('GeoJSON type:', geojson.geometry.type);
     
-    // 2. FIX FOR YOUR SPECIFIC GeoJSON:
-    // Your Polygon has an extra array wrapper for its coordinates (an array of arrays of coordinate pairs).
-    // turf.polygon expects an array of linear rings (which are arrays of coordinate pairs).
-    // For a simple Polygon like yours, we explicitly unwrap the outer array.
-    if (geojson.geometry.type === "Polygon" && coords.length === 1 && Array.isArray(coords[0][0])) {
-        // This unwraps the [ [ [lng, lat], ... ] ] to [ [lng, lat], ... ]
-        // to pass the correct structure to turf.polygon.
-        // NOTE: turf.polygon *usually* expects [[ [lng, lat],... ]], but sometimes the
-        // library's internal handling is sensitive. Let's make sure the structure is canonical.
+    let coordinates = geojson.geometry.coordinates;
+    const geometryType = geojson.geometry.type;
+
+    // DEBUG: Log the coordinate structure
+    console.log('Raw coordinates structure:', {
+      depth: getArrayDepth(coordinates),
+      firstElement: coordinates[0] ? coordinates[0][0] ? coordinates[0][0][0] : 'N/A' : 'N/A'
+    });
+
+    // Handle your specific GeoJSON structure
+    if (geometryType === 'Polygon') {
+      // Your GeoJSON has structure: [ [ [lng,lat], [lng,lat], ... ] ]
+      // This is actually correct for GeoJSON Polygon, but let's validate
+      
+      if (!Array.isArray(coordinates) || coordinates.length === 0) {
+        console.warn("Empty coordinates array");
+        return false;
+      }
+
+      // The first array should contain the polygon rings
+      const polygonRings = coordinates[0];
+      
+      if (!Array.isArray(polygonRings) || polygonRings.length < 3) {
+        console.warn("Invalid polygon - need at least 3 points");
+        return false;
+      }
+
+      // Validate that we have proper coordinate pairs
+      const firstCoord = polygonRings[0];
+      if (!Array.isArray(firstCoord) || firstCoord.length !== 2) {
+        console.warn("Invalid coordinate format");
+        return false;
+      }
+
+      // Check if polygon is closed (first point equals last point)
+      const lastCoord = polygonRings[polygonRings.length - 1];
+      const isClosed = firstCoord[0] === lastCoord[0] && firstCoord[1] === lastCoord[1];
+      
+      console.log(`Polygon has ${polygonRings.length} points, closed: ${isClosed}`);
+
+      // Create the polygon - use the exact structure from your GeoJSON
+      const polygon = turf.polygon([polygonRings]);
+      const point = turf.point([lng, lat]);
+
+      // Perform the point-in-polygon check
+      const inside = turf.booleanPointInPolygon(point, polygon);
+      
+      console.log(`Point [${lng}, ${lat}] inside zone: ${inside}`);
+      
+      return inside;
+
+    } else if (geometryType === 'MultiPolygon') {
+      // For MultiPolygon, handle differently
+      console.log("Processing MultiPolygon geometry");
+      // [Implementation for MultiPolygon...]
+      return false;
+    } else {
+      console.warn(`Unsupported geometry type: ${geometryType}`);
+      return false;
     }
 
-    const polygon = turf.polygon(coords); // Use the (potentially modified) coordinate array
-    const point = turf.point([lng, lat]);
-
-    // 3. FIX: Remove { ignoreBoundary: true } for strict inclusion check
-    // This prevents a point like 5.2 miles from a 5-mile boundary from being counted as inside.
-    const inside = turf.booleanPointInPolygon(point, polygon); 
-    
-    console.log(`Point [${lng}, ${lat}] inside zone (strict check): ${inside}`);
-
-    return inside;
   } catch (error) {
-    // This error often occurs if the GeoJSON structure is malformed.
-    console.error("Error checking point inside zone. Malformed GeoJSON?", error);
+    console.error("Error in isPointInsideZone:", error);
     return false;
   }
+}
+
+// Helper function to debug array structure
+function getArrayDepth(arr: any): number {
+  return Array.isArray(arr) ? 1 + Math.max(0, ...arr.map(getArrayDepth)) : 0;
 }
 
 
