@@ -49,30 +49,36 @@ export async function convertCurrency(amount: number, from: string, to: string):
   }
 }
 
-// NEW: Improved circular zone detection function
+// Improved circular zone detection function
 function isPointInsideCircularZone(lng: number, lat: number, zoneGeoJson: any, zoneRadiusMiles: number): boolean {
   try {
     const center = getZoneCentroid(zoneGeoJson);
+    
+    // Validate coordinates
+    if (Math.abs(lng) > 180 || Math.abs(lat) > 90) {
+      console.error(`Invalid coordinates: [${lng}, ${lat}]`);
+      return false;
+    }
+    
     const point = turf.point([lng, lat]);
     const centerPoint = turf.point(center);
-    
     const distanceToCenter = turf.distance(point, centerPoint, { units: 'miles' });
     
     // Add small tolerance for floating point precision
-    const tolerance = 0.01; // 0.01 miles ≈ 53 feet
+    const tolerance = 0.01;
     const isInside = distanceToCenter <= (zoneRadiusMiles + tolerance);
     
-    console.log(`Circle Check - Distance: ${distanceToCenter.toFixed(3)}mi, Radius: ${zoneRadiusMiles}mi, Inside: ${isInside}`);
+    console.log(`Circle Check - Point: [${lng}, ${lat}] | Center: [${center[0].toFixed(6)}, ${center[1].toFixed(6)}] | Distance: ${distanceToCenter.toFixed(3)}mi | Radius: ${zoneRadiusMiles}mi | Inside: ${isInside}`);
     return isInside;
   } catch (error) {
     console.error("Error in circular zone check:", error);
     
-    // Fallback to polygon method if circle method fails
+    // Fallback to polygon method
     return isPointInsideZone(lng, lat, zoneGeoJson);
   }
 }
 
-// NEW: Debug function for boundary cases
+// Debug function for boundary cases
 function debugZoneBoundary(lng: number, lat: number, zone: any, tripDistance?: number): boolean {
   const center = getZoneCentroid(zone.geojson);
   const point = turf.point([lng, lat]);
@@ -104,7 +110,36 @@ function debugZoneBoundary(lng: number, lat: number, zone: any, tripDistance?: n
   if (tripDistance) console.log(`Trip distance: ${tripDistance} miles`);
   console.log('===========================');
   
-  return circleMethod; // Prefer the more reliable circle method
+  return circleMethod;
+}
+
+// Debug function to check all zones
+async function debugAllZones(lng: number, lat: number, allZones: any[]) {
+  console.log('=== DEBUGGING ALL ZONES ===');
+  console.log(`Checking point: [${lng}, ${lat}]`);
+  
+  for (const zone of allZones) {
+    try {
+      const geojson = typeof zone.geojson === "string" ? JSON.parse(zone.geojson) : zone.geojson;
+      
+      if (!geojson?.geometry?.coordinates) {
+        console.log(`Zone ${zone.name}: Invalid GeoJSON`);
+        continue;
+      }
+      
+      const center = getZoneCentroid(geojson);
+      const point = turf.point([lng, lat]);
+      const centerPoint = turf.point(center);
+      const distance = turf.distance(point, centerPoint, { units: 'miles' });
+      
+      console.log(`Zone: ${zone.name} | Radius: ${zone.radius_km}mi | Distance: ${distance.toFixed(3)}mi | Inside: ${distance <= zone.radius_km}`);
+      console.log(`  Center: [${center[0].toFixed(6)}, ${center[1].toFixed(6)}]`);
+      
+    } catch (error) {
+      console.log(`Zone ${zone.name}: Error - ${error.message}`);
+    }
+  }
+  console.log('==========================');
 }
 
 export const fetchFromDatabase = async (
@@ -116,8 +151,11 @@ export const fetchFromDatabase = async (
   returnDate?: string,
   returnTime?: string
 ): Promise<{ vehicles: any[]; distance: any; estimatedTime: string}> => {
-  const [fromLat, fromLng] = pickupLocation.split(",").map(Number);
-  const [toLat, toLng] = dropoffLocation.split(",").map(Number);
+  // Parse coordinates correctly - ensure proper order
+  const [fromLat, fromLng] = pickupLocation.split(",").map(coord => parseFloat(coord.trim()));
+  const [toLat, toLng] = dropoffLocation.split(",").map(coord => parseFloat(coord.trim()));
+  
+  console.log(`Parsed coordinates - From: [${fromLat}, ${fromLng}], To: [${toLat}, ${toLng}]`);
   
   try {
     // Step 1: Fetch all zones
@@ -126,6 +164,7 @@ export const fetchFromDatabase = async (
     );
 
     const allZones = zonesResult.rows as any[];
+    console.log(`Total zones found: ${allZones.length}`);
 
     // Step 2: Filter zones where 'From' location is inside
     const matchedZones: any[] = [];
@@ -134,23 +173,30 @@ export const fetchFromDatabase = async (
       try {
         const geojson = typeof zone.geojson === "string" ? JSON.parse(zone.geojson) : zone.geojson;
 
-        if (!geojson || !geojson.geometry || !Array.isArray(geojson.geometry.coordinates)) {
+        if (!geojson?.geometry?.coordinates) {
           console.warn("Invalid geojson data for zone:", zone.id);
           continue;
         }
 
-        // NEW: Use improved circular zone detection
+        // Use improved zone detection with coordinate validation
         const inside = isPointInsideCircularZone(fromLng, fromLat, geojson, zone.radius_km);
         
         if (inside) {
+          console.log(`✅ Zone matched: ${zone.name} (Radius: ${zone.radius_km}mi)`);
           matchedZones.push(zone);
+        } else {
+          console.log(`❌ Zone not matched: ${zone.name} (Radius: ${zone.radius_km}mi)`);
         }
       } catch (error) {
         console.error("Error processing zone:", zone.id, error);
       }
     }
 
-    if (!matchedZones || matchedZones.length === 0) {
+    console.log(`Total matched zones: ${matchedZones.length}`);
+    
+    if (matchedZones.length === 0) {
+      // Debug why no zones are matching
+      await debugAllZones(fromLng, fromLat, allZones);
       throw new Error("No zones found for the selected locations.");
     }
 
@@ -220,7 +266,7 @@ export const fetchFromDatabase = async (
           console.log(`'From' location is inside '${fromZone.name}', but 'To' location is outside any zone.`);
           if (distance == null) distance = 0;
           
-          // NEW: More accurate boundary calculation using exact distance from center
+          // More accurate boundary calculation using exact distance from center
           const center = getZoneCentroid(fromZone.geojson);
           const fromPoint = turf.point([fromLng, fromLat]);
           const centerPoint = turf.point(center);
@@ -383,7 +429,7 @@ export const fetchFromDatabase = async (
   }
 };
 
-// UPDATED: Improved point in zone function with better error handling
+// Improved point in zone function with better error handling
 function isPointInsideZone(lng: number, lat: number, geojson: any): boolean {
   try {
     if (!geojson?.geometry?.coordinates) {
@@ -410,6 +456,34 @@ function isPointInsideZone(lng: number, lat: number, geojson: any): boolean {
   } catch (error) {
     console.error("Error checking point inside zone:", error);
     return false;
+  }
+}
+
+// Enhanced getZoneCentroid with validation
+function getZoneCentroid(zoneGeoJson: any): number[] {
+  try {
+    const centroid = turf.centroid(zoneGeoJson).geometry.coordinates;
+    
+    // Validate centroid coordinates
+    if (centroid[0] === 0 && centroid[1] === 0) {
+      console.warn("Centroid calculation may have failed - returning first coordinate");
+      // Return the first coordinate of the polygon as fallback
+      const coords = zoneGeoJson.geometry.coordinates[0][0];
+      return [coords[0], coords[1]];
+    }
+    
+    return centroid;
+  } catch (error) {
+    console.error("Error computing zone centroid, using fallback:", error);
+    
+    // Fallback: use the first coordinate of the polygon
+    try {
+      const coords = zoneGeoJson.geometry.coordinates[0][0];
+      return [coords[0], coords[1]];
+    } catch (e) {
+      console.error("Complete centroid failure:", e);
+      return [0, 0];
+    }
   }
 }
 
@@ -464,15 +538,6 @@ export async function getDistanceFromZoneBoundary(
   } catch (error) {
     console.error("Error calculating boundary distance:", error);
     return 0;
-  }
-}
-
-function getZoneCentroid(zoneGeoJson: any): number[] {
-  try {
-    return turf.centroid(zoneGeoJson).geometry.coordinates;
-  } catch (error) {
-    console.error("Error computing zone centroid:", error);
-    return [0, 0];
   }
 }
 
@@ -546,10 +611,64 @@ export const fetchFromThirdPartyApis = async (
   return results.flat();
 };
 
+// Test function to verify zone detection
+export const testZoneDetection = async (req: Request, res: Response) => {
+  const { lng, lat } = req.body;
+  
+  try {
+    const zonesResult = await db.execute(
+      sql`SELECT id, name, radius_km, geojson FROM zones`
+    );
+
+    const allZones = zonesResult.rows as any[];
+    const results = [];
+
+    for (const zone of allZones) {
+      const geojson = typeof zone.geojson === "string" ? JSON.parse(zone.geojson) : zone.geojson;
+      const center = getZoneCentroid(geojson);
+      const distance = turf.distance(turf.point([lng, lat]), turf.point(center), { units: 'miles' });
+      
+      results.push({
+        zone: zone.name,
+        radius: zone.radius_km,
+        distance: distance.toFixed(3),
+        inside: distance <= zone.radius_km,
+        center: center
+      });
+    }
+
+    res.json({ success: true, point: [lng, lat], results });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
 export const Search = async (req: Request, res: Response, next: NextFunction) => {
   const { date, dropoff, dropoffLocation, pax, pickup, pickupLocation, targetCurrency, time, returnDate, returnTime } = req.body;
 
+  // Validate input coordinates
+  console.log('=== INPUT VALIDATION ===');
+  console.log('Pickup Location:', pickupLocation);
+  console.log('Dropoff Location:', dropoffLocation);
+  
   try {
+    const [pickupLat, pickupLng] = pickupLocation.split(",").map(coord => parseFloat(coord.trim()));
+    const [dropoffLat, dropoffLng] = dropoffLocation.split(",").map(coord => parseFloat(coord.trim()));
+    
+    console.log('Parsed Pickup:', { lat: pickupLat, lng: pickupLng });
+    console.log('Parsed Dropoff:', { lat: dropoffLat, lng: dropoffLng });
+    
+    // Validate coordinate ranges
+    if (Math.abs(pickupLng) > 180 || Math.abs(pickupLat) > 90 || 
+        Math.abs(dropoffLng) > 180 || Math.abs(dropoffLat) > 90) {
+      console.error('Invalid coordinate ranges detected');
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid coordinates provided" 
+      });
+    }
+
+    // Fetch API details from the database
     const apiDetails = await db
       .select({
         url: SupplierApidataTable.Api,
@@ -563,6 +682,7 @@ export const Search = async (req: Request, res: Response, next: NextFunction) =>
       (detail) => detail.url !== null
     ) as { url: string; username: string; password: string, supplier_id: string }[];
 
+    // Fetch data from third-party APIs
     const apiData = await fetchFromThirdPartyApis(
       validApiDetails,
       dropoffLocation,
