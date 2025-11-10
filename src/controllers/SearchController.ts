@@ -70,7 +70,6 @@ export async function convertCurrency(amount: number, from: string, to: string):
   // Parse pickup location coordinates
   const [fromLat, fromLng] = pickupLocation.split(",").map(Number);
   const [toLat, toLng] = dropoffLocation.split(",").map(Number);
-
   try {
     // Step 1: Fetch all zones
     const zonesResult = await db.execute(
@@ -325,28 +324,22 @@ if (vehicleSurge && vehicleSurge.SurgeChargePrice) {
 };
 
 // Function to check if a point is inside a polygon (GeoJSON)
-function isPointInsideZone(lng: number, lat: number, geojson: any) {
+function isPointInsideZone(lng, lat, geojson) {
   try {
-    if (
-      !geojson ||
-      !geojson.geometry ||
-      !Array.isArray(geojson.geometry.coordinates)
-    ) {
+    if (!geojson?.geometry?.coordinates) {
       console.warn("Invalid geojson format detected!", geojson);
       return false;
     }
 
-    // Check if it's a MultiPolygon instead of a Polygon
     if (geojson.geometry.type === "MultiPolygon") {
-      console.warn("MultiPolygon detected, using first polygon.");
-      geojson.geometry.coordinates = geojson.geometry.coordinates[0]; // Take first polygon
+      geojson.geometry.coordinates = geojson.geometry.coordinates[0];
     }
 
     const polygon = turf.polygon(geojson.geometry.coordinates);
     const point = turf.point([lng, lat]);
 
-    const inside = turf.booleanPointInPolygon(point, polygon);
-    console.log(`Point [${lng}, ${lat}] inside zone: ${inside}`);
+    const inside = turf.booleanPointInPolygon(point, polygon, { ignoreBoundary: true });
+    console.log(`Point [${lng}, ${lat}] inside zone (ignoreBoundary): ${inside}`);
 
     return inside;
   } catch (error) {
