@@ -200,7 +200,7 @@ export const fetchFromDatabase = async (
           }
           
           // Convert zone radius to miles and apply the same buffer for consistency
-          const zoneRadiusMiles = fromZone.radius_km * 0.621371;
+          const zoneRadiusMiles = fromZone.radius_km;
           const bufferedZoneRadius = zoneRadiusMiles / ROAD_DISTANCE_BUFFER;
           
           // Only charge for distance beyond the buffered zone radius
