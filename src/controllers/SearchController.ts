@@ -324,7 +324,7 @@ if (vehicleSurge && vehicleSurge.SurgeChargePrice) {
 };
 
 // Function to check if a point is inside a polygon (GeoJSON)
-async function isPointInsideZoneByRoad(
+async function isPointInsideZone(
   pointLat: number,
   pointLng: number,
   zoneGeoJson: any,
