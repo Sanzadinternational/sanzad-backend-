@@ -109,7 +109,7 @@ export const fetchFromDatabase = async (
           );
           
           // Apply buffer to account for road distance being longer
-          const effectiveRadius = zone.radius_km * 0.621371; // Convert km to miles
+          const effectiveRadius = zone.radius_km; // Convert km to miles
           const bufferedRadius = effectiveRadius / ROAD_DISTANCE_BUFFER;
           
           console.log(`Zone ${zone.name}: straightDistance=${straightDistance.toFixed(2)} miles, effectiveRadius=${effectiveRadius.toFixed(2)} miles, bufferedRadius=${bufferedRadius.toFixed(2)} miles`);
