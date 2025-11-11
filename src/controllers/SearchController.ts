@@ -324,40 +324,23 @@ if (vehicleSurge && vehicleSurge.SurgeChargePrice) {
 };
 
 // Function to check if a point is inside a polygon (GeoJSON)
-export function isPointInsideZone(lng: number, lat: number, geojson: any): boolean {
+async function isPointInsideZoneByRoad(
+  pointLat: number,
+  pointLng: number,
+  zoneGeoJson: any,
+  zoneRadiusMiles: number
+): Promise<boolean> {
   try {
-    if (!geojson?.geometry) return false;
+    const center = turf.centroid(zoneGeoJson).geometry.coordinates;
+    const [centerLng, centerLat] = center;
 
-    const { type, coordinates } = geojson.geometry;
-    const point = turf.point([lng, lat]);
-    let inside = false;
+    const road = await getRoadDistance(centerLat, centerLng, pointLat, pointLng);
+    const distanceMiles = road.distance || 9999;
 
-    const fixPolygon = (coords: any) => {
-      // Handle accidental extra nesting
-      if (Array.isArray(coords[0][0][0])) {
-        return turf.polygon(coords[0]);
-      }
-      return turf.polygon(coords);
-    };
-
-    if (type === "Polygon") {
-      inside = turf.booleanPointInPolygon(point, fixPolygon(coordinates));
-    } else if (type === "MultiPolygon") {
-      for (const sub of coordinates) {
-        const poly = fixPolygon(sub);
-        if (turf.booleanPointInPolygon(point, poly)) {
-          inside = true;
-          break;
-        }
-      }
-    } else {
-      console.warn(`Unsupported geometry type: ${type}`);
-    }
-
-    console.log(`Point [${lng}, ${lat}] inside zone: ${inside}`);
-    return inside;
-  } catch (e) {
-    console.error("Error in isPointInsideZone:", e);
+    console.log(`Road distance to zone center: ${distanceMiles} miles (radius: ${zoneRadiusMiles})`);
+    return distanceMiles <= zoneRadiusMiles;
+  } catch (err) {
+    console.error("Error in isPointInsideZoneByRoad:", err);
     return false;
   }
 }
