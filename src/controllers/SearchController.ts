@@ -324,86 +324,40 @@ if (vehicleSurge && vehicleSurge.SurgeChargePrice) {
 };
 
 // Function to check if a point is inside a polygon (GeoJSON)
-function isPointInsideZone(lng: number, lat: number, geojson: any): boolean {
+export function isPointInsideZone(lng: number, lat: number, geojson: any): boolean {
   try {
-    // Validate inputs
-    if (typeof lng !== 'number' || typeof lat !== 'number' || 
-        isNaN(lng) || isNaN(lat)) {
-      console.warn("Invalid coordinates provided:", lng, lat);
-      return false;
-    }
+    if (!geojson?.geometry) return false;
 
-    if (!geojson?.geometry?.coordinates) {
-      console.warn("Invalid geojson format detected!", geojson);
-      return false;
-    }
+    const { type, coordinates } = geojson.geometry;
+    const point = turf.point([lng, lat]);
+    let inside = false;
 
-    console.log(`Checking point [${lng}, ${lat}] against zone`);
-    console.log('GeoJSON type:', geojson.geometry.type);
-    
-    let coordinates = geojson.geometry.coordinates;
-    const geometryType = geojson.geometry.type;
-
-    // DEBUG: Log the coordinate structure
-    console.log('Raw coordinates structure:', {
-      depth: getArrayDepth(coordinates),
-      firstElement: coordinates[0] ? coordinates[0][0] ? coordinates[0][0][0] : 'N/A' : 'N/A'
-    });
-
-    // Handle your specific GeoJSON structure
-    if (geometryType === 'Polygon') {
-      // Your GeoJSON has structure: [ [ [lng,lat], [lng,lat], ... ] ]
-      // This is actually correct for GeoJSON Polygon, but let's validate
-      
-      if (!Array.isArray(coordinates) || coordinates.length === 0) {
-        console.warn("Empty coordinates array");
-        return false;
+    const fixPolygon = (coords: any) => {
+      // Handle accidental extra nesting
+      if (Array.isArray(coords[0][0][0])) {
+        return turf.polygon(coords[0]);
       }
+      return turf.polygon(coords);
+    };
 
-      // The first array should contain the polygon rings
-      const polygonRings = coordinates[0];
-      
-      if (!Array.isArray(polygonRings) || polygonRings.length < 3) {
-        console.warn("Invalid polygon - need at least 3 points");
-        return false;
+    if (type === "Polygon") {
+      inside = turf.booleanPointInPolygon(point, fixPolygon(coordinates));
+    } else if (type === "MultiPolygon") {
+      for (const sub of coordinates) {
+        const poly = fixPolygon(sub);
+        if (turf.booleanPointInPolygon(point, poly)) {
+          inside = true;
+          break;
+        }
       }
-
-      // Validate that we have proper coordinate pairs
-      const firstCoord = polygonRings[0];
-      if (!Array.isArray(firstCoord) || firstCoord.length !== 2) {
-        console.warn("Invalid coordinate format");
-        return false;
-      }
-
-      // Check if polygon is closed (first point equals last point)
-      const lastCoord = polygonRings[polygonRings.length - 1];
-      const isClosed = firstCoord[0] === lastCoord[0] && firstCoord[1] === lastCoord[1];
-      
-      console.log(`Polygon has ${polygonRings.length} points, closed: ${isClosed}`);
-
-      // Create the polygon - use the exact structure from your GeoJSON
-      const polygon = turf.polygon([polygonRings]);
-      const point = turf.point([lng, lat]);
-
-      // Perform the point-in-polygon check
-      const inside = turf.booleanPointInPolygon(point, polygon);
-      
-      console.log(`Point [${lng}, ${lat}] inside zone: ${inside}`);
-      
-      return inside;
-
-    } else if (geometryType === 'MultiPolygon') {
-      // For MultiPolygon, handle differently
-      console.log("Processing MultiPolygon geometry");
-      // [Implementation for MultiPolygon...]
-      return false;
     } else {
-      console.warn(`Unsupported geometry type: ${geometryType}`);
-      return false;
+      console.warn(`Unsupported geometry type: ${type}`);
     }
 
-  } catch (error) {
-    console.error("Error in isPointInsideZone:", error);
+    console.log(`Point [${lng}, ${lat}] inside zone: ${inside}`);
+    return inside;
+  } catch (e) {
+    console.error("Error in isPointInsideZone:", e);
     return false;
   }
 }
