@@ -7,52 +7,58 @@ import { SupplierApidataTable } from "../db/schema/SupplierSchema";
 import { SupplierCarDetailsTable } from "../db/schema/SupplierSchema";
 import { CreateTransferCar } from "../db/schema/SupplierSchema";
 import { sql, inArray } from "drizzle-orm";
-import { zones, transfers_Vehicle } from "../db/schema/SupplierSchema";
+import { zones, transfers_Vehicle
+, } from "../db/schema/SupplierSchema";
 import { Create_Vehicles } from "../db/schema/SupplierSchema";
 
-const GOOGLE_MAPS_API_KEY = "AIzaSyAjXkEFU-hA_DSnHYaEjU3_fceVwQra0LI";
-import * as turf from '@turf/turf';
+ const GOOGLE_MAPS_API_KEY = "AIzaSyAjXkEFU-hA_DSnHYaEjU3_fceVwQra0LI"; // Replace with actual API key
+ import * as turf from '@turf/turf'; // Import turf.js for geospatial operations
 
-const currencyCache: Record<string, Record<string, number>> = {};
-// Conservative buffer to account for road distance being longer than straight-line distance
-const ROAD_DISTANCE_BUFFER = 1.3; // 30% buffer
+ const currencyCache: Record<string, Record<string, number>> = {};
 
-export const getExchangeRate = async (from: string, to: string): Promise<number> => {
-  const key = `${from}_${to}`;
+ export const getExchangeRate = async (from: string, to: string): Promise<number> => {
+   const key = `${from}_${to}`;
+ 
+   // Check if already in cache
+   if (currencyCache[from]?.[to]) {
+     return currencyCache[from][to];
+   }
+ 
+   try {
+     const res = await axios.get(`https://api.exchangerate.host/latest?base=${from}&symbols=${to}`);
+     const rate = res.data.rates[to];
+ 
+     if (!currencyCache[from]) currencyCache[from] = {};
+     currencyCache[from][to] = rate;
+ 
+     return rate;
+   } catch (error) {
+     console.error(`Error fetching exchange rate from ${from} to ${to}`, error);
+     return 1; // fallback: no conversion
+   }
+ };
 
-  // Check if already in cache
-  if (currencyCache[from]?.[to]) {
-    return currencyCache[from][to];
-  }
-
-  try {
-    const res = await axios.get(`https://api.exchangerate.host/latest?base=${from}&symbols=${to}`);
-    const rate = res.data.rates[to];
-
-    if (!currencyCache[from]) currencyCache[from] = {};
-    currencyCache[from][to] = rate;
-
-    return rate;
-  } catch (error) {
-    console.error(`Error fetching exchange rate from ${from} to ${to}`, error);
-    return 1; // fallback: no conversion
-  }
-};
 
 export async function convertCurrency(amount: number, from: string, to: string): Promise<number> {
   try {
-    const res = await axios.get(`https://v6.exchangerate-api.com/v6/9effc838a4da8122bac8b714/latest/${from}`);
+    const res = await axios.get(`https://v6.exchangerate-api.com/v6/5792347d5ad3d4f4281902b1/latest/${from}`);
     let rate = res.data?.conversion_rates?.[to];
     if (!rate) throw new Error(`Missing rate for ${to}`);
 
-    return amount;
+    // Apply 1.5% exchange fee
+    // rate *= 1.015;
+
+    // return amount * rate;
+   return amount;
   } catch (err) {
     console.error(`Error converting from ${from} to ${to}`, err);
     return amount; // fallback to original
   }
 }
+ 
 
-export const fetchFromDatabase = async (
+
+ export const fetchFromDatabase = async (
   pickupLocation: string,
   dropoffLocation: string,
   targetCurrency: string,
@@ -60,11 +66,10 @@ export const fetchFromDatabase = async (
   date: string,
   returnDate?: string,
   returnTime?: string
-): Promise<{ vehicles: any[]; distance: any; estimatedTime: string }> => {
+): Promise<{ vehicles: any[]; distance: any; estimatedTime: string}> => {
   // Parse pickup location coordinates
   const [fromLat, fromLng] = pickupLocation.split(",").map(Number);
   const [toLat, toLng] = dropoffLocation.split(",").map(Number);
-  
   try {
     // Step 1: Fetch all zones
     const zonesResult = await db.execute(
@@ -73,65 +78,46 @@ export const fetchFromDatabase = async (
 
     const allZones = zonesResult.rows as any[];
 
-    // Step 2: Filter zones where 'From' location is inside with road distance buffer
-    const matchedZones: any[] = [];
+   // Step 2: Filter zones where 'From' location is inside and group by supplier
+const filteredZonesMap = new Map<string, any>(); // supplierId -> highest priority zone
 
-    for (const zone of allZones) {
-      try {
-        const geojson = typeof zone.geojson === "string" ? JSON.parse(zone.geojson) : zone.geojson;
+// Step 2.1: Filter all zones where 'From' is inside
+const matchedZones: any[] = [];
 
-        if (!geojson || !geojson.geometry || !Array.isArray(geojson.geometry.coordinates)) {
-          console.warn("Invalid geojson data for zone:", zone.id);
-          continue;
-        }
+for (const zone of allZones) {
+  try {
+    const geojson = typeof zone.geojson === "string" ? JSON.parse(zone.geojson) : zone.geojson;
 
-        const polygon = turf.polygon(
-          geojson.geometry.type === "MultiPolygon"
-            ? geojson.geometry.coordinates[0]
-            : geojson.geometry.coordinates
-        );
-
-        const fromPoint = turf.point([fromLng, fromLat]);
-
-        // First check: straight-line point in polygon
-        const isInZoneStraightLine = turf.booleanPointInPolygon(fromPoint, polygon);
-        
-        if (isInZoneStraightLine) {
-          // Additional conservative check: calculate distance to zone center
-          const zoneCenter = getZoneCentroid(geojson);
-          const [zoneLng, zoneLat] = zoneCenter;
-          
-          // Calculate straight-line distance to center
-          const straightDistance = turf.distance(
-            fromPoint, 
-            turf.point([zoneLng, zoneLat]), 
-            { units: 'miles' }
-          );
-          
-          // Apply buffer to account for road distance being longer
-          const effectiveRadius = zone.radius_km; // Convert km to miles
-          const bufferedRadius = effectiveRadius / ROAD_DISTANCE_BUFFER;
-          
-          console.log(`Zone ${zone.name}: straightDistance=${straightDistance.toFixed(2)} miles, effectiveRadius=${effectiveRadius} miles, bufferedRadius=${bufferedRadius.toFixed(2)} miles`);
-          
-          if (straightDistance <= bufferedRadius) {
-            matchedZones.push(zone);
-            console.log(`Location is within buffered zone: ${zone.name}`);
-          } else {
-            console.log(`Location excluded from zone ${zone.name} due to road distance buffer`);
-          }
-        }
-      } catch (error) {
-        console.error("Error processing zone:", zone.id, error);
-      }
+    if (!geojson || !geojson.geometry || !Array.isArray(geojson.geometry.coordinates)) {
+      console.warn("Invalid geojson data for zone:", zone.id);
+      continue;
     }
 
-    if (!matchedZones || matchedZones.length === 0) {
-      throw new Error("No zones found for the selected locations.");
+    const polygon = turf.polygon(
+      geojson.geometry.type === "MultiPolygon"
+        ? geojson.geometry.coordinates[0]
+        : geojson.geometry.coordinates
+    );
+
+    const fromPoint = turf.point([fromLng, fromLat]);
+
+    if (turf.booleanPointInPolygon(fromPoint, polygon)) {
+      matchedZones.push(zone);
     }
+  } catch (error) {
+    console.error("Error processing zone:", zone.id, error);
+  }
+}
+
+// Step 2.2: Sort by smallest radius and pick one zone per supplier
+const zones = matchedZones;
+
+if (!zones || zones.length === 0) {
+  throw new Error("No zones found for the selected locations.");
+}
 
     // Extract zone IDs
-    const zoneIds = matchedZones.map(zone => zone.id);
+    const zoneIds = zones.map(zone => zone.id);
 
     // Step 3: Fetch all vehicles for the found zones
     const transfersResult = await db.execute(
@@ -142,32 +128,31 @@ export const fetchFromDatabase = async (
     );
 
     const transfers = transfersResult.rows as any[];
-    
-    // Fetch all vehicle types once before mapping
-    const vehicleTypesResult = await db.execute(
-      sql`SELECT id, "VehicleType", "vehicleImage" FROM "VehicleType"`
-    );
-    const vehicleTypes = vehicleTypesResult.rows as any[];
+   // Fetch all vehicle types once before mapping
+const vehicleTypesResult = await db.execute(
+  sql`SELECT id, "VehicleType", "vehicleImage" FROM "VehicleType"`
+);
+const vehicleTypes = vehicleTypesResult.rows as any[];
+
 
     // Step 4: Calculate Distance
     let { distance, duration } = await getRoadDistance(fromLat, fromLng, toLat, toLng);
 
-    // Step 5: Determine if extra pricing applies using the same buffered logic
-    const fromZone = matchedZones.find(zone => {
-      const inside = isPointInsideZoneWithBuffer(fromLng, fromLat, zone);
+    // Step 5: Determine if extra pricing applies
+    const fromZone = zones.find(zone => {
+      const inside = isPointInsideZone(fromLng, fromLat, zone.geojson);
       console.log(`Checking 'From' location against zone: ${zone.name} - Inside: ${inside}`);
       return inside;
     });
 
-    const toZone = matchedZones.find(zone => {
-      const inside = isPointInsideZoneWithBuffer(toLng, toLat, zone);
+    const toZone = zones.find(zone => {
+      const inside = isPointInsideZone(toLng, toLat, zone.geojson);
       console.log(`Checking 'To' location against zone: ${zone.name} - Inside: ${inside}`);
       return inside;
     });
 
     console.log("Final Zone Detection - From Zone:", fromZone ? fromZone.name : "Outside");
     console.log("Final Zone Detection - To Zone:", toZone ? toZone.name : "Outside");
-    console.log("Road Distance:", distance, "miles");
 
     const marginsResult = await db.execute(
       sql`SELECT * FROM "Margin"`
@@ -180,10 +165,10 @@ export const fetchFromDatabase = async (
       }
     }
 
-    const surgeChargesResult = await db.execute(
-      sql`SELECT * FROM "SurgeCharge" WHERE "From" <= ${date}::date AND "To" >= ${date}::date`
-    );
-    const surgeCharges = surgeChargesResult.rows as any[];
+   const surgeChargesResult = await db.execute(
+  sql`SELECT * FROM "SurgeCharge" WHERE "From" <= ${date}::date AND "To" >= ${date}::date`
+);
+const surgeCharges = surgeChargesResult.rows as any[];
 
     // Step 6: Calculate Pricing for Each Vehicle
     const vehiclesWithPricing = await Promise.all(transfers.map(async (transfer) => {
@@ -191,147 +176,135 @@ export const fetchFromDatabase = async (
 
       // Function to calculate total price asynchronously
       async function calculateTotalPrice() {
-        let totalPrice = Number(transfer.price); // Base price
-        
-        if (fromZone && !toZone) {
-          console.log(`'From' location is inside '${fromZone.name}', but 'To' location is outside any zone.`);
-          if (distance == null) {
-            distance = 0;
+          let totalPrice = Number(transfer.price); // Base price
+          
+          if (fromZone && (distance > fromZone.radius_km)) {
+              console.log(`'From' location is inside '${fromZone.name}', but 'To' location is outside any zone.`);
+              if (distance == null) {
+                distance = 0;
+              }
+              // const boundaryDistance = await getDistanceFromZoneBoundary(fromLng, fromLat, toLng, toLat, fromZone);
+           const boundaryDistance = distance - fromZone.radius_km;
+              const extraCharge = Number(boundaryDistance) * (Number(transfer.extra_price_per_mile) || 0);
+              totalPrice += extraCharge;
+  
+              console.log(`Extra Distance: ${boundaryDistance} miles | Extra Charge: ${extraCharge}`);
           }
-          
-          // Convert zone radius to miles and apply the same buffer for consistency
-          const zoneRadiusMiles = fromZone.radius_km;
-          const bufferedZoneRadius = zoneRadiusMiles / ROAD_DISTANCE_BUFFER;
-          
-          // Only charge for distance beyond the buffered zone radius
-          const boundaryDistance = Math.max(0, distance - bufferedZoneRadius);
-          const extraCharge = Number(boundaryDistance) * (Number(transfer.extra_price_per_mile) || 0);
-          totalPrice += extraCharge;
-
-          console.log(`Road Distance: ${distance} miles | Zone Radius: ${bufferedZoneRadius.toFixed(2)} miles | Extra Distance: ${boundaryDistance.toFixed(2)} miles | Extra Charge: ${extraCharge}`);
-        }
-
-        return totalPrice;
+  
+          return totalPrice;
       }
+     const isReturnTrip = !!returnDate && !!returnTime;
 
-      const isReturnTrip = !!returnDate && !!returnTime;
+// Function to calculate return trip extra cost
+async function calculateReturnPrice() {
+  if (!isReturnTrip) {
+    return 0;
+  }
 
-      // Function to calculate return trip extra cost
-      async function calculateReturnPrice() {
-        if (!isReturnTrip) {
-          return 0;
-        }
-
-        let returnPrice = Number(transfer.price); // base price
-        if (fromZone && !toZone) {
-          console.log(`Return: 'From' location is inside '${fromZone.name}', but 'To' location is outside any zone.`);
-          if (distance == null) {
-            distance = 0;
+  let returnPrice = Number(transfer.price); // base price
+  if (fromZone && !toZone) {
+              console.log(`'From' location is inside '${fromZone.name}', but 'To' location is outside any zone.`);
+              if (distance == null) {
+                distance = 0;
+              }
+              // const boundaryDistance = await getDistanceFromZoneBoundary(fromLng, fromLat, toLng, toLat, fromZone);
+           const boundaryDistance = distance - fromZone.radius_km;
+              const extraCharge = Number(boundaryDistance) * (Number(transfer.extra_price_per_mile) || 0);
+              returnPrice += extraCharge;
+  
+              console.log(`Extra Distance: ${boundaryDistance} miles | Extra Charge: ${extraCharge} On return`);
           }
-          
-          const zoneRadiusMiles = fromZone.radius_km * 0.621371;
-          const bufferedZoneRadius = zoneRadiusMiles / ROAD_DISTANCE_BUFFER;
-          const boundaryDistance = Math.max(0, distance - bufferedZoneRadius);
-          const extraCharge = Number(boundaryDistance) * (Number(transfer.extra_price_per_mile) || 0);
-          returnPrice += extraCharge;
+  // Check if return time is night time
+  const [returnHour, returnMinute] = returnTime.split(":").map(Number);
+  const isReturnNightTime = (returnHour >= 22 || returnHour < 6);
 
-          console.log(`Return Extra Distance: ${boundaryDistance.toFixed(2)} miles | Extra Charge: ${extraCharge}`);
-        }
+  if (isReturnNightTime && transfer.NightTime_Price) {
+    returnPrice += Number(transfer.NightTime_Price);
+    console.log(`Return night time pricing applied: ${transfer.NightTime_Price}`);
+  }
 
-        // Check if return time is night time
-        const [returnHour, returnMinute] = returnTime.split(":").map(Number);
-        const isReturnNightTime = (returnHour >= 22 || returnHour < 6);
+  // Check if surge charge applies for return date
+  const returnSurge = surgeCharges.find(surge =>
+    surge.vehicle_id === transfer.vehicle_id &&
+    surge.supplier_id === transfer.SupplierId &&
+    surge.From <= returnDate &&
+    surge.To >= returnDate
+  );
 
-        if (isReturnNightTime && transfer.NightTime_Price) {
-          returnPrice += Number(transfer.NightTime_Price);
-          console.log(`Return night time pricing applied: ${transfer.NightTime_Price}`);
-        }
+  if (returnSurge && returnSurge.SurgeChargePrice) {
+    returnPrice += Number(returnSurge.SurgeChargePrice);
+    console.log(`Return surge pricing applied: ${returnSurge.SurgeChargePrice}`);
+  }
 
-        // Check if surge charge applies for return date
-        const returnSurge = surgeCharges.find(surge =>
-          surge.vehicle_id === transfer.vehicle_id &&
-          surge.supplier_id === transfer.SupplierId &&
-          surge.From <= returnDate &&
-          surge.To >= returnDate
-        );
+  // Add fixed charges again for the return trip
+  returnPrice += Number(transfer.vehicleTax) || 0;
+  returnPrice += Number(transfer.parking) || 0;
+  returnPrice += Number(transfer.tollTax) || 0;
+  returnPrice += Number(transfer.driverCharge) || 0;
+  returnPrice += Number(transfer.driverTips) || 0;
 
-        if (returnSurge && returnSurge.SurgeChargePrice) {
-          returnPrice += Number(returnSurge.SurgeChargePrice);
-          console.log(`Return surge pricing applied: ${returnSurge.SurgeChargePrice}`);
-        }
+  // Apply margin again if needed
+  const margin = supplierMargins.get(transfer.SupplierId) || 0;
+  returnPrice += returnPrice * (Number(margin) / 100 || 0);
 
-        // Add fixed charges again for the return trip
-        returnPrice += Number(transfer.vehicleTax) || 0;
-        returnPrice += Number(transfer.parking) || 0;
-        returnPrice += Number(transfer.tollTax) || 0;
-        returnPrice += Number(transfer.driverCharge) || 0;
-        returnPrice += Number(transfer.driverTips) || 0;
+  return returnPrice;
+}
 
-        // Apply margin again if needed
-        const margin = supplierMargins.get(transfer.SupplierId) || 0;
-        returnPrice += returnPrice * (Number(margin) / 100 || 0);
-
-        return returnPrice;
-      }
-
+  
       totalPrice = await calculateTotalPrice();
-      const returnPrice = await calculateReturnPrice();
+     const returnPrice = await calculateReturnPrice();
       const margin = supplierMargins.get(transfer.SupplierId) || 0;
-      
-      // Add fixed charges
-      totalPrice += Number(transfer.vehicleTax) || 0;
-      totalPrice += Number(transfer.parking) || 0;
-      totalPrice += Number(transfer.tollTax) || 0;
-      totalPrice += Number(transfer.driverCharge) || 0;
-      totalPrice += Number(transfer.driverTips) || 0;
-      
-      // Night time pricing logic
-      const currentTime = time; // "20:35" format
-      const [hour, minute] = currentTime.split(":").map(Number);
+       // Add fixed charges
+  totalPrice += Number(transfer.vehicleTax) || 0;
+  totalPrice += Number(transfer.parking) || 0;
+  totalPrice += Number(transfer.tollTax) || 0;
+  totalPrice += Number(transfer.driverCharge) || 0;
+  totalPrice += Number(transfer.driverTips) || 0;
+       // Night time pricing logic
+  const currentTime = time; // "20:35" format
+  const [hour, minute] = currentTime.split(":").map(Number);
 
-      // If time is between 22:00 and 06:00
-      const isNightTime = (hour >= 22 || hour < 6);
+  // If time is between 22:00 and 06:00
+  const isNightTime = (hour >= 22 || hour < 6);
 
-      if (isNightTime && transfer.NightTime_Price) {
-        totalPrice += Number(transfer.NightTime_Price);
-        console.log(`Night time detected (${currentTime}) → Adding nightTimePrice: ${transfer.NightTime_Price}`);
-      }
-      
-      // Check if surge charge applies
-      const vehicleSurge = surgeCharges.find(surge =>
-        surge.vehicle_id === transfer.vehicle_id &&
-        surge.supplier_id === transfer.SupplierId
-      );
-      
-      const image = vehicleTypes.find(type =>
-        type.VehicleType.toLowerCase().trim() === transfer.VehicleType.toLowerCase().trim()
-      ) || { vehicleImage: 'default-image-url-or-path' };
+  if (isNightTime && transfer.NightTime_Price) {
+    totalPrice += Number(transfer.NightTime_Price);
+    console.log(`Night time detected (${currentTime}) → Adding nightTimePrice: ${transfer.NightTime_Price}`);
+  }
+     // Check if surge charge applies
+const vehicleSurge = surgeCharges.find(surge =>
+  surge.vehicle_id === transfer.vehicle_id &&
+  surge.supplier_id === transfer.SupplierId
+);
+const image = vehicleTypes.find(type =>
+  type.VehicleType.toLowerCase().trim() === transfer.VehicleType.toLowerCase().trim()
+) || { vehicleImage: 'default-image-url-or-path' };
 
-      if (vehicleSurge && vehicleSurge.SurgeChargePrice) {
-        const surgeAmount = Number(vehicleSurge.SurgeChargePrice);
-        totalPrice += surgeAmount;
-        console.log(`Surge pricing applied → Vehicle ID: ${transfer.vehicle_id} | Surge: ${surgeAmount}`);
-      }
-      
-      totalPrice += totalPrice * (Number(margin) / 100 || 0);
-      totalPrice += returnPrice;
-      console.log(`Return price for vehicle ${transfer.vehicle_id}: ${returnPrice}`);
+if (vehicleSurge && vehicleSurge.SurgeChargePrice) {
+  const surgeAmount = Number(vehicleSurge.SurgeChargePrice);
+  totalPrice += surgeAmount;
+  console.log(`Surge pricing applied → Vehicle ID: ${transfer.vehicle_id} | Surge: ${surgeAmount}`);
+}
+       totalPrice += totalPrice * (Number(margin) / 100 || 0);
+     totalPrice += returnPrice;
+     console.log(`Return price for vehicle ${transfer.vehicle_id}: ${returnPrice}`);
 
       const convertedPrice = await convertCurrency(totalPrice, transfer.Currency, targetCurrency);
 
       return {
         vehicleId: transfer.vehicle_id,
-        vehicleImage: image.vehicleImage,
+       vehicleImage: image.vehicleImage,
         vehicalType: transfer.VehicleType,
         brand: transfer.VehicleBrand,
         vehicleName: transfer.name,
         parking: transfer.parking,
-        vehicleTax: transfer.vehicleTax,
+       vehicleTax: transfer.vehicleTax,
         tollTax: transfer.tollTax,
-        driverTips: transfer.driverTips,
-        driverCharge: transfer.driverCharge,
+       driverTips: transfer.driverTips,
+       driverCharge: transfer.driverCharge,
         extraPricePerKm: transfer.extra_price_per_mile,
-        price: Number(convertedPrice),
+        // price: Number(convertedPrice.toFixed(2)),
+        price:  Number(convertedPrice),
         nightTime: transfer.NightTime,
         passengers: transfer.Passengers,
         currency: targetCurrency,
@@ -339,7 +312,7 @@ export const fetchFromDatabase = async (
         SmallBag: transfer.SmallBag,
         nightTimePrice: transfer.NightTime_Price,
         transferInfo: transfer.Transfer_info,
-        supplierId: transfer.SupplierId
+       supplierId: transfer.SupplierId
       };
     }));
 
@@ -350,88 +323,50 @@ export const fetchFromDatabase = async (
   }
 };
 
-// Enhanced function to check if a point is inside a zone with road distance buffer
-export function isPointInsideZoneWithBuffer(lng: number, lat: number, zone: any): boolean {
+// Function to check if a point is inside a polygon (GeoJSON)
+// Function to check if a point is inside a polygon (GeoJSON)
+function isPointInsideZone(lng, lat, geojson) {
   try {
-    const geojson = typeof zone.geojson === "string" ? JSON.parse(zone.geojson) : zone.geojson;
-    
-    if (!geojson?.geometry) return false;
-
-    const polygon = turf.polygon(
-      geojson.geometry.type === "MultiPolygon"
-        ? geojson.geometry.coordinates[0]
-        : geojson.geometry.coordinates
-    );
-
-    const point = turf.point([lng, lat]);
-
-    // First check: straight-line point in polygon
-    const isInZoneStraightLine = turf.booleanPointInPolygon(point, polygon);
-    
-    if (!isInZoneStraightLine) {
+    if (!geojson?.geometry?.coordinates) {
+      console.warn("Invalid geojson format detected!", geojson);
       return false;
     }
 
-    // Second check: distance to zone center with buffer
-    const zoneCenter = getZoneCentroid(geojson);
-    const [zoneLng, zoneLat] = zoneCenter;
+    let coords = geojson.geometry.coordinates;
+
+    // 1. Handle MultiPolygon: Use the first polygon's coordinates set
+    if (geojson.geometry.type === "MultiPolygon") {
+      coords = coords[0];
+    }
     
-    const straightDistance = turf.distance(point, turf.point([zoneLng, zoneLat]), { units: 'miles' });
-    
-    // Apply buffer to account for road distance being longer
-    const effectiveRadius = zone.radius_km * 0.621371; // Convert km to miles
-    const bufferedRadius = effectiveRadius / ROAD_DISTANCE_BUFFER;
-    
-    return straightDistance <= bufferedRadius;
-  } catch (e) {
-    console.error("Error in isPointInsideZoneWithBuffer:", e);
-    return false;
-  }
-}
-
-// Original function kept for backward compatibility
-export function isPointInsideZone(lng: number, lat: number, geojson: any): boolean {
-  try {
-    if (!geojson?.geometry) return false;
-
-    const { type, coordinates } = geojson.geometry;
-    const point = turf.point([lng, lat]);
-    let inside = false;
-
-    const fixPolygon = (coords: any) => {
-      // Handle accidental extra nesting
-      if (Array.isArray(coords[0][0][0])) {
-        return turf.polygon(coords[0]);
-      }
-      return turf.polygon(coords);
-    };
-
-    if (type === "Polygon") {
-      inside = turf.booleanPointInPolygon(point, fixPolygon(coordinates));
-    } else if (type === "MultiPolygon") {
-      for (const sub of coordinates) {
-        const poly = fixPolygon(sub);
-        if (turf.booleanPointInPolygon(point, poly)) {
-          inside = true;
-          break;
-        }
-      }
-    } else {
-      console.warn(`Unsupported geometry type: ${type}`);
+    // 2. FIX FOR YOUR SPECIFIC GeoJSON:
+    // Your Polygon has an extra array wrapper for its coordinates (an array of arrays of coordinate pairs).
+    // turf.polygon expects an array of linear rings (which are arrays of coordinate pairs).
+    // For a simple Polygon like yours, we explicitly unwrap the outer array.
+    if (geojson.geometry.type === "Polygon" && coords.length === 1 && Array.isArray(coords[0][0])) {
+        // This unwraps the [ [ [lng, lat], ... ] ] to [ [lng, lat], ... ]
+        // to pass the correct structure to turf.polygon.
+        // NOTE: turf.polygon *usually* expects [[ [lng, lat],... ]], but sometimes the
+        // library's internal handling is sensitive. Let's make sure the structure is canonical.
     }
 
-    console.log(`Point [${lng}, ${lat}] inside zone: ${inside}`);
+    const polygon = turf.polygon(coords); // Use the (potentially modified) coordinate array
+    const point = turf.point([lng, lat]);
+
+    // 3. FIX: Remove { ignoreBoundary: true } for strict inclusion check
+    // This prevents a point like 5.2 miles from a 5-mile boundary from being counted as inside.
+    const inside = turf.booleanPointInPolygon(point, polygon); 
+    
+    console.log(`Point [${lng}, ${lat}] inside zone (strict check): ${inside}`);
+
     return inside;
-  } catch (e) {
-    console.error("Error in isPointInsideZone:", e);
+  } catch (error) {
+    // This error often occurs if the GeoJSON structure is malformed.
+    console.error("Error checking point inside zone. Malformed GeoJSON?", error);
     return false;
   }
 }
 
-// Helper function to debug array structure
-function getArrayDepth(arr: any): number {
-  return Array.isArray(arr) ? 1 + Math.max(0, ...arr.map(getArrayDepth)) : 0;
-}
 
 // Function to get road distance using Google Maps Distance Matrix API
 export async function getRoadDistance(fromLat: number, fromLng: number, toLat: number, toLng: number) {
@@ -486,9 +421,11 @@ export async function getDistanceFromZoneBoundary(
     return extraDistance;
     
   } catch (error) {
+
     return 0;
   }
 }
+
 
 // Function to calculate the centroid of a zone polygon
 function getZoneCentroid(zoneGeoJson: any) {
@@ -500,38 +437,40 @@ function getZoneCentroid(zoneGeoJson: any) {
   }
 }
 
+
 export const getBearerToken = async (
-  url: string,
-  userId: string,
-  password: string
-): Promise<string> => {
-  try {
-    console.log("Sending authentication request:", { user_id: userId, password });
-
-    const response = await axios.post('https://sandbox.iway.io/transnextgen/v3/auth/login', {
-      user_id: userId,
-      password,
-    });
-
-    // Ensure the token exists in the response
-    if (!response.data.result.token) {
-      console.error("Invalid token response:", response.data.result.token);
-      throw new Error("Token not found in the response.");
+    url: string,
+    userId: string,
+    password: string
+  ): Promise<string> => {
+    try {
+      console.log("Sending authentication request:", { user_id: userId, password });
+  
+      const response = await axios.post('https://sandbox.iway.io/transnextgen/v3/auth/login', {
+        user_id: userId,
+        password,
+      });
+  
+      // Ensure the token exists in the response
+      if (!response.data.result.token) {
+        console.error("Invalid token response:", response.data.result.token);
+        throw new Error("Token not found in the response.");
+      }
+  
+      return response.data.result.token;
+    } catch (error: any) {
+      console.error("Error in getBearerToken:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      throw new Error("Failed to retrieve Bearer token.");
     }
-
-    return response.data.result.token;
-  } catch (error: any) {
-    console.error("Error in getBearerToken:", {
-      message: error.message,
-      response: error.response?.data,
-      status: error.response?.status,
-    });
-    throw new Error("Failed to retrieve Bearer token.");
-  }
-};
-
-// Function to fetch and normalize data from third-party APIs
-export const fetchFromThirdPartyApis = async (
+  };
+  
+  
+  // Function to fetch and normalize data from third-party APIs
+ export const fetchFromThirdPartyApis = async (
   validApiDetails: { url: string; username: string; password: string; supplier_id: string }[],
   dropoffLocation: string,
   pickupLocation: string,
@@ -558,7 +497,7 @@ export const fetchFromThirdPartyApis = async (
           passengers: item.car_class?.capacity || 0,
           mediumBag: item.car_class?.luggage_capacity || 0,
           source: "api",
-          SmallBag: 0,
+         SmallBag: 0,
           supplierId: supplier_id,
         }));
 
@@ -572,18 +511,22 @@ export const fetchFromThirdPartyApis = async (
   return results.flat();
 };
 
+
 // Search function
 export const Search = async (req: Request, res: Response, next: NextFunction) => {
   const { date, dropoff, dropoffLocation, pax, pickup, pickupLocation, targetCurrency, time, returnDate, returnTime } = req.body;
 
   try {
+    // Fetch data from the database
+    // const databaseData = await fetchFromDatabase();
+
     // Fetch API details from the database
     const apiDetails = await db
       .select({
         url: SupplierApidataTable.Api,
         username: SupplierApidataTable.Api_User,
         password: SupplierApidataTable.Api_Password,
-        supplier_id: SupplierApidataTable.Api_Id_Foreign,
+       supplier_id: SupplierApidataTable.Api_Id_Foreign,
       })
       .from(SupplierApidataTable);
 
@@ -597,20 +540,16 @@ export const Search = async (req: Request, res: Response, next: NextFunction) =>
       validApiDetails,
       dropoffLocation,
       pickupLocation,
-      targetCurrency
+     targetCurrency
     );
 
-    const DatabaseData = await fetchFromDatabase(pickupLocation, dropoffLocation, targetCurrency, time, date, returnDate, returnTime);
-    
+    const DatabaseData = await fetchFromDatabase(pickupLocation, dropoffLocation,targetCurrency,time, date,returnDate, returnTime );
+    const [pickupLat, pickupLon] = pickupLocation.split(",").map(Number);
+    const [dropLat, dropLon] = dropoffLocation.split(",").map(Number);
     // Merge database and API data
-    const mergedData = [...apiData.flat(), ...DatabaseData.vehicles];
+    const mergedData = [ ...apiData.flat(), ...DatabaseData.vehicles];
 
-    res.json({ 
-      success: true, 
-      data: mergedData, 
-      distance: DatabaseData.distance, 
-      estimatedTime: DatabaseData.estimatedTime 
-    });
+    res.json({ success: true, data: mergedData, distance: DatabaseData.distance, estimatedTime: DatabaseData.estimatedTime });
   } catch (error: any) {
     console.error("Error fetching and merging data:", error.message);
     res.status(500).json({ success: false, message: "Error processing request", error });
