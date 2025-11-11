@@ -338,7 +338,7 @@ async function isPointInsideZone(
     const distanceMiles = road.distance || 9999;
 
     console.log(`Road distance to zone center: ${distanceMiles} miles (radius: ${zoneRadiusMiles})`);
-    return distanceMiles <= zoneRadiusMiles;
+    return distanceMiles <= 5;
   } catch (err) {
     console.error("Error in isPointInsideZoneByRoad:", err);
     return false;
