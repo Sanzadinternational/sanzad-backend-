@@ -112,7 +112,7 @@ export const fetchFromDatabase = async (
           const effectiveRadius = zone.radius_km; // Convert km to miles
           const bufferedRadius = effectiveRadius / ROAD_DISTANCE_BUFFER;
           
-          console.log(`Zone ${zone.name}: straightDistance=${straightDistance.toFixed(2)} miles, effectiveRadius=${effectiveRadius.toFixed(2)} miles, bufferedRadius=${bufferedRadius.toFixed(2)} miles`);
+          console.log(`Zone ${zone.name}: straightDistance=${straightDistance.toFixed(2)} miles, effectiveRadius=${effectiveRadius} miles, bufferedRadius=${bufferedRadius.toFixed(2)} miles`);
           
           if (straightDistance <= bufferedRadius) {
             matchedZones.push(zone);
