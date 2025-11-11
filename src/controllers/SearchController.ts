@@ -41,7 +41,7 @@ export const getExchangeRate = async (from: string, to: string): Promise<number>
 
 export async function convertCurrency(amount: number, from: string, to: string): Promise<number> {
   try {
-    const res = await axios.get(`https://v6.exchangerate-api.com/v6/5792347d5ad3d4f4281902b1/latest/${from}`);
+    const res = await axios.get(`https://v6.exchangerate-api.com/v6/9effc838a4da8122bac8b714/latest/${from}`);
     let rate = res.data?.conversion_rates?.[to];
     if (!rate) throw new Error(`Missing rate for ${to}`);
 
