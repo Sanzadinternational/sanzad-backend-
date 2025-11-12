@@ -48,8 +48,8 @@ export async function convertCurrency(amount: number, from: string, to: string):
     // Apply 1.5% exchange fee
     // rate *= 1.015;
 
-    return amount * rate;
-   // return amount;
+    // return amount * rate;
+   return amount;
   } catch (err) {
     console.error(`Error converting from ${from} to ${to}`, err);
     return amount; // fallback to original
