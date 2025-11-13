@@ -1,33 +1,27 @@
 import { Request, Response, NextFunction } from "express";
 import axios from "axios";
 import { db } from "../db/db";
-import { eq } from "drizzle-orm";
-import { like } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { SupplierApidataTable } from "../db/schema/SupplierSchema";
-import { SupplierCarDetailsTable } from "../db/schema/SupplierSchema";
-import { CreateTransferCar } from "../db/schema/SupplierSchema";
-import { sql, inArray } from "drizzle-orm";
-import { zones, transfers_Vehicle } from "../db/schema/SupplierSchema";
-import { Create_Vehicles } from "../db/schema/SupplierSchema";
-
-const GOOGLE_MAPS_API_KEY = "AIzaSyAjXkEFU-hA_DSnHYaEjU3_fceVwQra0LI";
 import * as turf from '@turf/turf';
 
-const currencyCache: Record<string, Record<string, number>> = {};
+const GOOGLE_MAPS_API_KEY = "AIzaSyAjXkEFU-hA_DSnHYaEjU3_fceVwQra0LI";
 
-// Interface for enhanced zone data
+// Interface for zone data
 interface ZoneWithRoadData {
   id: string;
   name: string;
   radius_km: number;
   geojson: any;
-  roadRadiusMiles: number;
+  straightLineRadiusMiles: number;
   roadDistanceToDropoff: number;
   fromInside: boolean;
-  dropoffInsideByRoad: boolean;
+  dropoffInsideByStraightLine: boolean;
   priority: number;
-  equivalentRoadRadius: number;
+  zoneCenter: [number, number];
 }
+
+const currencyCache: Record<string, Record<string, number>> = {};
 
 export const getExchangeRate = async (from: string, to: string): Promise<number> => {
   const key = `${from}_${to}`;
@@ -63,124 +57,6 @@ export async function convertCurrency(amount: number, from: string, to: string):
   }
 }
 
-// Function to calculate urban density factor for road distance conversion
-async function calculateUrbanDensityFactor(lat: number, lng: number): Promise<number> {
-  try {
-    const response = await axios.get(
-      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}`
-    );
-    
-    const address = response.data.results[0]?.formatted_address || '';
-    const isDenseUrban = address.includes('NY') || 
-                        address.includes('New York') || 
-                        address.includes('Manhattan') ||
-                        address.includes('Brooklyn') ||
-                        address.includes('Queens') ||
-                        address.includes('Paris') ||
-                        address.includes('London') ||
-                        address.includes('Tokyo');
-    
-    return isDenseUrban ? 1.4 : 1.2;
-  } catch (error) {
-    return 1.3;
-  }
-}
-
-// Function to get road distance equivalent of straight-line radius
-async function getRoadDistanceEquivalent(straightLineMiles: number, location: { lat: number, lng: number }): Promise<number> {
-  try {
-    // Create a point 1 mile north to measure road distance vs straight-line
-    const testPointLat = location.lat + (1 / 69);
-    const testPointLng = location.lng;
-    
-    const roadDistance = await getRoadDistance(
-      location.lat, location.lng,
-      testPointLat, testPointLng
-    );
-    
-    if (roadDistance.distance && roadDistance.distance > 0) {
-      const roadToStraightRatio = roadDistance.distance / 1;
-      return straightLineMiles * roadToStraightRatio;
-    }
-  } catch (error) {
-    console.error("Error calculating road distance equivalent:", error);
-  }
-  
-  // Fallback with urban density factor
-  const urbanDensityFactor = await calculateUrbanDensityFactor(location.lat, location.lng);
-  return straightLineMiles * urbanDensityFactor;
-}
-
-// Enhanced zone validation with road distance
-async function validateZoneWithRoadDistance(
-  zone: any, 
-  fromLat: number, 
-  fromLng: number, 
-  toLat: number, 
-  toLng: number
-): Promise<ZoneWithRoadData | null> {
-  try {
-    const geojson = typeof zone.geojson === "string" ? JSON.parse(zone.geojson) : zone.geojson;
-    
-    if (!geojson?.geometry?.coordinates) {
-      return null;
-    }
-
-    const polygon = turf.polygon(
-      geojson.geometry.type === "MultiPolygon"
-        ? geojson.geometry.coordinates[0]
-        : geojson.geometry.coordinates
-    );
-
-    const fromPoint = turf.point([fromLng, fromLat]);
-    const fromInside = turf.booleanPointInPolygon(fromPoint, polygon);
-
-    if (!fromInside) {
-      return null;
-    }
-
-    // Get zone center
-    const zoneCenter = getZoneCentroid(geojson);
-    
-    // Calculate road distance from zone center to dropoff
-    const roadDistanceToDropoff = await getRoadDistance(
-      zoneCenter[1], zoneCenter[0], toLat, toLng
-    );
-
-    if (!roadDistanceToDropoff.distance) {
-      return null;
-    }
-
-    // Convert straight-line radius to equivalent road distance
-    const equivalentRoadRadius = await getRoadDistanceEquivalent(
-      zone.radius_km, // Convert km to miles
-      { lat: zoneCenter[1], lng: zoneCenter[0] }
-    );
-
-    const dropoffInsideByRoad = roadDistanceToDropoff.distance <= equivalentRoadRadius;
-
-    // Calculate priority score
-    let priority = 0;
-    if (dropoffInsideByRoad) priority += 100;
-    priority += Math.max(0, 50 - (roadDistanceToDropoff.distance * 2));
-    priority += Math.max(0, 30 - (zone.radius_km / 10));
-
-    return {
-      ...zone,
-      roadRadiusMiles: equivalentRoadRadius,
-      roadDistanceToDropoff: roadDistanceToDropoff.distance,
-      fromInside,
-      dropoffInsideByRoad,
-      priority,
-      equivalentRoadRadius
-    };
-
-  } catch (error) {
-    console.error(`Error validating zone ${zone.id} with road distance:`, error);
-    return null;
-  }
-}
-
 export const fetchFromDatabase = async (
   pickupLocation: string,
   dropoffLocation: string,
@@ -201,14 +77,14 @@ export const fetchFromDatabase = async (
 
     const allZones = zonesResult.rows as any[];
 
-    // Step 2: Enhanced zone selection with road distance validation
-    const zoneValidationPromises = allZones.map(zone => 
-      validateZoneWithRoadDistance(zone, fromLat, fromLng, toLat, toLng)
+    // Step 2: Enhanced zone selection with hybrid approach
+    const validatedZones = await validateZonesWithHybridApproach(
+      allZones, 
+      fromLat, 
+      fromLng, 
+      toLat, 
+      toLng
     );
-
-    const validatedZones = (await Promise.all(zoneValidationPromises))
-      .filter((zone): zone is ZoneWithRoadData => zone !== null)
-      .sort((a, b) => b.priority - a.priority);
 
     const zones = validatedZones.length > 0 ? [validatedZones[0]] : [];
 
@@ -217,7 +93,7 @@ export const fetchFromDatabase = async (
     }
 
     const selectedZone = zones[0];
-    console.log(`Selected zone: ${selectedZone.name} | Road radius: ${selectedZone.equivalentRoadRadius.toFixed(2)} miles | Dropoff inside: ${selectedZone.dropoffInsideByRoad}`);
+    console.log(`Selected zone: ${selectedZone.name} | Straight-line radius: ${selectedZone.straightLineRadiusMiles.toFixed(2)} miles`);
 
     // Step 3: Fetch vehicles for the selected zone
     const transfersResult = await db.execute(
@@ -235,13 +111,23 @@ export const fetchFromDatabase = async (
     );
     const vehicleTypes = vehicleTypesResult.rows as any[];
 
-    // Step 4: Calculate actual road distance
-    let { distance, duration } = await getRoadDistance(fromLat, fromLng, toLat, toLng);
+    // Step 4: Calculate actual road distance for the trip
+    let { distance: roadDistance, duration } = await getRoadDistance(fromLat, fromLng, toLat, toLng);
 
-    // Step 5: Get margins and surge charges
-    const marginsResult = await db.execute(
-      sql`SELECT * FROM "Margin"`
+    // Step 5: Calculate straight-line distance for zone radius comparison
+    const straightLineDistance = turf.distance(
+      turf.point([fromLng, fromLat]),
+      turf.point([toLng, toLat]),
+      { units: 'miles' }
     );
+
+    console.log(`📍 ZONE: ${selectedZone.name}`);
+    console.log(`📏 ZONE RADIUS: ${selectedZone.straightLineRadiusMiles.toFixed(2)} miles (straight-line)`);
+    console.log(`🛣️  ROAD DISTANCE: ${roadDistance} miles`);
+    console.log(`📐 STRAIGHT-LINE DISTANCE: ${straightLineDistance.toFixed(2)} miles`);
+
+    // Step 6: Get margins and surge charges
+    const marginsResult = await db.execute(sql`SELECT * FROM "Margin"`);
     const margins = marginsResult.rows as any[];
     const supplierMargins = new Map<string, number>();
     for (const margin of margins) {
@@ -255,23 +141,41 @@ export const fetchFromDatabase = async (
     );
     const surgeCharges = surgeChargesResult.rows as any[];
 
-    // Step 6: Calculate pricing with road distance considerations
+    // Step 7: Calculate pricing with NO BUFFER extra charge logic
     const vehiclesWithPricing = await Promise.all(transfers.map(async (transfer) => {
       let totalPrice = Number(transfer.price);
 
-      // Function to calculate total price based on road distance
+      // Function to calculate total price - NO BUFFER
       async function calculateTotalPrice() {
         let totalPrice = Number(transfer.price);
         
-        // Use road distance for extra charge calculation
-        if (selectedZone && (distance > selectedZone.equivalentRoadRadius)) {
-          console.log(`Trip exceeds zone road radius. Distance: ${distance} miles, Zone radius: ${selectedZone.equivalentRoadRadius.toFixed(2)} miles`);
+        // NO BUFFER - Use strict straight-line distance comparison
+        console.log(`🔍 EXTRA CHARGE CHECK for ${transfer.VehicleType}:`);
+        console.log(`   Straight-line distance: ${straightLineDistance.toFixed(2)} miles`);
+        console.log(`   Zone radius: ${selectedZone.straightLineRadiusMiles.toFixed(2)} miles`);
+        console.log(`   Road distance: ${roadDistance} miles`);
+
+        if (selectedZone && (straightLineDistance > selectedZone.straightLineRadiusMiles)) {
+          // Calculate how much we exceeded the zone in straight-line distance
+          const exceededStraightLine = straightLineDistance - selectedZone.straightLineRadiusMiles;
           
-          const boundaryDistance = distance - selectedZone.equivalentRoadRadius;
-          const extraCharge = Number(boundaryDistance) * (Number(transfer.extra_price_per_mile) || 0);
+          // Calculate the ratio of road distance to straight-line distance
+          const distanceRatio = roadDistance / straightLineDistance;
+          
+          // Convert straight-line excess to equivalent road distance
+          const extraRoadDistance = exceededStraightLine * distanceRatio;
+          
+          const extraCharge = extraRoadDistance * (Number(transfer.extra_price_per_mile) || 0);
           totalPrice += extraCharge;
 
-          console.log(`Extra Road Distance: ${boundaryDistance.toFixed(2)} miles | Extra Charge: ${extraCharge}`);
+          console.log(`🚨 EXTRA CHARGES APPLIED:`);
+          console.log(`   Straight-line exceeded by: ${exceededStraightLine.toFixed(2)} miles`);
+          console.log(`   Distance ratio (road/straight): ${distanceRatio.toFixed(2)}`);
+          console.log(`   Extra road distance to charge: ${extraRoadDistance.toFixed(2)} miles`);
+          console.log(`   Rate: $${transfer.extra_price_per_mile}/mile`);
+          console.log(`   Extra Charge: $${extraCharge.toFixed(2)}`);
+        } else {
+          console.log(`✅ NO EXTRA CHARGES - Within zone radius`);
         }
 
         return totalPrice;
@@ -279,7 +183,7 @@ export const fetchFromDatabase = async (
 
       const isReturnTrip = !!returnDate && !!returnTime;
 
-      // Function to calculate return trip pricing
+      // Function to calculate return trip pricing - NO BUFFER
       async function calculateReturnPrice() {
         if (!isReturnTrip) {
           return 0;
@@ -287,12 +191,14 @@ export const fetchFromDatabase = async (
 
         let returnPrice = Number(transfer.price);
         
-        // Apply same road distance logic for return trip
-        if (selectedZone && (distance > selectedZone.equivalentRoadRadius)) {
-          const boundaryDistance = distance - selectedZone.equivalentRoadRadius;
-          const extraCharge = Number(boundaryDistance) * (Number(transfer.extra_price_per_mile) || 0);
+        // Apply same NO BUFFER logic for return trip
+        if (selectedZone && (straightLineDistance > selectedZone.straightLineRadiusMiles)) {
+          const exceededStraightLine = straightLineDistance - selectedZone.straightLineRadiusMiles;
+          const distanceRatio = roadDistance / straightLineDistance;
+          const extraRoadDistance = exceededStraightLine * distanceRatio;
+          const extraCharge = extraRoadDistance * (Number(transfer.extra_price_per_mile) || 0);
           returnPrice += extraCharge;
-          console.log(`Return extra road distance: ${boundaryDistance.toFixed(2)} miles | Extra Charge: ${extraCharge}`);
+          console.log(`🔄 RETURN TRIP - Extra charge: $${extraCharge.toFixed(2)}`);
         }
 
         // Night time pricing for return
@@ -301,7 +207,7 @@ export const fetchFromDatabase = async (
 
         if (isReturnNightTime && transfer.NightTime_Price) {
           returnPrice += Number(transfer.NightTime_Price);
-          console.log(`Return night time pricing applied: ${transfer.NightTime_Price}`);
+          console.log(`🌙 RETURN NIGHT TIME - Added: $${transfer.NightTime_Price}`);
         }
 
         // Surge charge for return date
@@ -314,7 +220,7 @@ export const fetchFromDatabase = async (
 
         if (returnSurge && returnSurge.SurgeChargePrice) {
           returnPrice += Number(returnSurge.SurgeChargePrice);
-          console.log(`Return surge pricing applied: ${returnSurge.SurgeChargePrice}`);
+          console.log(`📈 RETURN SURGE - Added: $${returnSurge.SurgeChargePrice}`);
         }
 
         // Add fixed charges for return trip
@@ -326,7 +232,11 @@ export const fetchFromDatabase = async (
 
         // Apply margin
         const margin = supplierMargins.get(transfer.SupplierId) || 0;
-        returnPrice += returnPrice * (Number(margin) / 100 || 0);
+        if (margin > 0) {
+          const marginAmount = returnPrice * (Number(margin) / 100);
+          returnPrice += marginAmount;
+          console.log(`💰 RETURN MARGIN ${margin}% - Added: $${marginAmount.toFixed(2)}`);
+        }
 
         return returnPrice;
       }
@@ -343,12 +253,12 @@ export const fetchFromDatabase = async (
       totalPrice += Number(transfer.driverTips) || 0;
 
       // Night time pricing
-      const [hour, minute] = time.split(":").map(Number);
+      const [hour, minute] = time.split(":"").map(Number);
       const isNightTime = (hour >= 22 || hour < 6);
 
       if (isNightTime && transfer.NightTime_Price) {
         totalPrice += Number(transfer.NightTime_Price);
-        console.log(`Night time detected (${time}) → Adding nightTimePrice: ${transfer.NightTime_Price}`);
+        console.log(`🌙 NIGHT TIME - Added: $${transfer.NightTime_Price}`);
       }
 
       // Surge charges
@@ -364,15 +274,25 @@ export const fetchFromDatabase = async (
       if (vehicleSurge && vehicleSurge.SurgeChargePrice) {
         const surgeAmount = Number(vehicleSurge.SurgeChargePrice);
         totalPrice += surgeAmount;
-        console.log(`Surge pricing applied → Vehicle ID: ${transfer.vehicle_id} | Surge: ${surgeAmount}`);
+        console.log(`📈 SURGE PRICING - Added: $${surgeAmount}`);
       }
 
       // Apply margin
-      totalPrice += totalPrice * (Number(margin) / 100 || 0);
+      if (margin > 0) {
+        const marginAmount = totalPrice * (Number(margin) / 100);
+        totalPrice += marginAmount;
+        console.log(`💰 MARGIN ${margin}% - Added: $${marginAmount.toFixed(2)}`);
+      }
+
+      // Add return price
       totalPrice += returnPrice;
-      console.log(`Return price for vehicle ${transfer.vehicle_id}: ${returnPrice}`);
+      console.log(`🔄 RETURN PRICE - Added: $${returnPrice.toFixed(2)}`);
+
+      console.log(`🎯 FINAL BASE PRICE before conversion: $${totalPrice.toFixed(2)} ${transfer.Currency}`);
 
       const convertedPrice = await convertCurrency(totalPrice, transfer.Currency, targetCurrency);
+
+      console.log(`💱 CONVERTED PRICE: $${convertedPrice.toFixed(2)} ${targetCurrency}`);
 
       return {
         vehicleId: transfer.vehicle_id,
@@ -386,7 +306,7 @@ export const fetchFromDatabase = async (
         driverTips: transfer.driverTips,
         driverCharge: transfer.driverCharge,
         extraPricePerKm: transfer.extra_price_per_mile,
-        price: Number(convertedPrice),
+        price: Number(convertedPrice.toFixed(2)),
         nightTime: transfer.NightTime,
         passengers: transfer.Passengers,
         currency: targetCurrency,
@@ -396,43 +316,115 @@ export const fetchFromDatabase = async (
         transferInfo: transfer.Transfer_info,
         supplierId: transfer.SupplierId,
         zoneName: selectedZone.name,
-        roadDistance: distance,
-        zoneRoadRadius: selectedZone.equivalentRoadRadius
+        roadDistance: roadDistance,
+        straightLineDistance: straightLineDistance,
+        zoneRadius: selectedZone.straightLineRadiusMiles,
+        extraChargesApplied: straightLineDistance > selectedZone.straightLineRadiusMiles,
+        extraDistance: straightLineDistance > selectedZone.straightLineRadiusMiles 
+          ? (straightLineDistance - selectedZone.straightLineRadiusMiles) * (roadDistance / straightLineDistance)
+          : 0
       };
     }));
 
-    return { vehicles: vehiclesWithPricing, distance: distance, estimatedTime: duration };
+    return { 
+      vehicles: vehiclesWithPricing, 
+      distance: roadDistance, 
+      estimatedTime: duration 
+    };
   } catch (error) {
     console.error("Error fetching zones and vehicles:", error);
     throw new Error("Failed to fetch zones and vehicle pricing.");
   }
 };
 
-// Function to check if a point is inside a polygon
-function isPointInsideZone(lng, lat, geojson) {
-  try {
-    if (!geojson?.geometry?.coordinates) {
-      console.warn("Invalid geojson format detected!", geojson);
-      return false;
+// Hybrid zone validation function
+async function validateZonesWithHybridApproach(
+  allZones: any[], 
+  fromLat: number, 
+  fromLng: number, 
+  toLat: number, 
+  toLng: number
+): Promise<ZoneWithRoadData[]> {
+  const validatedZones: ZoneWithRoadData[] = [];
+
+  for (const zone of allZones) {
+    try {
+      const geojson = typeof zone.geojson === "string" ? JSON.parse(zone.geojson) : zone.geojson;
+      
+      if (!geojson?.geometry?.coordinates) {
+        continue;
+      }
+
+      const polygon = turf.polygon(
+        geojson.geometry.type === "MultiPolygon"
+          ? geojson.geometry.coordinates[0]
+          : geojson.geometry.coordinates
+      );
+
+      const fromPoint = turf.point([fromLng, fromLat]);
+      const toPoint = turf.point([toLng, toLat]);
+
+      // Use straight-line check for zone membership (since GeoJSON is straight-line)
+      const fromInside = turf.booleanPointInPolygon(fromPoint, polygon);
+      const toInside = turf.booleanPointInPolygon(toPoint, polygon);
+
+      if (!fromInside) {
+        continue;
+      }
+
+      // Get zone center
+      const zoneCenter = getZoneCentroid(geojson);
+      
+      // Calculate straight-line distances
+      const straightLineRadiusMiles = zone.radius_km * 0.621371;
+      
+      // Calculate straight-line distance from zone center to dropoff
+      const straightLineDistanceToDropoff = turf.distance(
+        turf.point(zoneCenter),
+        toPoint,
+        { units: 'miles' }
+      );
+
+      // Calculate road distance from zone center to dropoff for prioritization
+      const roadDistanceToDropoff = await getRoadDistance(
+        zoneCenter[1], zoneCenter[0], toLat, toLng
+      );
+
+      // Calculate priority score
+      let priority = 0;
+      
+      // Highest priority: both pickup and dropoff inside zone by straight-line
+      if (fromInside && toInside) priority += 100;
+      
+      // High priority: dropoff inside straight-line radius
+      if (straightLineDistanceToDropoff <= straightLineRadiusMiles) priority += 80;
+      
+      // Medium priority: closer road distance to dropoff
+      priority += Math.max(0, 50 - (roadDistanceToDropoff.distance || straightLineDistanceToDropoff));
+      
+      // Lower priority: smaller zones first (more specific)
+      priority += Math.max(0, 30 - (zone.radius_km / 10));
+
+      validatedZones.push({
+        ...zone,
+        straightLineRadiusMiles,
+        roadDistanceToDropoff: roadDistanceToDropoff.distance || straightLineDistanceToDropoff,
+        fromInside,
+        dropoffInsideByStraightLine: toInside,
+        priority,
+        zoneCenter
+      });
+
+      console.log(`Zone ${zone.name}: FromInside=${fromInside}, ToInside=${toInside}, Priority=${priority}`);
+
+    } catch (error) {
+      console.error(`Error validating zone ${zone.id}:`, error);
+      continue;
     }
-
-    let coords = geojson.geometry.coordinates;
-
-    if (geojson.geometry.type === "MultiPolygon") {
-      coords = coords[0];
-    }
-
-    const polygon = turf.polygon(coords);
-    const point = turf.point([lng, lat]);
-
-    const inside = turf.booleanPointInPolygon(point, polygon);
-    console.log(`Point [${lng}, ${lat}] inside zone: ${inside}`);
-
-    return inside;
-  } catch (error) {
-    console.error("Error checking point inside zone:", error);
-    return false;
   }
+
+  // Sort by priority (highest first)
+  return validatedZones.sort((a, b) => b.priority - a.priority);
 }
 
 // Function to get road distance using Google Maps
@@ -446,8 +438,8 @@ export async function getRoadDistance(fromLat: number, fromLng: number, toLat: n
     const durationText = response.data.rows[0]?.elements[0]?.duration?.text;
 
     if (!distanceText || !durationText) {
-      console.error("Distance or duration not found in response:", response.data);
-      throw new Error("Distance or duration not found");
+      console.error("Distance or duration not found in response");
+      return { distance: null, duration: null };
     }
 
     return {
@@ -460,41 +452,8 @@ export async function getRoadDistance(fromLat: number, fromLng: number, toLat: n
   }
 }
 
-// Function to calculate distance from zone boundary (updated for road distance)
-export async function getDistanceFromZoneBoundary(
-  fromLng: number,
-  fromLat: number,
-  toLng: number,
-  toLat: number,
-  fromZone: any
-) {
-  try {
-    if (!fromZone || !fromZone.geojson) {
-      console.warn("No valid 'From' zone found.");
-      return 0;
-    }
-
-    // Use road distance instead of straight-line calculation
-    const roadDistance = await getRoadDistance(fromLat, fromLng, toLat, toLng);
-    
-    if (!roadDistance.distance) {
-      return 0;
-    }
-
-    // Calculate extra distance beyond zone's road radius
-    const extraDistance = Math.max(0, roadDistance.distance - fromZone.equivalentRoadRadius);
-    
-    console.log(`Road distance: ${roadDistance.distance} miles, Zone road radius: ${fromZone.equivalentRoadRadius.toFixed(2)} miles, Extra distance: ${extraDistance.toFixed(2)} miles`);
-    
-    return extraDistance;
-  } catch (error) {
-    console.error("Error calculating distance from zone boundary:", error);
-    return 0;
-  }
-}
-
 // Function to calculate the centroid of a zone polygon
-function getZoneCentroid(zoneGeoJson: any) {
+function getZoneCentroid(zoneGeoJson: any): [number, number] {
   try {
     return turf.centroid(zoneGeoJson).geometry.coordinates;
   } catch (error) {
@@ -601,7 +560,7 @@ export const Search = async (req: Request, res: Response, next: NextFunction) =>
       targetCurrency
     );
 
-    // Fetch data from database with enhanced road distance logic
+    // Fetch data from database with NO BUFFER approach
     const DatabaseData = await fetchFromDatabase(
       pickupLocation, 
       dropoffLocation,
