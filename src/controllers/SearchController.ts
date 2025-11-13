@@ -153,7 +153,7 @@ async function validateZoneWithRoadDistance(
 
     // Convert straight-line radius to equivalent road distance
     const equivalentRoadRadius = await getRoadDistanceEquivalent(
-      zone.radius_km * 0.621371, // Convert km to miles
+      zone.radius_km, // Convert km to miles
       { lat: zoneCenter[1], lng: zoneCenter[0] }
     );
 
