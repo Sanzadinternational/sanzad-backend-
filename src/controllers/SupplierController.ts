@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { CreateSupplierInput,SupplierDocuments,UpdateVehicleType,UpdateVehicleModel,UpdateServiceType,UpdateVehicleBrand,VehicleType,SurgeCharge,VehicleBrand,ServiceType,UpdateTransferCars,VehicleModel,CreateTransferCars,UpdateCreateCartDetails,
     CreateCartDetails,Driverdata,CreateSupplierDetailServicesInput,CreateExtraSpace,UpdateExtraSpace,CreateTransportNodesInput,SupplierPriceInput, CreateSupplierOneWayInput,CreateSupplierApidata,DriversModel } from "../dto";
 import { and,desc, eq } from "drizzle-orm"; 
+import axios from "axios";
 const { v4: uuidv4 } = require('uuid'); 
 import { Create_Vehicles } from "../db/schema/SupplierSchema";
 import { CreateVehicle } from "../dto";
