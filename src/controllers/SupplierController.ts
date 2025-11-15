@@ -1618,28 +1618,75 @@ export const GetZoneBySupplierId = async (req: Request, res: Response, next: Nex
     }
 };
 
-export const CreateZone=async(req:Request,res:Response,next:NextFunction)=>{
-    try {
-        const { name,supplier_id,address, latitude, longitude, radius_miles } = req.body;
-        const center = turf.point([longitude, latitude]);
-        const circle = turf.circle(center, radius_miles, { steps: 64, units: "miles" });
-    
-        const newZone = await db.insert(zones).values({
-            name,
-            supplier_id,
-          latitude,
-          longitude,
-          radius_miles,
-          address,
-          geojson: circle,
-         })
-         .returning();
-    
-        res.status(201).json({ message: "Zone created successfully", zone: newZone });
-      } catch (error) {
-        res.status(500).json({ message: "Error creating zone", error });
+// Your ORS API key
+const ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImY1MjRlNWFjYzBmNzRmOTBiZjM3MGEwMWNmMzkzMzcwIiwiaCI6Im11cm11cjY0In0=";
+
+export const CreateZone = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { name, supplier_id, address, latitude, longitude, radius_miles } = req.body;
+
+    if (!latitude || !longitude || !radius_miles) {
+      return res.status(400).json({ message: "Missing required zone parameters." });
+    }
+
+    // --------------------------------------------------------------------
+    // STEP 1: Convert miles → meters (ORS uses meters)
+    // --------------------------------------------------------------------
+    const radius_meters = radius_miles * 1609.34;
+
+    // --------------------------------------------------------------------
+    // STEP 2: Call OpenRouteService Isochrone API
+    // --------------------------------------------------------------------
+    const orsResponse = await axios.post(
+      "https://api.openrouteservice.org/v2/isochrones/driving-car",
+      {
+        locations: [[longitude, latitude]],  // ORS expects [lng, lat]
+        range: [radius_meters],              // driving distance
+        range_type: "distance"
+      },
+      {
+        headers: {
+          Authorization: ORS_API_KEY,
+          "Content-Type": "application/json",
+        },
       }
-}
+    );
+
+    if (!orsResponse.data?.features?.length) {
+      return res.status(500).json({ message: "OpenRouteService returned no isochrone." });
+    }
+
+    const isochrone = orsResponse.data.features[0]; // The polygon
+
+    // --------------------------------------------------------------------
+    // STEP 3: Save real isochrone polygon to DB
+    // --------------------------------------------------------------------
+    const newZone = await db
+      .insert(zones)
+      .values({
+        name,
+        supplier_id,
+        latitude,
+        longitude,
+        radius_miles,  // keep original radius for reference
+        address,
+        geojson: isochrone,  // save actual polygon instead of circle
+      })
+      .returning();
+
+    res.status(201).json({
+      message: "Zone created successfully (Isochrone-based)",
+      zone: newZone,
+    });
+
+  } catch (error: any) {
+    console.error("Error creating zone with ORS isochrone:", error.response?.data || error);
+    res.status(500).json({
+      message: "Error creating zone (Isochrone failed)",
+      error: error.response?.data || error.message,
+    });
+  }
+};
 
 // Get Zone by ID
 export const getZoneById = async (req: Request, res: Response) => {
