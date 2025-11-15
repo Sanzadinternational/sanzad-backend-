@@ -10,7 +10,7 @@ import { CreateTransferCar } from "../db/schema/SupplierSchema";
 import { zones, transfers_Vehicle } from "../db/schema/SupplierSchema";
 import { Create_Vehicles } from "../db/schema/SupplierSchema";
 
-// Use env var for API key
+// Use env var for API key (kept your hard-coded key but consider moving to env)
 const GOOGLE_MAPS_API_KEY = "AIzaSyAjXkEFU-hA_DSnHYaEjU3_fceVwQra0LI";
 
 // currency cache
@@ -366,7 +366,7 @@ function calculateZonePrice({
   extraPricePerMile: number;
 }) {
   console.log(`[Pricing] Calculating zone price`);
-  console.log(`[Pricing] Base price: ${basePrice}, Distance: ${distanceMiles} miles, Zone radius: ${zoneRadiusMiles} miles`);
+  console.log(`[Pricing] Base price: ${basePrice}, Distance (used for zone check): ${distanceMiles} miles, Zone radius: ${zoneRadiusMiles} miles`);
   console.log(`[Pricing] Pickup inside zone: ${pickupInsideSelectedZone}, Dropoff inside zone: ${dropoffInsideSelectedZone}`);
 
   // If pickup is not inside the selected zone, do not charge extra miles
@@ -465,13 +465,27 @@ export const fetchFromDatabase = async (
     console.log(`[Database] Loaded ${vehicleTypes.length} vehicle types, ${margins.length} margins, ${surgeCharges.length} surge charges`);
 
     // 5) Compute road distance (miles)
-    console.log(`[Database] Calculating road distance`);
-    let { distance, duration } = await getRoadDistance(fromLat, fromLng, toLat, toLng);
+    console.log(`[Database] Calculating road distance (used for ETA/display)`);
+    let { distance: roadDistance, duration } = await getRoadDistance(fromLat, fromLng, toLat, toLng);
 
     // 6) Determine whether pickup/dropoff are inside selectedZone
     const pickupInsideSelected = getZonesContainingPoint(fromLng, fromLat, [selectedZone]).length > 0;
     const dropoffInsideSelected = getZonesContainingPoint(toLng, toLat, [selectedZone]).length > 0;
     console.log(`[Database] Location analysis - Pickup in zone: ${pickupInsideSelected}, Dropoff in zone: ${dropoffInsideSelected}`);
+
+    // 6b) Compute straight-line distance from zone center to dropoff (used for pricing boundary)
+    let straightLineDistanceFromCenterToDropoff = 0;
+    try {
+      const zonePoly = getPolygon(selectedZone.geojson);
+      const zoneCenter = turf.centroid(zonePoly).geometry.coordinates; // [lng, lat]
+      straightLineDistanceFromCenterToDropoff = turf.distance(turf.point(zoneCenter), turf.point([toLng, toLat]), { units: "miles" });
+      console.log(`[Database] Straight-line distance from zone center to dropoff: ${straightLineDistanceFromCenterToDropoff.toFixed(3)} miles`);
+    } catch (err) {
+      console.warn("[Database] Could not compute straight-line distance from zone center to dropoff:", err?.message || err);
+      // fallback: use straight-line from pickup to dropoff (less correct but a fallback)
+      straightLineDistanceFromCenterToDropoff = turf.distance(turf.point([fromLng, fromLat]), turf.point([toLng, toLat]), { units: "miles" });
+      console.log(`[Database] Fallback straight-line distance (pickup->dropoff): ${straightLineDistanceFromCenterToDropoff.toFixed(3)} miles`);
+    }
 
     // 7) Price each transfer
     console.log(`[Database] Calculating pricing for ${transfers.length} vehicles`);
@@ -482,12 +496,13 @@ export const fetchFromDatabase = async (
         const basePrice = Number(transfer.price) || 0;
         console.log(`[Pricing] Base transfer price: ${basePrice} ${transfer.Currency || "USD"}`);
 
-        // Use calculateZonePrice rule
+        // Use calculateZonePrice rule - pass straight-line distance for zone boundary checks
         const zoneRadiusMiles = Number(selectedZone.radius_km) || 0; // treated as miles
         const extraPricePerMile = Number(transfer.extra_price_per_mile) || 0;
 
+        // NOTE: distanceMiles below is the straight-line distance from zone center -> dropoff, used to decide if dropoff is outside circle
         let totalPrice = calculateZonePrice({
-          distanceMiles: distance ?? 0,
+          distanceMiles: straightLineDistanceFromCenterToDropoff,
           pickupInsideSelectedZone: pickupInsideSelected,
           dropoffInsideSelectedZone: dropoffInsideSelected,
           zoneRadiusMiles,
@@ -495,7 +510,7 @@ export const fetchFromDatabase = async (
           extraPricePerMile,
         });
 
-        console.log(`[Pricing] After zone pricing: ${totalPrice}`);
+        console.log(`[Pricing] After zone pricing: ${totalPrice} (zone radius: ${zoneRadiusMiles}, straightDistance: ${straightLineDistanceFromCenterToDropoff})`);
 
         // Add fixed fees
         const fees = {
@@ -544,7 +559,7 @@ export const fetchFromDatabase = async (
           console.log(`[Pricing] Calculating return trip pricing`);
           // Use same logic for return; you can refine this later
           returnPrice = calculateZonePrice({
-            distanceMiles: distance ?? 0,
+            distanceMiles: straightLineDistanceFromCenterToDropoff,
             pickupInsideSelectedZone: pickupInsideSelected,
             dropoffInsideSelectedZone: dropoffInsideSelected,
             zoneRadiusMiles,
@@ -596,7 +611,7 @@ export const fetchFromDatabase = async (
         totalPrice += returnPrice;
         console.log(`[Pricing] Final price before currency conversion: ${totalPrice} ${transfer.Currency || "USD"}`);
 
-        // Currency convert
+        // Currency convert (roadDistance used only for display; pricing used straight-line)
         const convertedPrice = await convertCurrency(totalPrice, transfer.Currency || "USD", targetCurrency);
         console.log(`[Pricing] Final converted price: ${convertedPrice} ${targetCurrency}`);
 
@@ -633,7 +648,8 @@ export const fetchFromDatabase = async (
     );
 
     console.log(`[Database] Successfully processed ${vehiclesWithPricing.length} vehicles`);
-    return { vehicles: vehiclesWithPricing, distance: distance, estimatedTime: duration };
+    // return roadDistance for display, straight-line used internally for pricing decisions
+    return { vehicles: vehiclesWithPricing, distance: roadDistance, estimatedTime: duration };
   } catch (error) {
     console.error("[Database] Error fetching zones and vehicles:", error?.message || error);
     throw new Error("Failed to fetch zones and vehicle pricing.");
