@@ -397,7 +397,72 @@ function calculateZonePrice({
   return basePrice;
 }
 
-// -------------------- Main fetchFromDatabase (updated) --------------------
+// -------------------- Vehicle comparison helpers --------------------
+function areVehiclesSimilar(vehicle1: any, vehicle2: any): boolean {
+  // Compare key characteristics to determine if vehicles are essentially the same
+  const isSimilar = (
+    vehicle1.vehicalType === vehicle2.vehicalType &&
+    vehicle1.brand === vehicle2.brand &&
+    vehicle1.passengers === vehicle2.passengers &&
+    vehicle1.mediumBag === vehicle2.mediumBag &&
+    vehicle1.SmallBag === vehicle2.SmallBag &&
+    vehicle1.supplierId === vehicle2.supplierId
+  );
+  
+  console.log(`[Vehicle Comparison] Vehicles similar: ${isSimilar}`, {
+    vehicle1: `${vehicle1.vehicalType} - ${vehicle1.brand} - ${vehicle1.passengers}p - ${vehicle1.supplierId}`,
+    vehicle2: `${vehicle2.vehicalType} - ${vehicle2.brand} - ${vehicle2.passengers}p - ${vehicle2.supplierId}`
+  });
+  
+  return isSimilar;
+}
+
+function optimizeSupplierVehicles(vehicles: any[]): any[] {
+  console.log(`[Optimization] Optimizing ${vehicles.length} vehicles for same supplier`);
+  
+  const vehicleGroups = new Map();
+  
+  // Group vehicles by supplier and characteristics
+  vehicles.forEach(vehicle => {
+    const key = `${vehicle.supplierId}_${vehicle.vehicalType}_${vehicle.brand}_${vehicle.passengers}_${vehicle.mediumBag}_${vehicle.SmallBag}`;
+    
+    if (!vehicleGroups.has(key)) {
+      vehicleGroups.set(key, []);
+    }
+    vehicleGroups.get(key).push(vehicle);
+  });
+  
+  const optimizedVehicles: any[] = [];
+  
+  // For each group, keep the one with lowest price
+  vehicleGroups.forEach((groupVehicles, key) => {
+    if (groupVehicles.length === 1) {
+      // Unique vehicle, always keep it
+      console.log(`[Optimization] Keeping unique vehicle: ${groupVehicles[0].vehicalType} from supplier ${groupVehicles[0].supplierId}`);
+      optimizedVehicles.push(groupVehicles[0]);
+    } else {
+      // Multiple similar vehicles from same supplier, keep the cheapest one
+      const cheapestVehicle = groupVehicles.reduce((cheapest, current) => 
+        current.price < cheapest.price ? current : cheapest
+      );
+      
+      console.log(`[Optimization] Found ${groupVehicles.length} similar vehicles from supplier ${cheapestVehicle.supplierId}`);
+      console.log(`[Optimization] Keeping cheapest: ${cheapestVehicle.vehicalType} at price ${cheapestVehicle.price} (had ${groupVehicles.length} options)`);
+      
+      // Log all prices for transparency
+      groupVehicles.forEach((v: any, i: number) => {
+        console.log(`[Optimization] Option ${i + 1}: ${v.price} ${v.currency} from zone ${v.zoneName}`);
+      });
+      
+      optimizedVehicles.push(cheapestVehicle);
+    }
+  });
+  
+  console.log(`[Optimization] Reduced from ${vehicles.length} to ${optimizedVehicles.length} vehicles for supplier`);
+  return optimizedVehicles;
+}
+
+// -------------------- Main fetchFromDatabase with new logic --------------------
 export const fetchFromDatabase = async (
   pickupLocation: string,
   dropoffLocation: string,
@@ -407,9 +472,8 @@ export const fetchFromDatabase = async (
   returnDate?: string,
   returnTime?: string
 ): Promise<{ vehicles: any[]; distance: any; estimatedTime: string }> => {
-  console.log(`[Database] Starting database fetch`);
+  console.log(`[Database] Starting database fetch with new overlapping zone logic`);
   console.log(`[Database] Pickup: ${pickupLocation}, Dropoff: ${dropoffLocation}, Currency: ${targetCurrency}`);
-  console.log(`[Database] Date: ${date}, Time: ${time}, Return: ${returnDate} ${returnTime}`);
 
   const [fromLat, fromLng] = pickupLocation.split(",").map(Number);
   const [toLat, toLng] = dropoffLocation.split(",").map(Number);
@@ -421,26 +485,45 @@ export const fetchFromDatabase = async (
     const allZones = zonesResult.rows as any[];
     console.log(`[Database] Loaded ${allZones.length} zones from database`);
 
-    // 2) Determine selected zone using the new selection logic
-    const selectedZone = pickFinalZone(fromLng, fromLat, toLng, toLat, allZones);
+    // 2) Find ALL zones containing pickup location
+    const pickupZones = getZonesContainingPoint(fromLng, fromLat, allZones);
+    console.log(`[Database] Pickup location is inside ${pickupZones.length} zones:`, pickupZones.map(z => z.name));
 
-    if (!selectedZone) {
-      console.error("[Database] No zones found for the selected locations");
-      throw new Error("No zones found for the selected locations.");
+    if (pickupZones.length === 0) {
+      console.error("[Database] No zones found for the pickup location");
+      throw new Error("No zones found for the selected pickup location.");
     }
 
-    console.log(`[Database] Selected zone: ${selectedZone.name} (${selectedZone.id}) with radius: ${selectedZone.radius_km} km`);
-
-    // 3) Fetch vehicles only for the selected zone
-    console.log(`[Database] Fetching vehicles for zone: ${selectedZone.id}`);
-    const transfersResult = await db.execute(sql`
-      SELECT t.*, v.*, t.extra_price_per_mile
-      FROM "Vehicle_transfers" t
-      JOIN "all_Vehicles" v ON t.vehicle_id = v.id
-      WHERE t.zone_id = ${selectedZone.id}::uuid
-    `);
-    const transfers = transfersResult.rows as any[];
-    console.log(`[Database] Found ${transfers.length} vehicles in selected zone`);
+    // 3) Fetch vehicles from ALL pickup zones using your vehicle schema
+    let allTransfers: any[] = [];
+    
+    if (pickupZones.length > 0) {
+      const zoneIds = pickupZones.map(zone => zone.id);
+      console.log(`[Database] Fetching vehicles from ${zoneIds.length} zones:`, zoneIds);
+      
+      const transfersResult = await db.execute(sql`
+        SELECT 
+          t.*, 
+          v.*, 
+          t.extra_price_per_mile, 
+          z.name as zone_name, 
+          z.radius_km as zone_radius,
+          z.id as zone_id
+        FROM "Vehicle_transfers" t
+        JOIN "all_Vehicles" v ON t.vehicle_id = v.id
+        JOIN zones z ON t.zone_id = z.id
+        WHERE t.zone_id = ANY(${zoneIds}::uuid[])
+      `);
+      
+      allTransfers = transfersResult.rows as any[];
+      console.log(`[Database] Found ${allTransfers.length} vehicles across all pickup zones`);
+      
+      // Log vehicles by zone for debugging
+      pickupZones.forEach(zone => {
+        const zoneVehicles = allTransfers.filter(t => t.zone_id === zone.id);
+        console.log(`[Database] Zone ${zone.name}: ${zoneVehicles.length} vehicles`);
+      });
+    }
 
     // 4) Supporting static data
     console.log(`[Database] Loading supporting data (vehicle types, margins, surge charges)`);
@@ -468,28 +551,30 @@ export const fetchFromDatabase = async (
     console.log(`[Database] Calculating road distance`);
     let { distance, duration } = await getRoadDistance(fromLat, fromLng, toLat, toLng);
 
-    // 6) Determine whether pickup/dropoff are inside selectedZone
-    const pickupInsideSelected = getZonesContainingPoint(fromLng, fromLat, [selectedZone]).length > 0;
-    const dropoffInsideSelected = getZonesContainingPoint(toLng, toLat, [selectedZone]).length > 0;
-    console.log(`[Database] Location analysis - Pickup in zone: ${pickupInsideSelected}, Dropoff in zone: ${dropoffInsideSelected}`);
-
-    // 7) Price each transfer
-    console.log(`[Database] Calculating pricing for ${transfers.length} vehicles`);
-    const vehiclesWithPricing = await Promise.all(
-      transfers.map(async (transfer, index) => {
-        console.log(`[Pricing] Processing vehicle ${index + 1}: ${transfer.VehicleType} (${transfer.name})`);
+    // 6) Price each transfer with zone-specific calculations
+    console.log(`[Database] Calculating pricing for ${allTransfers.length} vehicles across ${pickupZones.length} zones`);
+    const allVehiclesWithPricing = await Promise.all(
+      allTransfers.map(async (transfer, index) => {
+        console.log(`[Pricing] Processing vehicle ${index + 1}: ${transfer.VehicleType} from zone ${transfer.zone_name}`);
         
         const basePrice = Number(transfer.price) || 0;
         console.log(`[Pricing] Base transfer price: ${basePrice} ${transfer.Currency || "USD"}`);
 
-        // Use calculateZonePrice rule
-        const zoneRadiusMiles = Number(selectedZone.radius_km) || 0; // treated as miles
+        // For each vehicle, determine if pickup/dropoff are inside its specific zone
+        const vehicleZone = pickupZones.find(z => z.id === transfer.zone_id);
+        const pickupInsideThisZone = vehicleZone ? getZonesContainingPoint(fromLng, fromLat, [vehicleZone]).length > 0 : false;
+        const dropoffInsideThisZone = vehicleZone ? getZonesContainingPoint(toLng, toLat, [vehicleZone]).length > 0 : false;
+
+        console.log(`[Pricing] Vehicle zone: ${transfer.zone_name}, Pickup in zone: ${pickupInsideThisZone}, Dropoff in zone: ${dropoffInsideThisZone}`);
+
+        // Use calculateZonePrice rule with this specific zone
+        const zoneRadiusMiles = Number(transfer.zone_radius) || 0;
         const extraPricePerMile = Number(transfer.extra_price_per_mile) || 0;
 
         let totalPrice = calculateZonePrice({
           distanceMiles: distance ?? 0,
-          pickupInsideSelectedZone: pickupInsideSelected,
-          dropoffInsideSelectedZone: dropoffInsideSelected,
+          pickupInsideSelectedZone: pickupInsideThisZone,
+          dropoffInsideSelectedZone: dropoffInsideThisZone,
           zoneRadiusMiles,
           basePrice,
           extraPricePerMile,
@@ -542,11 +627,10 @@ export const fetchFromDatabase = async (
         
         if (isReturnTrip) {
           console.log(`[Pricing] Calculating return trip pricing`);
-          // Use same logic for return; you can refine this later
           returnPrice = calculateZonePrice({
             distanceMiles: distance ?? 0,
-            pickupInsideSelectedZone: pickupInsideSelected,
-            dropoffInsideSelectedZone: dropoffInsideSelected,
+            pickupInsideSelectedZone: pickupInsideThisZone,
+            dropoffInsideSelectedZone: dropoffInsideThisZone,
             zoneRadiusMiles,
             basePrice,
             extraPricePerMile,
@@ -605,7 +689,7 @@ export const fetchFromDatabase = async (
           String(type.VehicleType || "").toLowerCase().trim() === String(transfer.VehicleType || "").toLowerCase().trim()
         ) || { vehicleImage: "default-image-url-or-path" };
 
-        console.log(`[Pricing] Completed pricing for vehicle ${index + 1}`);
+        console.log(`[Pricing] Completed pricing for vehicle ${index + 1} from zone ${transfer.zone_name}`);
         
         return {
           vehicleId: transfer.vehicle_id,
@@ -627,13 +711,61 @@ export const fetchFromDatabase = async (
           SmallBag: transfer.SmallBag,
           nightTimePrice: transfer.NightTime_Price,
           transferInfo: transfer.Transfer_info,
-          supplierId: transfer.SupplierId
+          supplierId: transfer.SupplierId,
+          zoneId: transfer.zone_id,
+          zoneName: transfer.zone_name,
+          originalPrice: basePrice, // Keep original for comparison
+          isFromOverlappingZone: pickupZones.length > 1,
+          // Additional fields from your vehicle schema
+          serviceType: transfer.ServiceType,
+          vehicleModel: transfer.VehicleModel,
+          doors: transfer.Doors,
+          seats: transfer.Seats,
+          cargo: transfer.Cargo,
+          extraSpace: transfer.ExtraSpace
         };
       })
     );
 
-    console.log(`[Database] Successfully processed ${vehiclesWithPricing.length} vehicles`);
-    return { vehicles: vehiclesWithPricing, distance: distance, estimatedTime: duration };
+    // 7) Optimize vehicles: For same supplier, keep cheapest of identical vehicles
+    console.log(`[Optimization] Starting vehicle optimization across ${allVehiclesWithPricing.length} vehicles`);
+    
+    // Group by supplier first
+    const vehiclesBySupplier = new Map<string, any[]>();
+    allVehiclesWithPricing.forEach(vehicle => {
+      if (!vehiclesBySupplier.has(vehicle.supplierId)) {
+        vehiclesBySupplier.set(vehicle.supplierId, []);
+      }
+      vehiclesBySupplier.get(vehicle.supplierId)!.push(vehicle);
+    });
+
+    const optimizedVehicles: any[] = [];
+    
+    vehiclesBySupplier.forEach((supplierVehicles, supplierId) => {
+      console.log(`[Optimization] Processing ${supplierVehicles.length} vehicles from supplier ${supplierId}`);
+      
+      if (supplierVehicles.length === 1) {
+        // Single vehicle from this supplier, always keep it
+        optimizedVehicles.push(supplierVehicles[0]);
+      } else {
+        // Multiple vehicles from same supplier, optimize
+        const optimizedSupplierVehicles = optimizeSupplierVehicles(supplierVehicles);
+        optimizedVehicles.push(...optimizedSupplierVehicles);
+      }
+    });
+
+    console.log(`[Optimization] Final result: ${optimizedVehicles.length} vehicles after optimization (was ${allVehiclesWithPricing.length})`);
+    
+    // Log optimization summary
+    const supplierCount = new Set(optimizedVehicles.map(v => v.supplierId)).size;
+    const zoneCount = new Set(optimizedVehicles.map(v => v.zoneId)).size;
+    console.log(`[Optimization] Summary: ${optimizedVehicles.length} vehicles from ${supplierCount} suppliers across ${zoneCount} zones`);
+
+    return { 
+      vehicles: optimizedVehicles, 
+      distance: distance, 
+      estimatedTime: duration
+    };
   } catch (error) {
     console.error("[Database] Error fetching zones and vehicles:", error?.message || error);
     throw new Error("Failed to fetch zones and vehicle pricing.");
