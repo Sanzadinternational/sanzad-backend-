@@ -462,7 +462,6 @@ function optimizeSupplierVehicles(vehicles: any[]): any[] {
   return optimizedVehicles;
 }
 
-// -------------------- Main fetchFromDatabase with new logic --------------------
 // -------------------- Main fetchFromDatabase with fixed SQL query --------------------
 export const fetchFromDatabase = async (
   pickupLocation: string,
@@ -495,16 +494,14 @@ export const fetchFromDatabase = async (
       throw new Error("No zones found for the selected pickup location.");
     }
 
-    // 3) Fetch vehicles from ALL pickup zones - FIXED SQL QUERY
+    // 3) Fetch vehicles from ALL pickup zones - USING SIMPLER APPROACH
     let allTransfers: any[] = [];
     
-    if (pickupZones.length > 0) {
-      const zoneIds = pickupZones.map(zone => zone.id);
-      console.log(`[Database] Fetching vehicles from ${zoneIds.length} zones:`, zoneIds);
+    // Use simpler approach: query each zone separately to avoid SQL parameter issues
+    for (const zone of pickupZones) {
+      console.log(`[Database] Fetching vehicles from zone: ${zone.name} (${zone.id})`);
       
-      // Fix 1: Use parameterized query with proper array formatting
-      const zoneIdsPlaceholder = zoneIds.map((_, index) => `$${index + 1}`).join(', ');
-      const query = sql`
+      const transfersResult = await db.execute(sql`
         SELECT 
           t.*, 
           v.*, 
@@ -515,20 +512,15 @@ export const fetchFromDatabase = async (
         FROM "Vehicle_transfers" t
         JOIN "all_Vehicles" v ON t.vehicle_id = v.id
         JOIN zones z ON t.zone_id = z.id
-        WHERE t.zone_id IN (${sql.raw(zoneIdsPlaceholder)})
-      `;
+        WHERE t.zone_id = ${zone.id}::uuid
+      `);
       
-      // Fix 2: Execute with parameters
-      const transfersResult = await db.execute(query, zoneIds);
-      allTransfers = transfersResult.rows as any[];
-      console.log(`[Database] Found ${allTransfers.length} vehicles across all pickup zones`);
-      
-      // Log vehicles by zone for debugging
-      pickupZones.forEach(zone => {
-        const zoneVehicles = allTransfers.filter(t => t.zone_id === zone.id);
-        console.log(`[Database] Zone ${zone.name}: ${zoneVehicles.length} vehicles`);
-      });
+      const zoneTransfers = transfersResult.rows as any[];
+      console.log(`[Database] Found ${zoneTransfers.length} vehicles in zone ${zone.name}`);
+      allTransfers = allTransfers.concat(zoneTransfers);
     }
+
+    console.log(`[Database] Total vehicles across all zones: ${allTransfers.length}`);
 
     // 4) Supporting static data
     console.log(`[Database] Loading supporting data (vehicle types, margins, surge charges)`);
@@ -732,50 +724,6 @@ export const fetchFromDatabase = async (
       })
     );
 
-    // 7) Optimize vehicles: For same supplier, keep cheapest of identical vehicles
-    console.log(`[Optimization] Starting vehicle optimization across ${allVehiclesWithPricing.length} vehicles`);
-    
-    // Group by supplier first
-    const vehiclesBySupplier = new Map<string, any[]>();
-    allVehiclesWithPricing.forEach(vehicle => {
-      if (!vehiclesBySupplier.has(vehicle.supplierId)) {
-        vehiclesBySupplier.set(vehicle.supplierId, []);
-      }
-      vehiclesBySupplier.get(vehicle.supplierId)!.push(vehicle);
-    });
-
-    const optimizedVehicles: any[] = [];
-    
-    vehiclesBySupplier.forEach((supplierVehicles, supplierId) => {
-      console.log(`[Optimization] Processing ${supplierVehicles.length} vehicles from supplier ${supplierId}`);
-      
-      if (supplierVehicles.length === 1) {
-        // Single vehicle from this supplier, always keep it
-        optimizedVehicles.push(supplierVehicles[0]);
-      } else {
-        // Multiple vehicles from same supplier, optimize
-        const optimizedSupplierVehicles = optimizeSupplierVehicles(supplierVehicles);
-        optimizedVehicles.push(...optimizedSupplierVehicles);
-      }
-    });
-
-    console.log(`[Optimization] Final result: ${optimizedVehicles.length} vehicles after optimization (was ${allVehiclesWithPricing.length})`);
-    
-    // Log optimization summary
-    const supplierCount = new Set(optimizedVehicles.map(v => v.supplierId)).size;
-    const zoneCount = new Set(optimizedVehicles.map(v => v.zoneId)).size;
-    console.log(`[Optimization] Summary: ${optimizedVehicles.length} vehicles from ${supplierCount} suppliers across ${zoneCount} zones`);
-
-    return { 
-      vehicles: optimizedVehicles, 
-      distance: distance, 
-      estimatedTime: duration
-    };
-  } catch (error) {
-    console.error("[Database] Error fetching zones and vehicles:", error?.message || error);
-    throw new Error("Failed to fetch zones and vehicle pricing.");
-  }
-};
     // 7) Optimize vehicles: For same supplier, keep cheapest of identical vehicles
     console.log(`[Optimization] Starting vehicle optimization across ${allVehiclesWithPricing.length} vehicles`);
     
