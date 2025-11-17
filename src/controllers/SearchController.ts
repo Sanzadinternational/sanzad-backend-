@@ -16,6 +16,168 @@ const GOOGLE_MAPS_API_KEY = "AIzaSyAjXkEFU-hA_DSnHYaEjU3_fceVwQra0LI";
 // currency cache
 const currencyCache: Record<string, Record<string, number>> = {};
 
+// -------------------- Coordinate Validation --------------------
+function isValidCoordinate(lat: number, lng: number): boolean {
+  return !isNaN(lat) && !isNaN(lng) && 
+         lat >= -90 && lat <= 90 && 
+         lng >= -180 && lng <= 180;
+}
+
+function parseCoordinate(coordString: string): { lat: number; lng: number } | null {
+  try {
+    const parts = coordString.split(",").map(part => parseFloat(part.trim()));
+    if (parts.length !== 2) {
+      console.error(`[Coordinate] Invalid coordinate format: ${coordString}`);
+      return null;
+    }
+    
+    const [first, second] = parts;
+    
+    // Determine which is lat and which is lng
+    let lat, lng;
+    if (Math.abs(first) <= 90 && Math.abs(second) <= 180) {
+      // Standard format: lat,lng
+      lat = first;
+      lng = second;
+    } else if (Math.abs(second) <= 90 && Math.abs(first) <= 180) {
+      // Possibly swapped: lng,lat
+      lat = second;
+      lng = first;
+      console.warn(`[Coordinate] Coordinates might be swapped, correcting: ${coordString} -> (${lat}, ${lng})`);
+    } else {
+      console.error(`[Coordinate] Invalid coordinate values: ${coordString}`);
+      return null;
+    }
+    
+    if (!isValidCoordinate(lat, lng)) {
+      console.error(`[Coordinate] Invalid coordinate range: (${lat}, ${lng})`);
+      return null;
+    }
+    
+    return { lat, lng };
+  } catch (error) {
+    console.error(`[Coordinate] Error parsing coordinate: ${coordString}`, error);
+    return null;
+  }
+}
+
+// -------------------- Enhanced Distance Helper with Debugging --------------------
+export async function getRoadDistance(fromLat: number, fromLng: number, toLat: number, toLng: number) {
+  console.log(`[Distance] Getting road distance from (${fromLat}, ${fromLng}) to (${toLat}, ${toLng})`);
+  
+  // Validate coordinates
+  if (!isValidCoordinate(fromLat, fromLng) || !isValidCoordinate(toLat, toLng)) {
+    console.error(`[Distance] Invalid coordinates: From(${fromLat}, ${fromLng}) To(${toLat}, ${toLng})`);
+    return { distance: null, duration: null, straightLineDistance: null };
+  }
+
+  try {
+    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${fromLat},${fromLng}&destinations=${toLat},${toLng}&units=imperial&key=${GOOGLE_MAPS_API_KEY}`;
+    console.log(`[Distance] API URL: ${url.replace(GOOGLE_MAPS_API_KEY, 'HIDDEN')}`);
+    
+    const response = await axios.get(url);
+    
+    // Debug API status
+    console.log(`[Distance] API Status: ${response.data.status}`);
+    
+    const element = response.data.rows[0]?.elements[0];
+    
+    if (!element) {
+      console.error("[Distance] No route elements found in response");
+      console.log(`[Distance] Full response:`, JSON.stringify(response.data, null, 2));
+      return { distance: null, duration: null, straightLineDistance: null };
+    }
+
+    console.log(`[Distance] Element Status: ${element.status}`);
+    
+    if (element.status !== "OK") {
+      console.error(`[Distance] Route error: ${element.status}`, element);
+      return { distance: null, duration: null, straightLineDistance: null };
+    }
+
+    const distanceText = element.distance?.text;
+    const durationText = element.duration?.text;
+    const distanceMeters = element.distance?.value; // Distance in meters
+    
+    if (!distanceText || !durationText) {
+      console.error("[Distance] Distance or duration not found in response");
+      return { distance: null, duration: null, straightLineDistance: null };
+    }
+    
+    const distance = parseFloat(distanceText.replace(" mi", "").replace(",", ""));
+    console.log(`[Distance] Road distance: ${distance} miles (${distanceMeters} meters), Duration: ${durationText}`);
+    
+    // Calculate straight-line distance for comparison
+    const straightLineDistance = turf.distance(
+      turf.point([fromLng, fromLat]),
+      turf.point([toLng, toLat]),
+      { units: 'miles' }
+    );
+    
+    const straightLineMeters = straightLineDistance * 1609.34;
+    
+    console.log(`[Distance] Straight-line distance: ${straightLineDistance.toFixed(2)} miles (${straightLineMeters.toFixed(0)} meters)`);
+    console.log(`[Distance] Road vs Straight-line ratio: ${(distance / straightLineDistance).toFixed(2)}x`);
+    
+    // Warn if ratio is too high (possible issue)
+    const ratio = distance / straightLineDistance;
+    if (ratio > 2) {
+      console.warn(`[Distance] ⚠️ High distance ratio: ${ratio.toFixed(2)}x - Road distance much longer than straight-line`);
+    }
+    
+    return {
+      distance,
+      duration: durationText,
+      straightLineDistance: straightLineDistance,
+      distanceMeters,
+      straightLineMeters
+    };
+  } catch (error) {
+    console.error("[Distance] Error fetching road distance:", error?.response?.data || error?.message || error);
+    return { distance: null, duration: null, straightLineDistance: null };
+  }
+}
+
+// -------------------- Alternative Directions API (More Accurate) --------------------
+async function getDistanceUsingDirections(fromLat: number, fromLng: number, toLat: number, toLng: number) {
+  try {
+    const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${fromLat},${fromLng}&destination=${toLat},${toLng}&units=imperial&key=${GOOGLE_MAPS_API_KEY}`;
+    console.log(`[Directions] API URL: ${url.replace(GOOGLE_MAPS_API_KEY, 'HIDDEN')}`);
+    
+    const response = await axios.get(url);
+    
+    if (response.data.status !== "OK") {
+      console.error(`[Directions] API Error: ${response.data.status}`, response.data.error_message);
+      return null;
+    }
+    
+    const route = response.data.routes[0];
+    
+    if (!route) {
+      console.error("[Directions] No route found");
+      return null;
+    }
+
+    const leg = route.legs[0];
+    const distance = leg.distance.value / 1609.34; // meters to miles
+    const duration = leg.duration.text;
+    
+    console.log(`[Directions] Distance: ${distance.toFixed(2)} miles, Duration: ${duration}`);
+    console.log(`[Directions] Route summary: ${route.summary}`);
+    console.log(`[Directions] Number of steps: ${leg.steps.length}`);
+    
+    return { 
+      distance, 
+      duration,
+      summary: route.summary,
+      steps: leg.steps.length
+    };
+  } catch (error) {
+    console.error("[Directions] Error:", error?.response?.data || error);
+    return null;
+  }
+}
+
 // -------------------- Currency helpers --------------------
 export const getExchangeRate = async (from: string, to: string): Promise<number> => {
   console.log(`[Currency] Getting exchange rate from ${from} to ${to}`);
@@ -134,35 +296,6 @@ function getZonesContainingPoint(lng: number, lat: number, allZones: any[]) {
   
   console.log(`[Geometry] Found ${matches.length} isochrone zones containing the point`);
   return matches;
-}
-
-// -------------------- Distance helpers --------------------
-export async function getRoadDistance(fromLat: number, fromLng: number, toLat: number, toLng: number) {
-  console.log(`[Distance] Getting road distance from (${fromLat}, ${fromLng}) to (${toLat}, ${toLng})`);
-  
-  try {
-    const response = await axios.get(
-      `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${fromLat},${fromLng}&destinations=${toLat},${toLng}&units=imperial&key=${GOOGLE_MAPS_API_KEY}`
-    );
-    const distanceText = response.data.rows[0]?.elements[0]?.distance?.text;
-    const durationText = response.data.rows[0]?.elements[0]?.duration?.text;
-    
-    if (!distanceText || !durationText) {
-      console.error("[Distance] Distance or duration not found in response");
-      throw new Error("Distance or duration not found");
-    }
-    
-    const distance = parseFloat(distanceText.replace(" mi", ""));
-    console.log(`[Distance] Road distance: ${distance} miles, Duration: ${durationText}`);
-    
-    return {
-      distance,
-      duration: durationText
-    };
-  } catch (error) {
-    console.error("[Distance] Error fetching road distance:", error?.response?.data || error?.message || error);
-    return { distance: null, duration: null };
-  }
 }
 
 // -------------------- ROAD DISTANCE-BASED Pricing Helper --------------------
@@ -335,7 +468,7 @@ function optimizeSupplierVehicles(vehicles: any[]): any[] {
   return optimizedVehicles;
 }
 
-// -------------------- Main fetchFromDatabase with ROAD DISTANCE-BASED Pricing --------------------
+// -------------------- Main fetchFromDatabase with Enhanced Distance Handling --------------------
 export const fetchFromDatabase = async (
   pickupLocation: string,
   dropoffLocation: string,
@@ -344,12 +477,24 @@ export const fetchFromDatabase = async (
   date: string,
   returnDate?: string,
   returnTime?: string
-): Promise<{ vehicles: any[]; distance: any; estimatedTime: string }> => {
+): Promise<{ vehicles: any[]; distance: any; estimatedTime: string; straightLineDistance?: number }> => {
   console.log(`[Database] Starting database fetch with ROAD DISTANCE-BASED pricing`);
   console.log(`[Database] Pickup: ${pickupLocation}, Dropoff: ${dropoffLocation}, Currency: ${targetCurrency}`);
 
-  const [fromLat, fromLng] = pickupLocation.split(",").map(Number);
-  const [toLat, toLng] = dropoffLocation.split(",").map(Number);
+  // Parse coordinates with validation
+  console.log(`[Database] Parsing coordinates...`);
+  const fromCoords = parseCoordinate(pickupLocation);
+  const toCoords = parseCoordinate(dropoffLocation);
+  
+  if (!fromCoords || !toCoords) {
+    console.error("[Database] Invalid coordinates provided");
+    throw new Error("Invalid pickup or dropoff coordinates");
+  }
+
+  const { lat: fromLat, lng: fromLng } = fromCoords;
+  const { lat: toLat, lng: toLng } = toCoords;
+
+  console.log(`[Database] Parsed coordinates - From: (${fromLat}, ${fromLng}) To: (${toLat}, ${toLng})`);
 
   try {
     // 1) Load all isochrone zones
@@ -417,9 +562,27 @@ export const fetchFromDatabase = async (
     const surgeCharges = surgeChargesResult.rows as any[];
     console.log(`[Database] Loaded ${vehicleTypes.length} vehicle types, ${margins.length} margins, ${surgeCharges.length} surge charges`);
 
-    // 5) Compute road distance (miles)
+    // 5) Compute road distance (miles) with enhanced debugging
     console.log(`[Database] Calculating road distance`);
-    let { distance, duration } = await getRoadDistance(fromLat, fromLng, toLat, toLng);
+    let distanceResult = await getRoadDistance(fromLat, fromLng, toLat, toLng);
+    
+    // If distance is null, try alternative method
+    if (distanceResult.distance === null) {
+      console.warn(`[Database] Primary distance method failed, trying Directions API...`);
+      const directionsResult = await getDistanceUsingDirections(fromLat, fromLng, toLat, toLng);
+      if (directionsResult) {
+        distanceResult.distance = directionsResult.distance;
+        distanceResult.duration = directionsResult.duration;
+        console.log(`[Database] Using Directions API result: ${directionsResult.distance} miles`);
+      }
+    }
+    
+    if (distanceResult.distance === null) {
+      console.error("[Database] All distance methods failed");
+      throw new Error("Could not calculate road distance");
+    }
+
+    const { distance, duration, straightLineDistance } = distanceResult;
 
     // 6) Price each transfer with ROAD DISTANCE-BASED pricing
     console.log(`[Database] Calculating pricing for ${allTransfers.length} vehicles using ROAD DISTANCE-BASED pricing`);
@@ -623,12 +786,48 @@ export const fetchFromDatabase = async (
     return { 
       vehicles: optimizedVehicles, 
       distance: distance, 
-      estimatedTime: duration
+      estimatedTime: duration,
+      straightLineDistance: straightLineDistance
     };
   } catch (error) {
     console.error("[Database] Error fetching isochrone zones and vehicles:", error?.message || error);
     throw new Error("Failed to fetch isochrone zones and vehicle pricing.");
   }
+};
+
+// -------------------- Debug Endpoint for Distance Testing --------------------
+export const DebugDistance = async (req: Request, res: Response) => {
+  const { pickup, dropoff } = req.body;
+  
+  console.log(`[Debug] Testing distance calculation`);
+  console.log(`[Debug] Pickup: ${pickup}, Dropoff: ${dropoff}`);
+  
+  const fromCoords = parseCoordinate(pickup);
+  const toCoords = parseCoordinate(dropoff);
+  
+  if (!fromCoords || !toCoords) {
+    return res.status(400).json({ error: "Invalid coordinates" });
+  }
+
+  const { lat: fromLat, lng: fromLng } = fromCoords;
+  const { lat: toLat, lng: toLng } = toCoords;
+
+  // Test both APIs
+  const distanceMatrixResult = await getRoadDistance(fromLat, fromLng, toLat, toLng);
+  const directionsResult = await getDistanceUsingDirections(fromLat, fromLng, toLat, toLng);
+
+  res.json({
+    coordinates: { 
+      from: { lat: fromLat, lng: fromLng }, 
+      to: { lat: toLat, lng: toLng } 
+    },
+    distanceMatrix: distanceMatrixResult,
+    directions: directionsResult,
+    comparison: {
+      difference: directionsResult ? Math.abs(distanceMatrixResult.distance - directionsResult.distance) : null,
+      differencePercentage: directionsResult ? (Math.abs(distanceMatrixResult.distance - directionsResult.distance) / distanceMatrixResult.distance * 100) : null
+    }
+  });
 };
 
 // -------------------- Search controller --------------------
@@ -668,7 +867,8 @@ export const Search = async (req: Request, res: Response, next: NextFunction) =>
       success: true, 
       data: mergedData, 
       distance: DatabaseData.distance, 
-      estimatedTime: DatabaseData.estimatedTime 
+      estimatedTime: DatabaseData.estimatedTime,
+      straightLineDistance: DatabaseData.straightLineDistance
     });
   } catch (error: any) {
     console.error("[Search] Error fetching and merging data:", error?.message || error);
