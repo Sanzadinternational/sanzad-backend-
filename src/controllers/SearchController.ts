@@ -74,55 +74,85 @@ export async function convertCurrency(amount: number, from: string, to: string):
   }
 }
 
-// -------------------- Geometry helpers --------------------
-function getPolygon(geojson: any) {
-  console.log(`[Geometry] Creating polygon from GeoJSON`);
+// -------------------- Geometry helpers for Isochrone --------------------
+function getPolygonFromIsochrone(geojson: any) {
+  console.log(`[Geometry] Creating polygon from isochrone GeoJSON`);
   
   if (!geojson) {
-    console.error("[Geometry] Invalid geojson: null or undefined");
-    throw new Error("Invalid geojson");
+    console.error("[Geometry] Invalid isochrone geojson: null or undefined");
+    throw new Error("Invalid isochrone geojson");
   }
   
-  const geometry = typeof geojson === "string" ? JSON.parse(geojson).geometry : geojson.geometry;
+  // Parse if string, otherwise use directly
+  const geojsonData = typeof geojson === "string" ? JSON.parse(geojson) : geojson;
+  
+  // Isochrone data can have different structures
+  let geometry;
+  if (geojsonData.type === "FeatureCollection") {
+    // Take the first feature from feature collection
+    if (!geojsonData.features || geojsonData.features.length === 0) {
+      throw new Error("No features in isochrone FeatureCollection");
+    }
+    geometry = geojsonData.features[0].geometry;
+  } else if (geojsonData.type === "Feature") {
+    geometry = geojsonData.geometry;
+  } else {
+    geometry = geojsonData;
+  }
+  
   if (!geometry) {
-    console.error("[Geometry] Invalid geojson geometry");
-    throw new Error("Invalid geojson geometry");
+    console.error("[Geometry] Invalid isochrone geometry");
+    throw new Error("Invalid isochrone geometry");
   }
   
-  const coords = geometry.type === "MultiPolygon" ? geometry.coordinates[0] : geometry.coordinates;
-  const polygon = turf.polygon(coords);
+  console.log(`[Geometry] Isochrone geometry type: ${geometry.type}`);
   
-  console.log(`[Geometry] Polygon created with ${coords.length} coordinates`);
+  // Handle different isochrone geometry types
+  let coordinates;
+  if (geometry.type === "Polygon") {
+    coordinates = geometry.coordinates;
+  } else if (geometry.type === "MultiPolygon") {
+    // Use the first polygon from multipolygon
+    coordinates = geometry.coordinates[0];
+  } else if (geometry.type === "LineString") {
+    // Convert linestring to polygon by closing the ring
+    coordinates = [geometry.coordinates.concat([geometry.coordinates[0]])];
+  } else {
+    throw new Error(`Unsupported isochrone geometry type: ${geometry.type}`);
+  }
+  
+  const polygon = turf.polygon(coordinates);
+  console.log(`[Geometry] Isochrone polygon created with ${coordinates[0].length} coordinates`);
   return polygon;
 }
 
 function getZonesContainingPoint(lng: number, lat: number, allZones: any[]) {
-  console.log(`[Geometry] Finding zones containing point (${lng}, ${lat})`);
+  console.log(`[Geometry] Finding isochrone zones containing point (${lng}, ${lat})`);
   
   const point = turf.point([lng, lat]);
   const matches: any[] = [];
   
   for (const zone of allZones) {
     try {
-      const poly = getPolygon(zone.geojson);
+      const poly = getPolygonFromIsochrone(zone.geojson);
       if (turf.booleanPointInPolygon(point, poly)) {
-        console.log(`[Geometry] Point found in zone: ${zone.name} (${zone.id})`);
+        console.log(`[Geometry] Point found in isochrone zone: ${zone.name} (${zone.id})`);
         matches.push(zone);
       }
     } catch (err) {
-      console.warn(`[Geometry] Skipping zone due to malformed geojson: ${zone?.id}`, err?.message || err);
+      console.warn(`[Geometry] Skipping isochrone zone due to malformed geojson: ${zone?.id}`, err?.message || err);
     }
   }
   
-  console.log(`[Geometry] Found ${matches.length} zones containing the point`);
+  console.log(`[Geometry] Found ${matches.length} isochrone zones containing the point`);
   return matches;
 }
 
 function getClosestZoneToPoint(lng: number, lat: number, zones: any[]) {
-  console.log(`[Geometry] Finding closest zone to point (${lng}, ${lat}) from ${zones.length} zones`);
+  console.log(`[Geometry] Finding closest isochrone zone to point (${lng}, ${lat}) from ${zones.length} zones`);
   
   if (!zones || zones.length === 0) {
-    console.log("[Geometry] No zones provided, returning null");
+    console.log("[Geometry] No isochrone zones provided, returning null");
     return null;
   }
   
@@ -132,77 +162,77 @@ function getClosestZoneToPoint(lng: number, lat: number, zones: any[]) {
   
   for (const zone of zones) {
     try {
-      const poly = getPolygon(zone.geojson);
+      const poly = getPolygonFromIsochrone(zone.geojson);
       const center = turf.centroid(poly).geometry.coordinates;
       const dist = turf.distance(point, turf.point(center), { units: "miles" });
       
-      console.log(`[Geometry] Zone ${zone.name} distance: ${dist.toFixed(2)} miles`);
+      console.log(`[Geometry] Isochrone zone ${zone.name} center distance: ${dist.toFixed(2)} miles`);
       
       if (dist < bestDist) {
         bestDist = dist;
         best = zone;
-        console.log(`[Geometry] New closest zone: ${zone.name} (${dist.toFixed(2)} miles)`);
+        console.log(`[Geometry] New closest isochrone zone: ${zone.name} (${dist.toFixed(2)} miles)`);
       }
     } catch (err) {
-      console.warn(`[Geometry] Error computing centroid/distance for zone ${zone?.id}`, err?.message || err);
+      console.warn(`[Geometry] Error computing centroid/distance for isochrone zone ${zone?.id}`, err?.message || err);
     }
   }
   
-  console.log(`[Geometry] Selected closest zone: ${best?.name} (distance: ${bestDist.toFixed(2)} miles)`);
+  console.log(`[Geometry] Selected closest isochrone zone: ${best?.name} (distance: ${bestDist.toFixed(2)} miles)`);
   return best;
 }
 
 function pickFinalZone(fromLng: number, fromLat: number, toLng: number, toLat: number, allZones: any[]) {
-  console.log(`[Zone Selection] Starting zone selection process`);
+  console.log(`[Zone Selection] Starting isochrone zone selection process`);
   console.log(`[Zone Selection] Pickup: (${fromLng}, ${fromLat}), Dropoff: (${toLng}, ${toLat})`);
   
   const pickupZones = getZonesContainingPoint(fromLng, fromLat, allZones);
   const dropoffZones = getZonesContainingPoint(toLng, toLat, allZones);
   
-  console.log(`[Zone Selection] Pickup zones: ${pickupZones.length}, Dropoff zones: ${dropoffZones.length}`);
+  console.log(`[Zone Selection] Pickup isochrone zones: ${pickupZones.length}, Dropoff isochrone zones: ${dropoffZones.length}`);
 
   // common zones
   const common = pickupZones.filter(p => dropoffZones.some(d => d.id === p.id));
-  console.log(`[Zone Selection] Common zones: ${common.length}`);
+  console.log(`[Zone Selection] Common isochrone zones: ${common.length}`);
   
   if (common.length > 0) {
     // if multiple common zones, choose one closest to dropoff
     if (common.length === 1) {
-      console.log(`[Zone Selection] Single common zone selected: ${common[0].name}`);
+      console.log(`[Zone Selection] Single common isochrone zone selected: ${common[0].name}`);
       return common[0];
     }
     const closestCommon = getClosestZoneToPoint(toLng, toLat, common);
-    console.log(`[Zone Selection] Multiple common zones, selected closest to dropoff: ${closestCommon.name}`);
+    console.log(`[Zone Selection] Multiple common isochrone zones, selected closest to dropoff: ${closestCommon.name}`);
     return closestCommon;
   }
 
   // pickup multiple
   if (pickupZones.length > 1) {
     const closestPickup = getClosestZoneToPoint(fromLng, fromLat, pickupZones);
-    console.log(`[Zone Selection] Multiple pickup zones, selected closest to pickup: ${closestPickup.name}`);
+    console.log(`[Zone Selection] Multiple pickup isochrone zones, selected closest to pickup: ${closestPickup.name}`);
     return closestPickup;
   }
 
   // dropoff multiple
   if (dropoffZones.length > 1) {
     const closestDropoff = getClosestZoneToPoint(toLng, toLat, dropoffZones);
-    console.log(`[Zone Selection] Multiple dropoff zones, selected closest to dropoff: ${closestDropoff.name}`);
+    console.log(`[Zone Selection] Multiple dropoff isochrone zones, selected closest to dropoff: ${closestDropoff.name}`);
     return closestDropoff;
   }
 
   // single pickup zone
   if (pickupZones.length === 1) {
-    console.log(`[Zone Selection] Single pickup zone selected: ${pickupZones[0].name}`);
+    console.log(`[Zone Selection] Single pickup isochrone zone selected: ${pickupZones[0].name}`);
     return pickupZones[0];
   }
 
   // single dropoff zone (pickup none)
   if (dropoffZones.length === 1) {
-    console.log(`[Zone Selection] Single dropoff zone selected: ${dropoffZones[0].name}`);
+    console.log(`[Zone Selection] Single dropoff isochrone zone selected: ${dropoffZones[0].name}`);
     return dropoffZones[0];
   }
 
-  console.log("[Zone Selection] No zones found for the locations");
+  console.log("[Zone Selection] No isochrone zones found for the locations");
   return null;
 }
 
@@ -235,7 +265,7 @@ export async function getRoadDistance(fromLat: number, fromLng: number, toLat: n
   }
 }
 
-// -------------------- Zone boundary helpers --------------------
+// -------------------- Zone boundary helpers for Isochrone --------------------
 export async function getDistanceFromZoneBoundary(
   fromLng: number,
   fromLat: number,
@@ -243,30 +273,25 @@ export async function getDistanceFromZoneBoundary(
   toLat: number,
   fromZone: any
 ) {
-  console.log(`[Zone Boundary] Calculating distance from zone boundary`);
+  console.log(`[Zone Boundary] Calculating distance from isochrone zone boundary`);
   
   try {
     if (!fromZone || !fromZone.geojson) {
-      console.warn("[Zone Boundary] No valid 'From' zone found.");
+      console.warn("[Zone Boundary] No valid 'From' isochrone zone found.");
       return 0;
     }
     
-    const geometry = typeof fromZone.geojson === "string" ? JSON.parse(fromZone.geojson).geometry : fromZone.geojson.geometry;
-    if (!geometry || (geometry.type !== "Polygon" && geometry.type !== "MultiPolygon")) {
-      console.warn("[Zone Boundary] Invalid zone geometry type. Expected Polygon or MultiPolygon.");
-      return 0;
-    }
-    
-    const polygonCoordinates = geometry.type === "MultiPolygon" ? geometry.coordinates[0] : geometry.coordinates;
-    const lineString = turf.lineString(polygonCoordinates[0] ? polygonCoordinates[0] : polygonCoordinates);
+    const poly = getPolygonFromIsochrone(fromZone.geojson);
     const toPoint = turf.point([toLng, toLat]);
-    const nearestPoint = turf.nearestPointOnLine(lineString, toPoint);
+    
+    // For isochrone zones, we need to find the nearest point on the polygon boundary
+    const nearestPoint = turf.nearestPointOnLine(turf.polygonToLineString(poly), toPoint);
     const extraDistance = turf.distance(toPoint, nearestPoint, { units: "miles" });
     
-    console.log(`[Zone Boundary] Extra distance from zone boundary: ${extraDistance.toFixed(2)} miles`);
+    console.log(`[Zone Boundary] Extra distance from isochrone zone boundary: ${extraDistance.toFixed(2)} miles`);
     return extraDistance;
   } catch (error) {
-    console.error("[Zone Boundary] Error computing distance from zone boundary:", error);
+    console.error("[Zone Boundary] Error computing distance from isochrone zone boundary:", error);
     return 0;
   }
 }
@@ -367,21 +392,21 @@ function calculateZonePrice({
 }) {
   console.log(`[Pricing] Calculating zone price`);
   console.log(`[Pricing] Base price: ${basePrice}, Distance: ${distanceMiles} miles, Zone radius: ${zoneRadiusMiles} miles`);
-  console.log(`[Pricing] Pickup inside zone: ${pickupInsideSelectedZone}, Dropoff inside zone: ${dropoffInsideSelectedZone}`);
+  console.log(`[Pricing] Pickup inside isochrone zone: ${pickupInsideSelectedZone}, Dropoff inside isochrone zone: ${dropoffInsideSelectedZone}`);
 
-  // If pickup is not inside the selected zone, do not charge extra miles
+  // If pickup is not inside the selected isochrone zone, do not charge extra miles
   if (!pickupInsideSelectedZone) {
-    console.log(`[Pricing] Pickup not in selected zone, returning base price: ${basePrice}`);
+    console.log(`[Pricing] Pickup not in selected isochrone zone, returning base price: ${basePrice}`);
     return basePrice;
   }
 
-  // If both inside same zone -> base price
+  // If both inside same isochrone zone -> base price
   if (dropoffInsideSelectedZone) {
-    console.log(`[Pricing] Both pickup and dropoff in same zone, returning base price: ${basePrice}`);
+    console.log(`[Pricing] Both pickup and dropoff in same isochrone zone, returning base price: ${basePrice}`);
     return basePrice;
   }
 
-  // Leaving the zone -> charge extra miles beyond radius
+  // Leaving the isochrone zone -> charge extra miles beyond radius
   const extraMiles = (distanceMiles ?? 0) - (zoneRadiusMiles ?? 0);
   console.log(`[Pricing] Extra miles calculation: ${distanceMiles} - ${zoneRadiusMiles} = ${extraMiles} miles`);
 
@@ -462,7 +487,7 @@ function optimizeSupplierVehicles(vehicles: any[]): any[] {
   return optimizedVehicles;
 }
 
-// -------------------- Main fetchFromDatabase with fixed SQL query --------------------
+// -------------------- Main fetchFromDatabase with isochrone support --------------------
 export const fetchFromDatabase = async (
   pickupLocation: string,
   dropoffLocation: string,
@@ -472,34 +497,34 @@ export const fetchFromDatabase = async (
   returnDate?: string,
   returnTime?: string
 ): Promise<{ vehicles: any[]; distance: any; estimatedTime: string }> => {
-  console.log(`[Database] Starting database fetch with new overlapping zone logic`);
+  console.log(`[Database] Starting database fetch with isochrone zone logic`);
   console.log(`[Database] Pickup: ${pickupLocation}, Dropoff: ${dropoffLocation}, Currency: ${targetCurrency}`);
 
   const [fromLat, fromLng] = pickupLocation.split(",").map(Number);
   const [toLat, toLng] = dropoffLocation.split(",").map(Number);
 
   try {
-    // 1) Load all zones
-    console.log(`[Database] Loading all zones from database`);
+    // 1) Load all isochrone zones
+    console.log(`[Database] Loading all isochrone zones from database`);
     const zonesResult = await db.execute(sql`SELECT id, name, radius_km, geojson FROM zones`);
     const allZones = zonesResult.rows as any[];
-    console.log(`[Database] Loaded ${allZones.length} zones from database`);
+    console.log(`[Database] Loaded ${allZones.length} isochrone zones from database`);
 
-    // 2) Find ALL zones containing pickup location
+    // 2) Find ALL isochrone zones containing pickup location
     const pickupZones = getZonesContainingPoint(fromLng, fromLat, allZones);
-    console.log(`[Database] Pickup location is inside ${pickupZones.length} zones:`, pickupZones.map(z => z.name));
+    console.log(`[Database] Pickup location is inside ${pickupZones.length} isochrone zones:`, pickupZones.map(z => z.name));
 
     if (pickupZones.length === 0) {
-      console.error("[Database] No zones found for the pickup location");
-      throw new Error("No zones found for the selected pickup location.");
+      console.error("[Database] No isochrone zones found for the pickup location");
+      throw new Error("No isochrone zones found for the selected pickup location.");
     }
 
-    // 3) Fetch vehicles from ALL pickup zones - USING SIMPLER APPROACH
+    // 3) Fetch vehicles from ALL pickup isochrone zones
     let allTransfers: any[] = [];
     
-    // Use simpler approach: query each zone separately to avoid SQL parameter issues
+    // Query each isochrone zone separately to avoid SQL parameter issues
     for (const zone of pickupZones) {
-      console.log(`[Database] Fetching vehicles from zone: ${zone.name} (${zone.id})`);
+      console.log(`[Database] Fetching vehicles from isochrone zone: ${zone.name} (${zone.id})`);
       
       const transfersResult = await db.execute(sql`
         SELECT 
@@ -516,11 +541,11 @@ export const fetchFromDatabase = async (
       `);
       
       const zoneTransfers = transfersResult.rows as any[];
-      console.log(`[Database] Found ${zoneTransfers.length} vehicles in zone ${zone.name}`);
+      console.log(`[Database] Found ${zoneTransfers.length} vehicles in isochrone zone ${zone.name}`);
       allTransfers = allTransfers.concat(zoneTransfers);
     }
 
-    console.log(`[Database] Total vehicles across all zones: ${allTransfers.length}`);
+    console.log(`[Database] Total vehicles across all isochrone zones: ${allTransfers.length}`);
 
     // 4) Supporting static data
     console.log(`[Database] Loading supporting data (vehicle types, margins, surge charges)`);
@@ -548,23 +573,23 @@ export const fetchFromDatabase = async (
     console.log(`[Database] Calculating road distance`);
     let { distance, duration } = await getRoadDistance(fromLat, fromLng, toLat, toLng);
 
-    // 6) Price each transfer with zone-specific calculations
-    console.log(`[Database] Calculating pricing for ${allTransfers.length} vehicles across ${pickupZones.length} zones`);
+    // 6) Price each transfer with isochrone-zone-specific calculations
+    console.log(`[Database] Calculating pricing for ${allTransfers.length} vehicles across ${pickupZones.length} isochrone zones`);
     const allVehiclesWithPricing = await Promise.all(
       allTransfers.map(async (transfer, index) => {
-        console.log(`[Pricing] Processing vehicle ${index + 1}: ${transfer.VehicleType} from zone ${transfer.zone_name}`);
+        console.log(`[Pricing] Processing vehicle ${index + 1}: ${transfer.VehicleType} from isochrone zone ${transfer.zone_name}`);
         
         const basePrice = Number(transfer.price) || 0;
         console.log(`[Pricing] Base transfer price: ${basePrice} ${transfer.Currency || "USD"}`);
 
-        // For each vehicle, determine if pickup/dropoff are inside its specific zone
+        // For each vehicle, determine if pickup/dropoff are inside its specific isochrone zone
         const vehicleZone = pickupZones.find(z => z.id === transfer.zone_id);
         const pickupInsideThisZone = vehicleZone ? getZonesContainingPoint(fromLng, fromLat, [vehicleZone]).length > 0 : false;
         const dropoffInsideThisZone = vehicleZone ? getZonesContainingPoint(toLng, toLat, [vehicleZone]).length > 0 : false;
 
-        console.log(`[Pricing] Vehicle zone: ${transfer.zone_name}, Pickup in zone: ${pickupInsideThisZone}, Dropoff in zone: ${dropoffInsideThisZone}`);
+        console.log(`[Pricing] Vehicle isochrone zone: ${transfer.zone_name}, Pickup in zone: ${pickupInsideThisZone}, Dropoff in zone: ${dropoffInsideThisZone}`);
 
-        // Use calculateZonePrice rule with this specific zone
+        // Use calculateZonePrice rule with this specific isochrone zone
         const zoneRadiusMiles = Number(transfer.zone_radius) || 0;
         const extraPricePerMile = Number(transfer.extra_price_per_mile) || 0;
 
@@ -577,7 +602,7 @@ export const fetchFromDatabase = async (
           extraPricePerMile,
         });
 
-        console.log(`[Pricing] After zone pricing: ${totalPrice}`);
+        console.log(`[Pricing] After isochrone zone pricing: ${totalPrice}`);
 
         // Add fixed fees
         const fees = {
@@ -686,7 +711,7 @@ export const fetchFromDatabase = async (
           String(type.VehicleType || "").toLowerCase().trim() === String(transfer.VehicleType || "").toLowerCase().trim()
         ) || { vehicleImage: "default-image-url-or-path" };
 
-        console.log(`[Pricing] Completed pricing for vehicle ${index + 1} from zone ${transfer.zone_name}`);
+        console.log(`[Pricing] Completed pricing for vehicle ${index + 1} from isochrone zone ${transfer.zone_name}`);
         
         return {
           vehicleId: transfer.vehicle_id,
@@ -756,7 +781,7 @@ export const fetchFromDatabase = async (
     // Log optimization summary
     const supplierCount = new Set(optimizedVehicles.map(v => v.supplierId)).size;
     const zoneCount = new Set(optimizedVehicles.map(v => v.zoneId)).size;
-    console.log(`[Optimization] Summary: ${optimizedVehicles.length} vehicles from ${supplierCount} suppliers across ${zoneCount} zones`);
+    console.log(`[Optimization] Summary: ${optimizedVehicles.length} vehicles from ${supplierCount} suppliers across ${zoneCount} isochrone zones`);
 
     return { 
       vehicles: optimizedVehicles, 
@@ -764,8 +789,8 @@ export const fetchFromDatabase = async (
       estimatedTime: duration
     };
   } catch (error) {
-    console.error("[Database] Error fetching zones and vehicles:", error?.message || error);
-    throw new Error("Failed to fetch zones and vehicle pricing.");
+    console.error("[Database] Error fetching isochrone zones and vehicles:", error?.message || error);
+    throw new Error("Failed to fetch isochrone zones and vehicle pricing.");
   }
 };
 
