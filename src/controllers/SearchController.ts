@@ -392,21 +392,21 @@ function calculateZonePrice({
 }) {
   console.log(`[Pricing] Calculating zone price`);
   console.log(`[Pricing] Base price: ${basePrice}, Distance: ${distanceMiles} miles, Zone radius: ${zoneRadiusMiles} miles`);
-  console.log(`[Pricing] Pickup inside isochrone zone: ${pickupInsideSelectedZone}, Dropoff inside isochrone zone: ${dropoffInsideSelectedZone}`);
+  console.log(`[Pricing] Pickup inside this specific zone: ${pickupInsideSelectedZone}, Dropoff inside this specific zone: ${dropoffInsideSelectedZone}`);
 
-  // If pickup is not inside the selected isochrone zone, do not charge extra miles
+  // If pickup is not inside this specific zone, do not charge extra miles
   if (!pickupInsideSelectedZone) {
-    console.log(`[Pricing] Pickup not in selected isochrone zone, returning base price: ${basePrice}`);
+    console.log(`[Pricing] Pickup not in this specific zone, returning base price: ${basePrice}`);
     return basePrice;
   }
 
-  // If both inside same isochrone zone -> base price
+  // If both inside this specific zone -> base price
   if (dropoffInsideSelectedZone) {
-    console.log(`[Pricing] Both pickup and dropoff in same isochrone zone, returning base price: ${basePrice}`);
+    console.log(`[Pricing] Both pickup and dropoff in this specific zone, returning base price: ${basePrice}`);
     return basePrice;
   }
 
-  // Leaving the isochrone zone -> charge extra miles beyond radius
+  // Leaving this specific zone -> charge extra miles beyond radius
   const extraMiles = (distanceMiles ?? 0) - (zoneRadiusMiles ?? 0);
   console.log(`[Pricing] Extra miles calculation: ${distanceMiles} - ${zoneRadiusMiles} = ${extraMiles} miles`);
 
@@ -487,7 +487,7 @@ function optimizeSupplierVehicles(vehicles: any[]): any[] {
   return optimizedVehicles;
 }
 
-// -------------------- Main fetchFromDatabase with isochrone support --------------------
+// -------------------- Main fetchFromDatabase with Option B logic --------------------
 export const fetchFromDatabase = async (
   pickupLocation: string,
   dropoffLocation: string,
@@ -497,7 +497,7 @@ export const fetchFromDatabase = async (
   returnDate?: string,
   returnTime?: string
 ): Promise<{ vehicles: any[]; distance: any; estimatedTime: string }> => {
-  console.log(`[Database] Starting database fetch with isochrone zone logic`);
+  console.log(`[Database] Starting database fetch with Option B logic (per-vehicle zone pricing)`);
   console.log(`[Database] Pickup: ${pickupLocation}, Dropoff: ${dropoffLocation}, Currency: ${targetCurrency}`);
 
   const [fromLat, fromLng] = pickupLocation.split(",").map(Number);
@@ -573,36 +573,36 @@ export const fetchFromDatabase = async (
     console.log(`[Database] Calculating road distance`);
     let { distance, duration } = await getRoadDistance(fromLat, fromLng, toLat, toLng);
 
-    // 6) Price each transfer with isochrone-zone-specific calculations
-    console.log(`[Database] Calculating pricing for ${allTransfers.length} vehicles across ${pickupZones.length} isochrone zones`);
+    // 6) Price each transfer with OPTION B: per-vehicle-zone-specific calculations
+    console.log(`[Database] Calculating pricing for ${allTransfers.length} vehicles across ${pickupZones.length} zones (Option B logic)`);
     const allVehiclesWithPricing = await Promise.all(
       allTransfers.map(async (transfer, index) => {
-        console.log(`[Pricing] Processing vehicle ${index + 1}: ${transfer.VehicleType} from isochrone zone ${transfer.zone_name}`);
+        console.log(`[Pricing] Processing vehicle ${index + 1}: ${transfer.VehicleType} from zone ${transfer.zone_name}`);
         
         const basePrice = Number(transfer.price) || 0;
         console.log(`[Pricing] Base transfer price: ${basePrice} ${transfer.Currency || "USD"}`);
 
-        // For each vehicle, determine if pickup/dropoff are inside its specific isochrone zone
+        // OPTION B: Check if pickup AND dropoff are within THIS SPECIFIC vehicle's zone
         const vehicleZone = pickupZones.find(z => z.id === transfer.zone_id);
         const pickupInsideThisZone = vehicleZone ? getZonesContainingPoint(fromLng, fromLat, [vehicleZone]).length > 0 : false;
         const dropoffInsideThisZone = vehicleZone ? getZonesContainingPoint(toLng, toLat, [vehicleZone]).length > 0 : false;
 
-        console.log(`[Pricing] Vehicle isochrone zone: ${transfer.zone_name}, Pickup in zone: ${pickupInsideThisZone}, Dropoff in zone: ${dropoffInsideThisZone}`);
+        console.log(`[Pricing] OPTION B - Vehicle zone: ${transfer.zone_name}, Pickup in THIS zone: ${pickupInsideThisZone}, Dropoff in THIS zone: ${dropoffInsideThisZone}`);
 
-        // Use calculateZonePrice rule with this specific isochrone zone
+        // Use calculateZonePrice rule with this specific vehicle's zone
         const zoneRadiusMiles = Number(transfer.zone_radius) || 0;
         const extraPricePerMile = Number(transfer.extra_price_per_mile) || 0;
 
         let totalPrice = calculateZonePrice({
           distanceMiles: distance ?? 0,
-          pickupInsideSelectedZone: pickupInsideThisZone,
-          dropoffInsideSelectedZone: dropoffInsideThisZone,
+          pickupInsideSelectedZone: pickupInsideThisZone, // Use pickup inside THIS specific zone
+          dropoffInsideSelectedZone: dropoffInsideThisZone, // Use dropoff inside THIS specific zone
           zoneRadiusMiles,
           basePrice,
           extraPricePerMile,
         });
 
-        console.log(`[Pricing] After isochrone zone pricing: ${totalPrice}`);
+        console.log(`[Pricing] After OPTION B zone pricing: ${totalPrice}`);
 
         // Add fixed fees
         const fees = {
@@ -711,7 +711,7 @@ export const fetchFromDatabase = async (
           String(type.VehicleType || "").toLowerCase().trim() === String(transfer.VehicleType || "").toLowerCase().trim()
         ) || { vehicleImage: "default-image-url-or-path" };
 
-        console.log(`[Pricing] Completed pricing for vehicle ${index + 1} from isochrone zone ${transfer.zone_name}`);
+        console.log(`[Pricing] Completed pricing for vehicle ${index + 1} from zone ${transfer.zone_name}`);
         
         return {
           vehicleId: transfer.vehicle_id,
