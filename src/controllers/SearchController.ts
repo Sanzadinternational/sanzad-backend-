@@ -376,6 +376,7 @@ export const fetchFromThirdPartyApis = async (
 };
 
 // -------------------- Fixed Pricing Helper for Isochrone --------------------
+// -------------------- Fixed Pricing Helper for Isochrone --------------------
 function calculateZonePriceForIsochrone({
   distanceMiles,
   pickupInsideZone,
@@ -416,17 +417,25 @@ function calculateZonePriceForIsochrone({
     return basePrice;
   }
 
-  // If dropoff is outside the isochrone zone -> charge extra for entire distance
-  // Because the isochrone boundary represents the maximum service area for base price
-  console.log(`[Pricing] ✗ Dropoff outside isochrone zone, charging extra for entire road distance`);
+  // If dropoff is outside the isochrone zone -> charge base price + (extra miles * extra price per mile)
+  console.log(`[Pricing] ✗ Dropoff outside isochrone zone, calculating extra miles`);
   
-  const extraCost = distanceMiles * (extraPricePerMile ?? 0);
-  const totalPrice = basePrice + extraCost;
+  // Calculate extra miles beyond the zone radius
+  const extraMiles = Math.max(0, (distanceMiles ?? 0) - (zoneRadiusMiles ?? 0));
   
-  console.log(`[Pricing] Adding extra cost: ${distanceMiles} miles * ${extraPricePerMile}/mile = ${extraCost}`);
-  console.log(`[Pricing] Total price with extra: ${totalPrice}`);
-  
-  return totalPrice;
+  if (extraMiles > 0) {
+    const extraCost = extraMiles * (extraPricePerMile ?? 0);
+    const totalPrice = basePrice + extraCost;
+    
+    console.log(`[Pricing] Extra miles calculation: ${distanceMiles} - ${zoneRadiusMiles} = ${extraMiles} miles`);
+    console.log(`[Pricing] Adding extra cost: ${extraMiles} miles * ${extraPricePerMile}/mile = ${extraCost}`);
+    console.log(`[Pricing] Total price: ${basePrice} (base) + ${extraCost} (extra) = ${totalPrice}`);
+    
+    return totalPrice;
+  } else {
+    console.log(`[Pricing] No extra miles beyond zone radius, returning base price: ${basePrice}`);
+    return basePrice;
+  }
 }
 
 // -------------------- Vehicle comparison helpers --------------------
