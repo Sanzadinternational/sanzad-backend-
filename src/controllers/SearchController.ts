@@ -74,7 +74,7 @@ export async function convertCurrency(amount: number, from: string, to: string):
   }
 }
 
-// -------------------- Geometry helpers for Isochrone --------------------
+// -------------------- Fixed Geometry helpers for Isochrone --------------------
 function getPolygonFromIsochrone(geojson: any) {
   console.log(`[Geometry] Creating polygon from isochrone GeoJSON`);
   
@@ -86,43 +86,37 @@ function getPolygonFromIsochrone(geojson: any) {
   // Parse if string, otherwise use directly
   const geojsonData = typeof geojson === "string" ? JSON.parse(geojson) : geojson;
   
-  // Isochrone data can have different structures
+  console.log(`[Geometry] Raw GeoJSON type: ${geojsonData.type}`);
+  
+  // Your GeoJSON is a Feature with Polygon geometry
   let geometry;
-  if (geojsonData.type === "FeatureCollection") {
-    // Take the first feature from feature collection
-    if (!geojsonData.features || geojsonData.features.length === 0) {
-      throw new Error("No features in isochrone FeatureCollection");
-    }
-    geometry = geojsonData.features[0].geometry;
-  } else if (geojsonData.type === "Feature") {
+  if (geojsonData.type === "Feature") {
     geometry = geojsonData.geometry;
-  } else {
+    console.log(`[Geometry] Extracted geometry from Feature: ${geometry.type}`);
+  } else if (geojsonData.type === "Polygon") {
     geometry = geojsonData;
-  }
-  
-  if (!geometry) {
-    console.error("[Geometry] Invalid isochrone geometry");
-    throw new Error("Invalid isochrone geometry");
-  }
-  
-  console.log(`[Geometry] Isochrone geometry type: ${geometry.type}`);
-  
-  // Handle different isochrone geometry types
-  let coordinates;
-  if (geometry.type === "Polygon") {
-    coordinates = geometry.coordinates;
-  } else if (geometry.type === "MultiPolygon") {
-    // Use the first polygon from multipolygon
-    coordinates = geometry.coordinates[0];
-  } else if (geometry.type === "LineString") {
-    // Convert linestring to polygon by closing the ring
-    coordinates = [geometry.coordinates.concat([geometry.coordinates[0]])];
   } else {
-    throw new Error(`Unsupported isochrone geometry type: ${geometry.type}`);
+    console.error(`[Geometry] Unsupported GeoJSON type: ${geojsonData.type}`);
+    throw new Error(`Unsupported GeoJSON type: ${geojsonData.type}`);
   }
+  
+  if (!geometry || geometry.type !== "Polygon") {
+    console.error("[Geometry] Invalid or non-Polygon geometry in isochrone");
+    throw new Error("Invalid or non-Polygon geometry in isochrone");
+  }
+  
+  const coordinates = geometry.coordinates;
+  console.log(`[Geometry] Polygon has ${coordinates.length} ring(s), outer ring has ${coordinates[0]?.length || 0} coordinates`);
   
   const polygon = turf.polygon(coordinates);
-  console.log(`[Geometry] Isochrone polygon created with ${coordinates[0].length} coordinates`);
+  
+  // Calculate the actual bounding box to understand the zone size
+  const bbox = turf.bbox(polygon);
+  const width = turf.distance([bbox[0], bbox[1]], [bbox[2], bbox[1]], { units: 'miles' });
+  const height = turf.distance([bbox[0], bbox[1]], [bbox[0], bbox[3]], { units: 'miles' });
+  
+  console.log(`[Geometry] Isochrone polygon created - approximate size: ${width.toFixed(2)} x ${height.toFixed(2)} miles`);
+  
   return polygon;
 }
 
@@ -134,13 +128,20 @@ function getZonesContainingPoint(lng: number, lat: number, allZones: any[]) {
   
   for (const zone of allZones) {
     try {
+      console.log(`[Geometry] Checking zone: ${zone.name} (${zone.id})`);
       const poly = getPolygonFromIsochrone(zone.geojson);
-      if (turf.booleanPointInPolygon(point, poly)) {
-        console.log(`[Geometry] Point found in isochrone zone: ${zone.name} (${zone.id})`);
+      
+      const isInside = turf.booleanPointInPolygon(point, poly);
+      console.log(`[Geometry] Point (${lng}, ${lat}) in zone ${zone.name}: ${isInside}`);
+      
+      if (isInside) {
+        console.log(`[Geometry] ✓ Point found in isochrone zone: ${zone.name} (${zone.id})`);
         matches.push(zone);
+      } else {
+        console.log(`[Geometry] ✗ Point NOT in isochrone zone: ${zone.name}`);
       }
     } catch (err) {
-      console.warn(`[Geometry] Skipping isochrone zone due to malformed geojson: ${zone?.id}`, err?.message || err);
+      console.warn(`[Geometry] Skipping isochrone zone due to error: ${zone?.id}`, err?.message || err);
     }
   }
   
@@ -374,52 +375,58 @@ export const fetchFromThirdPartyApis = async (
   return allVehicles;
 };
 
-// -------------------- Pricing helper --------------------
-function calculateZonePrice({
+// -------------------- Fixed Pricing Helper for Isochrone --------------------
+function calculateZonePriceForIsochrone({
   distanceMiles,
-  pickupInsideSelectedZone,
-  dropoffInsideSelectedZone,
-  zoneRadiusMiles,
+  pickupInsideZone,
+  dropoffInsideZone,
   basePrice,
   extraPricePerMile,
+  zoneRadiusMiles,
 }: {
   distanceMiles: number;
-  pickupInsideSelectedZone: boolean;
-  dropoffInsideSelectedZone: boolean;
-  zoneRadiusMiles: number;
+  pickupInsideZone: boolean;
+  dropoffInsideZone: boolean;
   basePrice: number;
   extraPricePerMile: number;
+  zoneRadiusMiles?: number;
 }) {
-  console.log(`[Pricing] Calculating zone price`);
-  console.log(`[Pricing] Base price: ${basePrice}, Distance: ${distanceMiles} miles, Zone radius: ${zoneRadiusMiles} miles`);
-  console.log(`[Pricing] Pickup inside this specific zone: ${pickupInsideSelectedZone}, Dropoff inside this specific zone: ${dropoffInsideSelectedZone}`);
-
-  // If pickup is not inside this specific zone, do not charge extra miles
-  if (!pickupInsideSelectedZone) {
-    console.log(`[Pricing] Pickup not in this specific zone, returning base price: ${basePrice}`);
-    return basePrice;
-  }
-
-  // If both inside this specific zone -> base price
-  if (dropoffInsideSelectedZone) {
-    console.log(`[Pricing] Both pickup and dropoff in this specific zone, returning base price: ${basePrice}`);
-    return basePrice;
-  }
-
-  // Leaving this specific zone -> charge extra miles beyond radius
-  const extraMiles = (distanceMiles ?? 0) - (zoneRadiusMiles ?? 0);
-  console.log(`[Pricing] Extra miles calculation: ${distanceMiles} - ${zoneRadiusMiles} = ${extraMiles} miles`);
-
-  if (extraMiles > 0) {
-    const extraCost = extraMiles * (extraPricePerMile ?? 0);
-    const totalPrice = basePrice + extraCost;
-    console.log(`[Pricing] Adding extra cost: ${extraMiles} miles * ${extraPricePerMile}/mile = ${extraCost}`);
-    console.log(`[Pricing] Total price with extra: ${totalPrice}`);
-    return totalPrice;
-  }
+  console.log(`[Pricing] Calculating price for ISOCHRONE zone`);
+  console.log(`[Pricing] Base price: ${basePrice}, Road distance: ${distanceMiles} miles`);
+  console.log(`[Pricing] Zone radius (for reference): ${zoneRadiusMiles} miles`);
+  console.log(`[Pricing] Pickup inside isochrone: ${pickupInsideZone}, Dropoff inside isochrone: ${dropoffInsideZone}`);
   
-  console.log(`[Pricing] No extra miles charged, returning base price: ${basePrice}`);
-  return basePrice;
+  // DEBUG: Log the apparent contradiction
+  if (dropoffInsideZone && distanceMiles > (zoneRadiusMiles || 0)) {
+    console.log(`[Pricing] ⚠️  CONTRADICTION: Road distance ${distanceMiles} miles > zone radius ${zoneRadiusMiles} miles, but dropoff reported inside zone`);
+    console.log(`[Pricing] ⚠️  This confirms isochrone zones are TIME-BASED (travel time contours), not distance-based radii`);
+  }
+
+  // If pickup is not inside the isochrone zone, use base price only
+  if (!pickupInsideZone) {
+    console.log(`[Pricing] Pickup not in isochrone zone, returning base price: ${basePrice}`);
+    return basePrice;
+  }
+
+  // If both inside same isochrone zone -> base price only
+  // Isochrone zones represent "reachable within X time", so distance doesn't matter if both points are inside
+  if (dropoffInsideZone) {
+    console.log(`[Pricing] ✓ Both pickup and dropoff inside isochrone zone (time-based boundary)`);
+    console.log(`[Pricing] ✓ Returning base price: ${basePrice} (road distance ${distanceMiles} miles is within travel time boundary)`);
+    return basePrice;
+  }
+
+  // If dropoff is outside the isochrone zone -> charge extra for entire distance
+  // Because the isochrone boundary represents the maximum service area for base price
+  console.log(`[Pricing] ✗ Dropoff outside isochrone zone, charging extra for entire road distance`);
+  
+  const extraCost = distanceMiles * (extraPricePerMile ?? 0);
+  const totalPrice = basePrice + extraCost;
+  
+  console.log(`[Pricing] Adding extra cost: ${distanceMiles} miles * ${extraPricePerMile}/mile = ${extraCost}`);
+  console.log(`[Pricing] Total price with extra: ${totalPrice}`);
+  
+  return totalPrice;
 }
 
 // -------------------- Vehicle comparison helpers --------------------
@@ -487,7 +494,7 @@ function optimizeSupplierVehicles(vehicles: any[]): any[] {
   return optimizedVehicles;
 }
 
-// -------------------- Main fetchFromDatabase with Option B logic --------------------
+// -------------------- Main fetchFromDatabase with Fixed Isochrone Logic --------------------
 export const fetchFromDatabase = async (
   pickupLocation: string,
   dropoffLocation: string,
@@ -497,7 +504,7 @@ export const fetchFromDatabase = async (
   returnDate?: string,
   returnTime?: string
 ): Promise<{ vehicles: any[]; distance: any; estimatedTime: string }> => {
-  console.log(`[Database] Starting database fetch with Option B logic (per-vehicle zone pricing)`);
+  console.log(`[Database] Starting database fetch with FIXED isochrone zone logic`);
   console.log(`[Database] Pickup: ${pickupLocation}, Dropoff: ${dropoffLocation}, Currency: ${targetCurrency}`);
 
   const [fromLat, fromLng] = pickupLocation.split(",").map(Number);
@@ -573,8 +580,8 @@ export const fetchFromDatabase = async (
     console.log(`[Database] Calculating road distance`);
     let { distance, duration } = await getRoadDistance(fromLat, fromLng, toLat, toLng);
 
-    // 6) Price each transfer with OPTION B: per-vehicle-zone-specific calculations
-    console.log(`[Database] Calculating pricing for ${allTransfers.length} vehicles across ${pickupZones.length} zones (Option B logic)`);
+    // 6) Price each transfer with FIXED isochrone logic
+    console.log(`[Database] Calculating pricing for ${allTransfers.length} vehicles across ${pickupZones.length} zones (FIXED ISOCHRONE LOGIC)`);
     const allVehiclesWithPricing = await Promise.all(
       allTransfers.map(async (transfer, index) => {
         console.log(`[Pricing] Processing vehicle ${index + 1}: ${transfer.VehicleType} from zone ${transfer.zone_name}`);
@@ -582,27 +589,27 @@ export const fetchFromDatabase = async (
         const basePrice = Number(transfer.price) || 0;
         console.log(`[Pricing] Base transfer price: ${basePrice} ${transfer.Currency || "USD"}`);
 
-        // OPTION B: Check if pickup AND dropoff are within THIS SPECIFIC vehicle's zone
+        // OPTION B: Check if pickup AND dropoff are within THIS SPECIFIC vehicle's isochrone zone
         const vehicleZone = pickupZones.find(z => z.id === transfer.zone_id);
         const pickupInsideThisZone = vehicleZone ? getZonesContainingPoint(fromLng, fromLat, [vehicleZone]).length > 0 : false;
         const dropoffInsideThisZone = vehicleZone ? getZonesContainingPoint(toLng, toLat, [vehicleZone]).length > 0 : false;
 
-        console.log(`[Pricing] OPTION B - Vehicle zone: ${transfer.zone_name}, Pickup in THIS zone: ${pickupInsideThisZone}, Dropoff in THIS zone: ${dropoffInsideThisZone}`);
+        console.log(`[Pricing] OPTION B - Vehicle zone: ${transfer.zone_name}, Pickup in THIS isochrone: ${pickupInsideThisZone}, Dropoff in THIS isochrone: ${dropoffInsideThisZone}`);
 
-        // Use calculateZonePrice rule with this specific vehicle's zone
+        // Use FIXED isochrone pricing logic
         const zoneRadiusMiles = Number(transfer.zone_radius) || 0;
         const extraPricePerMile = Number(transfer.extra_price_per_mile) || 0;
 
-        let totalPrice = calculateZonePrice({
+        let totalPrice = calculateZonePriceForIsochrone({
           distanceMiles: distance ?? 0,
-          pickupInsideSelectedZone: pickupInsideThisZone, // Use pickup inside THIS specific zone
-          dropoffInsideSelectedZone: dropoffInsideThisZone, // Use dropoff inside THIS specific zone
-          zoneRadiusMiles,
+          pickupInsideZone: pickupInsideThisZone,
+          dropoffInsideZone: dropoffInsideThisZone,
           basePrice,
           extraPricePerMile,
+          zoneRadiusMiles, // For debugging only
         });
 
-        console.log(`[Pricing] After OPTION B zone pricing: ${totalPrice}`);
+        console.log(`[Pricing] After FIXED isochrone pricing: ${totalPrice}`);
 
         // Add fixed fees
         const fees = {
@@ -649,13 +656,13 @@ export const fetchFromDatabase = async (
         
         if (isReturnTrip) {
           console.log(`[Pricing] Calculating return trip pricing`);
-          returnPrice = calculateZonePrice({
+          returnPrice = calculateZonePriceForIsochrone({
             distanceMiles: distance ?? 0,
-            pickupInsideSelectedZone: pickupInsideThisZone,
-            dropoffInsideSelectedZone: dropoffInsideThisZone,
-            zoneRadiusMiles,
+            pickupInsideZone: pickupInsideThisZone,
+            dropoffInsideZone: dropoffInsideThisZone,
             basePrice,
             extraPricePerMile,
+            zoneRadiusMiles,
           });
 
           const returnFees = {
@@ -711,7 +718,7 @@ export const fetchFromDatabase = async (
           String(type.VehicleType || "").toLowerCase().trim() === String(transfer.VehicleType || "").toLowerCase().trim()
         ) || { vehicleImage: "default-image-url-or-path" };
 
-        console.log(`[Pricing] Completed pricing for vehicle ${index + 1} from zone ${transfer.zone_name}`);
+        console.log(`[Pricing] Completed pricing for vehicle ${index + 1} from isochrone zone ${transfer.zone_name}`);
         
         return {
           vehicleId: transfer.vehicle_id,
