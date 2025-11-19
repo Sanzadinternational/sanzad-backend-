@@ -298,9 +298,11 @@ function getZonesContainingPoint(lng: number, lat: number, allZones: any[]) {
   return matches;
 }
 
-// -------------------- Zone Optimization Helpers --------------------
+// -------------------- Enhanced Effective Distance Calculation --------------------
 function calculateEffectiveDistance(pickupLng: number, pickupLat: number, zone: any): number {
   try {
+    console.log(`[Effective Distance] Calculating distance to zone: ${zone.name}`);
+    
     const poly = getPolygonFromIsochrone(zone.geojson);
     const center = turf.centroid(poly);
     const centerCoords = center.geometry.coordinates; // [lng, lat]
@@ -311,121 +313,12 @@ function calculateEffectiveDistance(pickupLng: number, pickupLat: number, zone: 
       { units: 'miles' }
     );
     
-    console.log(`[Zone Optimization] Distance from pickup to ${zone.name} center: ${distanceToCenter.toFixed(2)} miles`);
+    console.log(`[Effective Distance] Distance from pickup (${pickupLng}, ${pickupLat}) to zone center (${centerCoords[0]}, ${centerCoords[1]}): ${distanceToCenter.toFixed(2)} miles`);
     return distanceToCenter;
   } catch (error) {
-    console.error(`[Zone Optimization] Error calculating effective distance for zone ${zone.name}:`, error);
+    console.error(`[Effective Distance] Error calculating distance for zone ${zone.name}:`, error);
     return 0;
   }
-}
-
-function calculateOptimizedZonePrice({
-  roadDistanceMiles,
-  basePrice,
-  extraPricePerMile,
-  zoneRadiusMiles,
-  effectiveDistance, // Distance from pickup to zone center
-}: {
-  roadDistanceMiles: number;
-  basePrice: number;
-  extraPricePerMile: number;
-  zoneRadiusMiles: number;
-  effectiveDistance: number;
-}) {
-  console.log(`[Zone Optimization] Calculating OPTIMIZED zone price`);
-  console.log(`[Zone Optimization] Base price: ${basePrice}, Road distance: ${roadDistanceMiles} miles`);
-  console.log(`[Zone Optimization] Zone radius: ${zoneRadiusMiles} miles, Effective distance: ${effectiveDistance.toFixed(2)} miles`);
-  
-  // Available miles within zone: Zone radius - Distance from center
-  const availableMilesInZone = Math.max(0, zoneRadiusMiles - effectiveDistance);
-  console.log(`[Zone Optimization] Available miles within zone: ${zoneRadiusMiles} - ${effectiveDistance.toFixed(2)} = ${availableMilesInZone.toFixed(2)} miles`);
-  
-  // Extra miles beyond available zone coverage
-  const extraMiles = Math.max(0, roadDistanceMiles - availableMilesInZone);
-  const extraCost = extraMiles * extraPricePerMile;
-  const totalPrice = basePrice + extraCost;
-  
-  console.log(`[Zone Optimization] Extra miles calculation: ${roadDistanceMiles} - ${availableMilesInZone.toFixed(2)} = ${extraMiles.toFixed(2)} miles`);
-  console.log(`[Zone Optimization] Extra cost: ${extraMiles.toFixed(2)} miles * ${extraPricePerMile}/mile = ${extraCost.toFixed(2)}`);
-  console.log(`[Zone Optimization] Total price: ${basePrice} (base) + ${extraCost.toFixed(2)} (extra) = ${totalPrice.toFixed(2)}`);
-  
-  return {
-    totalPrice,
-    extraMiles,
-    extraCost,
-    availableMilesInZone,
-    effectiveDistance
-  };
-}
-
-function findOptimalZoneForVehicleType(
-  vehicleType: string,
-  brand: string,
-  passengers: number,
-  supplierId: string,
-  pickupLng: number,
-  pickupLat: number,
-  roadDistanceMiles: number,
-  overlappingZones: any[],
-  allTransfers: any[]
-) {
-  console.log(`[Zone Optimization] Finding optimal zone for: ${vehicleType} - ${brand} - ${passengers}p - Supplier ${supplierId}`);
-  
-  const similarVehicles = allTransfers.filter(transfer =>
-    transfer.VehicleType === vehicleType &&
-    transfer.VehicleBrand === brand &&
-    transfer.Passengers === passengers &&
-    transfer.SupplierId === supplierId
-  );
-  
-  if (similarVehicles.length === 0) {
-    console.log(`[Zone Optimization] No similar vehicles found`);
-    return null;
-  }
-  
-  let optimalVehicle = null;
-  let lowestPrice = Infinity;
-  
-  for (const vehicle of similarVehicles) {
-    const vehicleZone = overlappingZones.find(zone => zone.id === vehicle.zone_id);
-    if (!vehicleZone) continue;
-    
-    // Calculate effective distance for this zone
-    const effectiveDistance = calculateEffectiveDistance(pickupLng, pickupLat, vehicleZone);
-    
-    // Calculate optimized price
-    const basePrice = Number(vehicle.price) || 0;
-    const extraPricePerMile = Number(vehicle.extra_price_per_mile) || 0;
-    const zoneRadiusMiles = Number(vehicleZone.radius_km) || 0; // Actually miles
-    
-    const priceResult = calculateOptimizedZonePrice({
-      roadDistanceMiles,
-      basePrice,
-      extraPricePerMile,
-      zoneRadiusMiles,
-      effectiveDistance,
-    });
-    
-    console.log(`[Zone Optimization] Zone ${vehicleZone.name}: ${priceResult.totalPrice.toFixed(2)} (Base: ${basePrice})`);
-    
-    if (priceResult.totalPrice < lowestPrice) {
-      lowestPrice = priceResult.totalPrice;
-      optimalVehicle = {
-        ...vehicle,
-        optimizedPrice: priceResult.totalPrice,
-        zone: vehicleZone,
-        priceDetails: priceResult
-      };
-    }
-  }
-  
-  if (optimalVehicle) {
-    console.log(`[Zone Optimization] ✅ Selected zone ${optimalVehicle.zone.name} with price: ${optimalVehicle.optimizedPrice.toFixed(2)}`);
-  } else {
-    console.log(`[Zone Optimization] ❌ No optimal zone found`);
-  }
-  
-  return optimalVehicle;
 }
 
 // -------------------- Token / third-party API fetch --------------------
@@ -571,7 +464,7 @@ function optimizeSupplierVehicles(vehicles: any[]): any[] {
   return optimizedVehicles;
 }
 
-// -------------------- Main fetchFromDatabase with Zone Optimization --------------------
+// -------------------- Main fetchFromDatabase with NEW Zone Overlapping Logic --------------------
 export const fetchFromDatabase = async (
   pickupLocation: string,
   dropoffLocation: string,
@@ -581,7 +474,7 @@ export const fetchFromDatabase = async (
   returnDate?: string,
   returnTime?: string
 ): Promise<{ vehicles: any[]; distance: any; estimatedTime: string; straightLineDistance?: number }> => {
-  console.log(`[Database] Starting database fetch with ZONE OPTIMIZATION pricing`);
+  console.log(`[Database] Starting database fetch with NEW ZONE OVERLAPPING LOGIC`);
   console.log(`[Database] Pickup: ${pickupLocation}, Dropoff: ${dropoffLocation}, Currency: ${targetCurrency}`);
 
   // Parse coordinates with validation
@@ -615,7 +508,29 @@ export const fetchFromDatabase = async (
       throw new Error("No zones found for the selected pickup location.");
     }
 
-    // 3) Fetch vehicles from ALL overlapping zones
+    // 3) Calculate distance from pickup to dropoff
+    console.log(`[Database] Calculating road distance from pickup to dropoff`);
+    let distanceResult = await getRoadDistance(fromLat, fromLng, toLat, toLng);
+    
+    if (distanceResult.distance === null) {
+      console.warn(`[Database] Primary distance method failed, trying Directions API...`);
+      const directionsResult = await getDistanceUsingDirections(fromLat, fromLng, toLat, toLng);
+      if (directionsResult) {
+        distanceResult.distance = directionsResult.distance;
+        distanceResult.duration = directionsResult.duration;
+        console.log(`[Database] Using Directions API result: ${directionsResult.distance} miles`);
+      }
+    }
+    
+    if (distanceResult.distance === null) {
+      console.error("[Database] All distance methods failed");
+      throw new Error("Could not calculate road distance");
+    }
+
+    const { distance: totalTripDistance, duration, straightLineDistance } = distanceResult;
+    console.log(`[Database] Total trip distance: ${totalTripDistance} miles`);
+
+    // 4) Fetch ALL vehicles from ALL overlapping zones
     let allTransfers: any[] = [];
     
     // Query each overlapping zone separately
@@ -638,12 +553,19 @@ export const fetchFromDatabase = async (
       
       const zoneTransfers = transfersResult.rows as any[];
       console.log(`[Database] Found ${zoneTransfers.length} vehicles in overlapping zone ${zone.name}`);
-      allTransfers = allTransfers.concat(zoneTransfers);
+      
+      // Add zone information to each vehicle
+      const vehiclesWithZoneInfo = zoneTransfers.map(vehicle => ({
+        ...vehicle,
+        zone_data: zone // Attach full zone data
+      }));
+      
+      allTransfers = allTransfers.concat(vehiclesWithZoneInfo);
     }
 
     console.log(`[Database] Total vehicles across all overlapping zones: ${allTransfers.length}`);
 
-    // 4) Supporting static data
+    // 5) Supporting static data
     console.log(`[Database] Loading supporting data (vehicle types, margins, surge charges)`);
     const [vehicleTypesResult, marginsResult, surgeChargesResult] = await Promise.all([
       db.execute(sql`SELECT id, "VehicleType", "vehicleImage" FROM "VehicleType"`),
@@ -665,31 +587,12 @@ export const fetchFromDatabase = async (
     const surgeCharges = surgeChargesResult.rows as any[];
     console.log(`[Database] Loaded ${vehicleTypes.length} vehicle types, ${margins.length} margins, ${surgeCharges.length} surge charges`);
 
-    // 5) Compute road distance (miles)
-    console.log(`[Database] Calculating road distance`);
-    let distanceResult = await getRoadDistance(fromLat, fromLng, toLat, toLng);
-    
-    if (distanceResult.distance === null) {
-      console.warn(`[Database] Primary distance method failed, trying Directions API...`);
-      const directionsResult = await getDistanceUsingDirections(fromLat, fromLng, toLat, toLng);
-      if (directionsResult) {
-        distanceResult.distance = directionsResult.distance;
-        distanceResult.duration = directionsResult.duration;
-        console.log(`[Database] Using Directions API result: ${directionsResult.distance} miles`);
-      }
-    }
-    
-    if (distanceResult.distance === null) {
-      console.error("[Database] All distance methods failed");
-      throw new Error("Could not calculate road distance");
-    }
-
-    const { distance, duration, straightLineDistance } = distanceResult;
-
-    // 6) GROUP vehicles by type and find OPTIMAL ZONE for each vehicle type
-    console.log(`[Zone Optimization] Starting zone optimization for ${allTransfers.length} vehicles across ${overlappingZones.length} zones`);
+    // 6) NEW: Calculate optimal pricing for each vehicle across overlapping zones
+    console.log(`[Zone Optimization] Calculating optimal pricing across ${overlappingZones.length} overlapping zones`);
     
     const vehicleGroups = new Map();
+    
+    // Group vehicles by type and supplier
     allTransfers.forEach(vehicle => {
       const key = `${vehicle.VehicleType}_${vehicle.VehicleBrand}_${vehicle.Passengers}_${vehicle.SupplierId}`;
       if (!vehicleGroups.has(key)) {
@@ -702,30 +605,75 @@ export const fetchFromDatabase = async (
 
     const optimizedVehicles: any[] = [];
     
-    // Find optimal zone for each vehicle type
+    // For each vehicle type, find the best zone with lowest price
     for (const [vehicleKey, vehicles] of vehicleGroups.entries()) {
       const [vehicleType, brand, passengers, supplierId] = vehicleKey.split('_');
       
-      console.log(`\n[Zone Optimization] Processing vehicle type: ${vehicleType} - ${brand} - ${passengers}p`);
+      console.log(`\n[Zone Optimization] Processing vehicle type: ${vehicleType} - ${brand} - ${passengers}p - Supplier: ${supplierId}`);
       
-      const optimalVehicle = findOptimalZoneForVehicleType(
-        vehicleType,
-        brand,
-        parseInt(passengers),
-        supplierId,
-        fromLng,
-        fromLat,
-        distance,
-        overlappingZones,
-        allTransfers
-      );
+      let bestVehicle: any = null;
+      let lowestPrice = Infinity;
       
-      if (optimalVehicle) {
-        optimizedVehicles.push(optimalVehicle);
+      // Calculate price for this vehicle type in each overlapping zone
+      for (const vehicle of vehicles) {
+        const zone = vehicle.zone_data;
+        
+        console.log(`[Zone Optimization] Calculating price for zone: ${zone.name}`);
+        
+        // Calculate distance from pickup location to zone center
+        const effectiveDistance = calculateEffectiveDistance(fromLng, fromLat, zone);
+        console.log(`[Zone Optimization] Distance from pickup to zone center: ${effectiveDistance.toFixed(2)} miles`);
+        
+        // Get zone radius (assuming it's in miles)
+        const zoneRadiusMiles = Number(zone.radius_km) || 0;
+        console.log(`[Zone Optimization] Zone radius: ${zoneRadiusMiles} miles`);
+        
+        // Calculate available coverage within zone
+        const availableMilesInZone = Math.max(0, zoneRadiusMiles - effectiveDistance);
+        console.log(`[Zone Optimization] Available miles within zone: ${zoneRadiusMiles} - ${effectiveDistance.toFixed(2)} = ${availableMilesInZone.toFixed(2)} miles`);
+        
+        // Calculate extra miles beyond zone coverage
+        const extraMiles = Math.max(0, totalTripDistance - availableMilesInZone);
+        console.log(`[Zone Optimization] Extra miles beyond zone: ${totalTripDistance} - ${availableMilesInZone.toFixed(2)} = ${extraMiles.toFixed(2)} miles`);
+        
+        // Calculate total price
+        const basePrice = Number(vehicle.price) || 0;
+        const extraPricePerMile = Number(vehicle.extra_price_per_mile) || 0;
+        const extraCost = extraMiles * extraPricePerMile;
+        const totalPrice = basePrice + extraCost;
+        
+        console.log(`[Zone Optimization] Price breakdown for ${zone.name}:`);
+        console.log(`[Zone Optimization]   Base price: ${basePrice}`);
+        console.log(`[Zone Optimization]   Extra cost: ${extraMiles.toFixed(2)} miles × ${extraPricePerMile}/mile = ${extraCost.toFixed(2)}`);
+        console.log(`[Zone Optimization]   Total price: ${totalPrice.toFixed(2)}`);
+        
+        // Track the vehicle with lowest price
+        if (totalPrice < lowestPrice) {
+          lowestPrice = totalPrice;
+          bestVehicle = {
+            ...vehicle,
+            optimizedPrice: totalPrice,
+            selected_zone: zone,
+            priceDetails: {
+              basePrice,
+              extraMiles,
+              extraCost,
+              availableMilesInZone,
+              effectiveDistance,
+              zoneRadiusMiles,
+              totalTripDistance
+            }
+          };
+          
+          console.log(`[Zone Optimization] ✅ New best price: ${totalPrice.toFixed(2)} from zone ${zone.name}`);
+        }
+      }
+      
+      if (bestVehicle) {
+        console.log(`[Zone Optimization] 🏆 Selected zone ${bestVehicle.selected_zone.name} with price: ${bestVehicle.optimizedPrice.toFixed(2)}`);
+        optimizedVehicles.push(bestVehicle);
       } else {
-        // If no optimal found, use the first available vehicle (fallback)
-        console.log(`[Zone Optimization] Using fallback - first available vehicle`);
-        optimizedVehicles.push(vehicles[0]);
+        console.log(`[Zone Optimization] ❌ No optimal vehicle found for ${vehicleKey}`);
       }
     }
 
@@ -735,7 +683,7 @@ export const fetchFromDatabase = async (
     console.log(`[Database] Applying final pricing to ${optimizedVehicles.length} optimized vehicles`);
     const allVehiclesWithPricing = await Promise.all(
       optimizedVehicles.map(async (vehicle, index) => {
-        console.log(`[Pricing] Processing optimized vehicle ${index + 1}: ${vehicle.VehicleType} from zone ${vehicle.zone_name}`);
+        console.log(`[Pricing] Processing optimized vehicle ${index + 1}: ${vehicle.VehicleType} from zone ${vehicle.selected_zone.name}`);
         
         // Start with the optimized base price
         let totalPrice = vehicle.optimizedPrice || Number(vehicle.price) || 0;
@@ -786,22 +734,19 @@ export const fetchFromDatabase = async (
         
         if (isReturnTrip) {
           console.log(`[Pricing] Calculating return trip pricing`);
+          
           // For return trip, use the same optimization logic
-          const effectiveDistance = vehicle.priceDetails?.effectiveDistance || calculateEffectiveDistance(fromLng, fromLat, vehicle.zone);
+          const effectiveDistance = vehicle.priceDetails.effectiveDistance;
           const basePrice = Number(vehicle.price) || 0;
           const extraPricePerMile = Number(vehicle.extra_price_per_mile) || 0;
-          const zoneRadiusMiles = Number(vehicle.zone.radius_km) || 0;
+          const zoneRadiusMiles = vehicle.priceDetails.zoneRadiusMiles;
           
-          const returnPriceResult = calculateOptimizedZonePrice({
-            roadDistanceMiles: distance,
-            basePrice,
-            extraPricePerMile,
-            zoneRadiusMiles,
-            effectiveDistance,
-          });
+          const availableMilesInZone = Math.max(0, zoneRadiusMiles - effectiveDistance);
+          const extraMiles = Math.max(0, totalTripDistance - availableMilesInZone);
+          returnPrice = basePrice + (extraMiles * extraPricePerMile);
           
-          returnPrice = returnPriceResult.totalPrice;
-          
+          console.log(`[Pricing] Return trip base calculation: ${basePrice} + (${extraMiles} × ${extraPricePerMile}) = ${returnPrice}`);
+
           const returnFees = {
             vehicleTax: Number(vehicle.vehicleTax) || 0,
             parking: Number(vehicle.parking) || 0,
@@ -855,7 +800,7 @@ export const fetchFromDatabase = async (
           String(type.VehicleType || "").toLowerCase().trim() === String(vehicle.VehicleType || "").toLowerCase().trim()
         ) || { vehicleImage: "default-image-url-or-path" };
 
-        console.log(`[Pricing] Completed pricing for optimized vehicle ${index + 1} from zone ${vehicle.zone_name}`);
+        console.log(`[Pricing] Completed pricing for optimized vehicle ${index + 1} from zone ${vehicle.selected_zone.name}`);
         
         return {
           vehicleId: vehicle.vehicle_id,
@@ -878,8 +823,8 @@ export const fetchFromDatabase = async (
           nightTimePrice: vehicle.NightTime_Price,
           transferInfo: vehicle.Transfer_info,
           supplierId: vehicle.SupplierId,
-          zoneId: vehicle.zone_id,
-          zoneName: vehicle.zone_name,
+          zoneId: vehicle.selected_zone.id,
+          zoneName: vehicle.selected_zone.name,
           originalPrice: Number(vehicle.price) || 0,
           optimizedPrice: vehicle.optimizedPrice,
           isFromOverlappingZone: overlappingZones.length > 1,
@@ -895,15 +840,33 @@ export const fetchFromDatabase = async (
       })
     );
 
-    console.log(`[Database] Final optimized vehicles with pricing: ${allVehiclesWithPricing.length}`);
+    // 8) Remove duplicate vehicles (same type from same supplier)
+    console.log(`[Database] Removing duplicate vehicles from same supplier`);
+    const uniqueVehiclesMap = new Map();
     
+    allVehiclesWithPricing.forEach(vehicle => {
+      const key = `${vehicle.vehicalType}_${vehicle.brand}_${vehicle.passengers}_${vehicle.supplierId}`;
+      
+      if (!uniqueVehiclesMap.has(key) || vehicle.price < uniqueVehiclesMap.get(key).price) {
+        uniqueVehiclesMap.set(key, vehicle);
+      }
+    });
+    
+    const finalVehicles = Array.from(uniqueVehiclesMap.values());
+    console.log(`[Database] Final unique vehicles: ${finalVehicles.length}`);
+
     // Log optimization summary
-    const zonesUsed = new Set(allVehiclesWithPricing.map(v => v.zoneName));
+    const zonesUsed = new Set(finalVehicles.map(v => v.zoneName));
     console.log(`[Zone Optimization] Summary: Using ${zonesUsed.size} optimal zones:`, Array.from(zonesUsed));
+    
+    // Log pricing comparison
+    finalVehicles.forEach(vehicle => {
+      console.log(`[Final] ${vehicle.vehicalType} - ${vehicle.brand}: ${vehicle.price} ${targetCurrency} (Zone: ${vehicle.zoneName})`);
+    });
 
     return { 
-      vehicles: allVehiclesWithPricing, 
-      distance: distance, 
+      vehicles: finalVehicles, 
+      distance: totalTripDistance, 
       estimatedTime: duration,
       straightLineDistance: straightLineDistance
     };
