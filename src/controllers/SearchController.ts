@@ -71,14 +71,37 @@ export async function getRoadDistance(fromLat: number, fromLng: number, toLat: n
     return { distance: null, duration: null, straightLineDistance: null };
   }
 
+  // Check for same coordinates
+  if (fromLat === toLat && fromLng === toLng) {
+    console.log(`[Distance] Same coordinates, distance is 0`);
+    return { 
+      distance: 0, 
+      duration: "0 mins", 
+      straightLineDistance: 0,
+      distanceMeters: 0,
+      straightLineMeters: 0
+    };
+  }
+
   try {
     const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${fromLat},${fromLng}&destinations=${toLat},${toLng}&units=imperial&key=${GOOGLE_MAPS_API_KEY}`;
     console.log(`[Distance] API URL: ${url.replace(GOOGLE_MAPS_API_KEY, 'HIDDEN')}`);
     
-    const response = await axios.get(url);
+    const response = await axios.get(url, { timeout: 10000 });
     
     // Debug API status
     console.log(`[Distance] API Status: ${response.data.status}`);
+    
+    // Handle API errors
+    if (response.data.status === "OVER_QUERY_LIMIT") {
+      console.error("[Distance] Google Maps API quota exceeded");
+      return { distance: null, duration: null, straightLineDistance: null, error: "API quota exceeded" };
+    }
+    
+    if (response.data.status === "REQUEST_DENIED") {
+      console.error("[Distance] Google Maps API request denied:", response.data.error_message);
+      return { distance: null, duration: null, straightLineDistance: null, error: "API request denied" };
+    }
     
     const element = response.data.rows[0]?.elements[0];
     
@@ -134,6 +157,12 @@ export async function getRoadDistance(fromLat: number, fromLng: number, toLat: n
     };
   } catch (error) {
     console.error("[Distance] Error fetching road distance:", error?.response?.data || error?.message || error);
+    
+    if (error.code === 'ECONNABORTED') {
+      console.error("[Distance] Request timeout");
+      return { distance: null, duration: null, straightLineDistance: null, error: "Request timeout" };
+    }
+    
     return { distance: null, duration: null, straightLineDistance: null };
   }
 }
@@ -144,7 +173,7 @@ async function getDistanceUsingDirections(fromLat: number, fromLng: number, toLa
     const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${fromLat},${fromLng}&destination=${toLat},${toLng}&units=imperial&key=${GOOGLE_MAPS_API_KEY}`;
     console.log(`[Directions] API URL: ${url.replace(GOOGLE_MAPS_API_KEY, 'HIDDEN')}`);
     
-    const response = await axios.get(url);
+    const response = await axios.get(url, { timeout: 10000 });
     
     if (response.data.status !== "OK") {
       console.error(`[Directions] API Error: ${response.data.status}`, response.data.error_message);
@@ -191,7 +220,7 @@ export const getExchangeRate = async (from: string, to: string): Promise<number>
 
   try {
     console.log(`[Currency] Fetching live exchange rate from API`);
-    const res = await axios.get(`https://api.exchangerate.host/latest?base=${from}&symbols=${to}`);
+    const res = await axios.get(`https://api.exchangerate.host/latest?base=${from}&symbols=${to}`, { timeout: 5000 });
     const rate = res.data?.rates?.[to];
     
     if (!rate) {
@@ -218,20 +247,49 @@ export async function convertCurrency(amount: number, from: string, to: string):
     return amount;
   }
   
+  // Validate amount
+  if (isNaN(amount) || amount < 0) {
+    console.warn(`[Currency] Invalid amount: ${amount}, returning 0`);
+    return 0;
+  }
+  
   try {
-    const res = await axios.get(`https://v6.exchangerate-api.com/v6/9effc838a4da8122bac8b714/latest/${from}`);
+    const res = await axios.get(`https://v6.exchangerate-api.com/v6/9effc838a4da8122bac8b714/latest/${from}`, {
+      timeout: 5000
+    });
+    
+    if (res.data?.result === 'error') {
+      console.error(`[Currency] API error: ${res.data['error-type']}`);
+      return amount; // Fallback to original amount
+    }
+    
     const rate = res.data?.conversion_rates?.[to];
     
-    if (!rate) {
-      console.error(`[Currency] Missing rate for ${to}`);
-      return amount;
+    if (!rate || isNaN(rate)) {
+      console.error(`[Currency] Invalid rate for ${to}: ${rate}`);
+      return amount; // Fallback to original amount
     }
     
     const convertedAmount = amount * rate;
+    
+    // Sanity check
+    if (convertedAmount <= 0 || isNaN(convertedAmount)) {
+      console.warn(`[Currency] Invalid conversion result: ${convertedAmount}, using original amount`);
+      return amount;
+    }
+    
     console.log(`[Currency] Conversion result: ${amount} ${from} = ${convertedAmount} ${to} (rate: ${rate})`);
     return convertedAmount;
-  } catch (err) {
-    console.error(`[Currency] Error converting from ${from} to ${to}`, err);
+  } catch (err: any) {
+    console.error(`[Currency] Error converting from ${from} to ${to}:`, err.message);
+    
+    // Fallback strategies
+    if (currencyCache[from]?.[to]) {
+      console.log(`[Currency] Using cached rate as fallback: ${currencyCache[from][to]}`);
+      return amount * currencyCache[from][to];
+    }
+    
+    console.log(`[Currency] Returning original amount as fallback`);
     return amount;
   }
 }
@@ -242,36 +300,62 @@ function getPolygonFromIsochrone(geojson: any) {
   
   if (!geojson) {
     console.error("[Geometry] Invalid isochrone geojson: null or undefined");
-    throw new Error("Invalid isochrone geojson");
+    throw new Error("Invalid isochrone geojson: null or undefined");
   }
   
-  // Parse if string, otherwise use directly
-  const geojsonData = typeof geojson === "string" ? JSON.parse(geojson) : geojson;
-  
-  console.log(`[Geometry] Raw GeoJSON type: ${geojsonData.type}`);
-  
-  // Your GeoJSON is a Feature with Polygon geometry
-  let geometry;
-  if (geojsonData.type === "Feature") {
-    geometry = geojsonData.geometry;
-    console.log(`[Geometry] Extracted geometry from Feature: ${geometry.type}`);
-  } else if (geojsonData.type === "Polygon") {
-    geometry = geojsonData;
-  } else {
-    console.error(`[Geometry] Unsupported GeoJSON type: ${geojsonData.type}`);
-    throw new Error(`Unsupported GeoJSON type: ${geojsonData.type}`);
+  try {
+    // Parse if string, otherwise use directly
+    const geojsonData = typeof geojson === "string" ? JSON.parse(geojson) : geojson;
+    
+    console.log(`[Geometry] Raw GeoJSON type: ${geojsonData.type}`);
+    
+    if (!geojsonData.type) {
+      throw new Error("Missing GeoJSON type");
+    }
+    
+    let geometry;
+    if (geojsonData.type === "Feature") {
+      geometry = geojsonData.geometry;
+      if (!geometry) {
+        throw new Error("Feature has no geometry");
+      }
+      console.log(`[Geometry] Extracted geometry from Feature: ${geometry.type}`);
+    } else if (geojsonData.type === "Polygon") {
+      geometry = geojsonData;
+    } else if (geojsonData.type === "FeatureCollection") {
+      // Handle FeatureCollection by taking first feature
+      const firstFeature = geojsonData.features?.[0];
+      if (!firstFeature) {
+        throw new Error("FeatureCollection has no features");
+      }
+      geometry = firstFeature.geometry;
+      console.log(`[Geometry] Using first feature from FeatureCollection: ${geometry.type}`);
+    } else {
+      throw new Error(`Unsupported GeoJSON type: ${geojsonData.type}`);
+    }
+    
+    if (!geometry || geometry.type !== "Polygon") {
+      throw new Error(`Invalid or non-Polygon geometry in isochrone: ${geometry?.type}`);
+    }
+    
+    const coordinates = geometry.coordinates;
+    if (!coordinates || !Array.isArray(coordinates) || coordinates.length === 0) {
+      throw new Error("Invalid polygon coordinates");
+    }
+    
+    console.log(`[Geometry] Polygon has ${coordinates.length} ring(s), outer ring has ${coordinates[0]?.length || 0} coordinates`);
+    
+    // Validate coordinate structure
+    if (!coordinates[0] || coordinates[0].length < 4) {
+      throw new Error("Polygon ring has insufficient coordinates (minimum 4 required)");
+    }
+    
+    const polygon = turf.polygon(coordinates);
+    return polygon;
+  } catch (error: any) {
+    console.error("[Geometry] Error parsing GeoJSON:", error);
+    throw new Error(`Failed to parse zone GeoJSON: ${error.message}`);
   }
-  
-  if (!geometry || geometry.type !== "Polygon") {
-    console.error("[Geometry] Invalid or non-Polygon geometry in isochrone");
-    throw new Error("Invalid or non-Polygon geometry in isochrone");
-  }
-  
-  const coordinates = geometry.coordinates;
-  console.log(`[Geometry] Polygon has ${coordinates.length} ring(s), outer ring has ${coordinates[0]?.length || 0} coordinates`);
-  
-  const polygon = turf.polygon(coordinates);
-  return polygon;
 }
 
 function getZonesContainingPoint(lng: number, lat: number, allZones: any[]) {
@@ -289,7 +373,7 @@ function getZonesContainingPoint(lng: number, lat: number, allZones: any[]) {
         console.log(`[Geometry] ✓ Point found in isochrone zone: ${zone.name} (${zone.id})`);
         matches.push(zone);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn(`[Geometry] Skipping isochrone zone due to error: ${zone?.id}`, err?.message || err);
     }
   }
@@ -298,27 +382,61 @@ function getZonesContainingPoint(lng: number, lat: number, allZones: any[]) {
   return matches;
 }
 
-// -------------------- Enhanced Effective Distance Calculation --------------------
-function calculateEffectiveDistance(pickupLng: number, pickupLat: number, zone: any): number {
-  try {
-    console.log(`[Effective Distance] Calculating distance to zone: ${zone.name}`);
+// -------------------- FIXED: Enhanced Effective Distance Calculation with ROAD DISTANCE --------------------
+async function calculateEffectiveDistance(
+    pickupLng: number, 
+    pickupLat: number, 
+    zone: any
+): Promise<number> {
+    console.log(`[Effective Distance] Calculating ROAD distance to zone: ${zone.name}`);
     
-    const poly = getPolygonFromIsochrone(zone.geojson);
-    const center = turf.centroid(poly);
-    const centerCoords = center.geometry.coordinates; // [lng, lat]
-    
-    const distanceToCenter = turf.distance(
-      turf.point([pickupLng, pickupLat]),
-      turf.point(centerCoords),
-      { units: 'miles' }
-    );
-    
-    console.log(`[Effective Distance] Distance from pickup (${pickupLng}, ${pickupLat}) to zone center (${centerCoords[0]}, ${centerCoords[1]}): ${distanceToCenter.toFixed(2)} miles`);
-    return distanceToCenter;
-  } catch (error) {
-    console.error(`[Effective Distance] Error calculating distance for zone ${zone.name}:`, error);
-    return 0;
-  }
+    try {
+        const poly = getPolygonFromIsochrone(zone.geojson);
+        const center = turf.centroid(poly);
+        const centerCoords = center.geometry.coordinates; // [lng, lat]
+        
+        // Use Google Maps API for ROAD distance, not straight-line
+        // Note: getRoadDistance expects (lat, lng) order
+        const distanceResult = await getRoadDistance(
+            pickupLat, pickupLng, 
+            centerCoords[1], centerCoords[0] // Convert [lng, lat] to [lat, lng]
+        );
+        
+        if (distanceResult.distance === null || distanceResult.distance === undefined) {
+            console.warn(`[Effective Distance] Failed to get road distance for ${zone.name}, using straight-line as fallback`);
+            // Fallback to straight-line distance
+            const straightLineDistance = turf.distance(
+                turf.point([pickupLng, pickupLat]),
+                turf.point(centerCoords),
+                { units: 'miles' }
+            );
+            console.log(`[Effective Distance] Using straight-line fallback: ${straightLineDistance.toFixed(2)} miles`);
+            return straightLineDistance;
+        }
+        
+        console.log(`[Effective Distance] Road distance from pickup to ${zone.name} center: ${distanceResult.distance} miles`);
+        return distanceResult.distance;
+    } catch (error: any) {
+        console.error(`[Effective Distance] Error calculating road distance for zone ${zone.name}:`, error.message);
+        
+        // Ultimate fallback - calculate straight-line distance
+        try {
+            const poly = getPolygonFromIsochrone(zone.geojson);
+            const center = turf.centroid(poly);
+            const centerCoords = center.geometry.coordinates;
+            
+            const straightLineDistance = turf.distance(
+                turf.point([pickupLng, pickupLat]),
+                turf.point(centerCoords),
+                { units: 'miles' }
+            );
+            console.log(`[Effective Distance] Using straight-line as ultimate fallback: ${straightLineDistance.toFixed(2)} miles`);
+            return straightLineDistance;
+        } catch (fallbackError: any) {
+            console.error(`[Effective Distance] Complete failure for zone ${zone.name}:`, fallbackError.message);
+            return 0; // Final fallback
+        }
+    }
 }
 
 // -------------------- Token / third-party API fetch --------------------
@@ -464,7 +582,34 @@ function optimizeSupplierVehicles(vehicles: any[]): any[] {
   return optimizedVehicles;
 }
 
-// -------------------- Main fetchFromDatabase with NEW Zone Overlapping Logic --------------------
+// -------------------- Zone Priority Logic --------------------
+function calculateZonePriority(zone: any, effectiveDistance: number, totalTripDistance: number): number {
+    // Higher priority = better
+    let priority = 0;
+    
+    // 1. Primary factor: Zone should logically serve the pickup location
+    const isAirportZone = zone.name.toLowerCase().includes('airport') || zone.name.toLowerCase().includes('fco');
+    const isStationZone = zone.name.toLowerCase().includes('station') || zone.name.toLowerCase().includes('termini');
+    const isCityZone = !isAirportZone && !isStationZone;
+    
+    // 2. Distance-based priority - closer zones get higher priority
+    const distancePriority = Math.max(0, 1 - (effectiveDistance / 30)); // Normalize to 0-1 (30 mile max)
+    
+    // 3. Zone type priority - city/station zones preferred for city pickups
+    let typePriority = 1;
+    if (isStationZone && effectiveDistance < 1) typePriority = 3; // Station zones for nearby pickups
+    else if (isCityZone && effectiveDistance < 2) typePriority = 2; // City zones for city pickups
+    else if (isAirportZone && effectiveDistance > 10) typePriority = 0.3; // Airport zones heavily penalized for distant pickups
+    else if (isAirportZone && effectiveDistance > 5) typePriority = 0.5; // Airport zones penalized for distant pickups
+    
+    priority = distancePriority * typePriority;
+    
+    console.log(`[Zone Priority] ${zone.name}: distance=${effectiveDistance.toFixed(2)}mi, typePriority=${typePriority}, finalPriority=${priority.toFixed(2)}`);
+    
+    return priority;
+}
+
+// -------------------- Main fetchFromDatabase with ROAD DISTANCE Zone Optimization --------------------
 export const fetchFromDatabase = async (
   pickupLocation: string,
   dropoffLocation: string,
@@ -474,7 +619,7 @@ export const fetchFromDatabase = async (
   returnDate?: string,
   returnTime?: string
 ): Promise<{ vehicles: any[]; distance: any; estimatedTime: string; straightLineDistance?: number }> => {
-  console.log(`[Database] Starting database fetch with NEW ZONE OVERLAPPING LOGIC`);
+  console.log(`[Database] Starting database fetch with ROAD DISTANCE zone optimization`);
   console.log(`[Database] Pickup: ${pickupLocation}, Dropoff: ${dropoffLocation}, Currency: ${targetCurrency}`);
 
   // Parse coordinates with validation
@@ -587,8 +732,8 @@ export const fetchFromDatabase = async (
     const surgeCharges = surgeChargesResult.rows as any[];
     console.log(`[Database] Loaded ${vehicleTypes.length} vehicle types, ${margins.length} margins, ${surgeCharges.length} surge charges`);
 
-    // 6) NEW: Calculate optimal pricing for each vehicle across overlapping zones
-    console.log(`[Zone Optimization] Calculating optimal pricing across ${overlappingZones.length} overlapping zones`);
+    // 6) NEW: Calculate optimal pricing for each vehicle across overlapping zones USING ROAD DISTANCE
+    console.log(`[Zone Optimization] Calculating optimal pricing across ${overlappingZones.length} overlapping zones USING ROAD DISTANCE`);
     
     const vehicleGroups = new Map();
     
@@ -612,7 +757,7 @@ export const fetchFromDatabase = async (
       console.log(`\n[Zone Optimization] Processing vehicle type: ${vehicleType} - ${brand} - ${passengers}p - Supplier: ${supplierId}`);
       
       let bestVehicle: any = null;
-      let lowestPrice = Infinity;
+      let bestScore = -Infinity;
       
       // Calculate price for this vehicle type in each overlapping zone
       for (const vehicle of vehicles) {
@@ -620,12 +765,12 @@ export const fetchFromDatabase = async (
         
         console.log(`[Zone Optimization] Calculating price for zone: ${zone.name}`);
         
-        // Calculate distance from pickup location to zone center
-        const effectiveDistance = calculateEffectiveDistance(fromLng, fromLat, zone);
-        console.log(`[Zone Optimization] Distance from pickup to zone center: ${effectiveDistance.toFixed(2)} miles`);
+        // Calculate distance from pickup location to zone center USING ROAD DISTANCE
+        const effectiveDistance = await calculateEffectiveDistance(fromLng, fromLat, zone);
+        console.log(`[Zone Optimization] ROAD distance from pickup to zone center: ${effectiveDistance.toFixed(2)} miles`);
         
         // Get zone radius (assuming it's in miles)
-        const zoneRadiusMiles = Number(zone.radius_km) || 0;
+        const zoneRadiusMiles = Math.max(1, Number(zone.radius_km) || 10); // Ensure minimum radius
         console.log(`[Zone Optimization] Zone radius: ${zoneRadiusMiles} miles`);
         
         // Calculate available coverage within zone
@@ -640,20 +785,27 @@ export const fetchFromDatabase = async (
         const basePrice = Number(vehicle.price) || 0;
         const extraPricePerMile = Number(vehicle.extra_price_per_mile) || 0;
         const extraCost = extraMiles * extraPricePerMile;
-        const totalPrice = basePrice + extraCost;
+        const totalPrice = Math.max(basePrice, basePrice + extraCost); // At least base price
         
-        console.log(`[Zone Optimization] Price breakdown for ${zone.name}:`);
-        console.log(`[Zone Optimization]   Base price: ${basePrice}`);
-        console.log(`[Zone Optimization]   Extra cost: ${extraMiles.toFixed(2)} miles × ${extraPricePerMile}/mile = ${extraCost.toFixed(2)}`);
-        console.log(`[Zone Optimization]   Total price: ${totalPrice.toFixed(2)}`);
+        // Calculate zone priority to avoid illogical zone assignments
+        const zonePriority = calculateZonePriority(zone, effectiveDistance, totalTripDistance);
         
-        // Track the vehicle with lowest price
-        if (totalPrice < lowestPrice) {
-          lowestPrice = totalPrice;
+        // Combined score: lower price + higher priority
+        const priceScore = 1000 / (totalPrice + 1); // Inverse of price (higher is better)
+        const combinedScore = priceScore * zonePriority;
+        
+        console.log(`[Zone Optimization] ${zone.name}:`);
+        console.log(`  Price: $${totalPrice.toFixed(2)} (base: $${basePrice}, extra: $${extraCost.toFixed(2)})`);
+        console.log(`  Zone Priority: ${zonePriority.toFixed(2)}`);
+        console.log(`  Combined Score: ${combinedScore.toFixed(2)}`);
+        
+        if (combinedScore > bestScore) {
+          bestScore = combinedScore;
           bestVehicle = {
             ...vehicle,
             optimizedPrice: totalPrice,
             selected_zone: zone,
+            zonePriority: zonePriority,
             priceDetails: {
               basePrice,
               extraMiles,
@@ -664,16 +816,20 @@ export const fetchFromDatabase = async (
               totalTripDistance
             }
           };
-          
-          console.log(`[Zone Optimization] ✅ New best price: ${totalPrice.toFixed(2)} from zone ${zone.name}`);
+          console.log(`  ✅ NEW BEST: score ${combinedScore.toFixed(2)}`);
         }
       }
       
       if (bestVehicle) {
-        console.log(`[Zone Optimization] 🏆 Selected zone ${bestVehicle.selected_zone.name} with price: ${bestVehicle.optimizedPrice.toFixed(2)}`);
+        console.log(`[Zone Optimization] 🏆 Selected: ${bestVehicle.selected_zone.name} with score ${bestScore.toFixed(2)}`);
         optimizedVehicles.push(bestVehicle);
       } else {
         console.log(`[Zone Optimization] ❌ No optimal vehicle found for ${vehicleKey}`);
+        // Fallback: use first available vehicle
+        if (vehicles.length > 0) {
+          console.log(`[Zone Optimization] Using fallback: first available vehicle`);
+          optimizedVehicles.push(vehicles[0]);
+        }
       }
     }
 
@@ -870,7 +1026,7 @@ export const fetchFromDatabase = async (
       estimatedTime: duration,
       straightLineDistance: straightLineDistance
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("[Database] Error in zone optimization:", error?.message || error);
     throw new Error("Failed to optimize zones and vehicle pricing.");
   }
