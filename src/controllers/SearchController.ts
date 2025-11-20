@@ -23,43 +23,22 @@ function isValidCoordinate(lat: number, lng: number): boolean {
          lng >= -180 && lng <= 180;
 }
 
-function parseCoordinate(coordString: string): { lat: number; lng: number } | null {
+function parseCoordinate(coordString: string) {
   try {
-    const parts = coordString.split(",").map(part => parseFloat(part.trim()));
-    if (parts.length !== 2) {
-      console.error(`[Coordinate] Invalid coordinate format: ${coordString}`);
-      return null;
-    }
-    
-    const [first, second] = parts;
-    
-    // Determine which is lat and which is lng
-    let lat, lng;
-    if (Math.abs(first) <= 90 && Math.abs(second) <= 180) {
-      // Standard format: lat,lng
-      lat = first;
-      lng = second;
-    } else if (Math.abs(second) <= 90 && Math.abs(first) <= 180) {
-      // Possibly swapped: lng,lat
-      lat = second;
-      lng = first;
-      console.warn(`[Coordinate] Coordinates might be swapped, correcting: ${coordString} -> (${lat}, ${lng})`);
-    } else {
-      console.error(`[Coordinate] Invalid coordinate values: ${coordString}`);
-      return null;
-    }
-    
-    if (!isValidCoordinate(lat, lng)) {
-      console.error(`[Coordinate] Invalid coordinate range: (${lat}, ${lng})`);
-      return null;
-    }
-    
+    const [latStr, lngStr] = coordString.split(",").map(s => s.trim());
+    const lat = parseFloat(latStr);
+    const lng = parseFloat(lngStr);
+
+    if (isNaN(lat) || isNaN(lng)) return null;
+    if (lat < -90 || lat > 90) return null;
+    if (lng < -180 || lng > 180) return null;
+
     return { lat, lng };
-  } catch (error) {
-    console.error(`[Coordinate] Error parsing coordinate: ${coordString}`, error);
+  } catch {
     return null;
   }
 }
+
 
 // -------------------- Enhanced Distance Helper with Debugging --------------------
 export async function getRoadDistance(fromLat: number, fromLng: number, toLat: number, toLng: number) {
