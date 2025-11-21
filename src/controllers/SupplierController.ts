@@ -1729,29 +1729,92 @@ export const getZoneById = async (req: Request, res: Response) => {
 
 // Update Zone
 export const updateZone = async (req: Request, res: Response) => {
-    try {
-        const { id } = req.params;
-        const { name, supplier_id, latitude, longitude,address, radius_miles } = req.body;
-        const center = turf.point([longitude, latitude]);
-        const circle = turf.circle(center, radius_miles, { steps: 64, units: "miles" });
-        
-        const updatedZone = await db.update(zones).set({
-            name,
-            supplier_id,
-            latitude,
-            longitude,
-            radius_miles,
-            address,
-            geojson: circle,
-        }).where(eq(zones.id, id)).returning();
-        
-        if (!updatedZone) {
-            return res.status(404).json({ message: "Zone not found" });
-        }
-        res.json({ message: "Zone updated successfully", zone: updatedZone });
-    } catch (error) {
-        res.status(500).json({ message: "Error updating zone", error });
-    }
+try {
+const { id } = req.params;
+const { name, supplier_id, latitude, longitude, address, radius_miles } = req.body;
+
+```
+if (!latitude || !longitude || !radius_miles) {
+  return res.status(400).json({ message: "Missing required zone parameters." });
+}
+
+// --------------------------------------------------------------------
+// STEP 1: Convert miles → meters
+// --------------------------------------------------------------------
+const radius_meters = radius_miles * 1609.34;
+
+// --------------------------------------------------------------------
+// STEP 2: Call OpenRouteService Isochrone API
+// --------------------------------------------------------------------
+const orsResponse = await axios.post(
+  "https://api.openrouteservice.org/v2/isochrones/driving-car",
+  {
+    locations: [[longitude, latitude]],  // ORS expects [lng, lat]
+    range: [radius_meters],
+    range_type: "distance",
+  },
+  {
+    headers: {
+      Authorization: ORS_API_KEY,
+      "Content-Type": "application/json",
+    },
+  }
+);
+
+if (!orsResponse.data?.features?.length) {
+  return res.status(500).json({ message: "OpenRouteService returned no isochrone." });
+}
+
+const isochrone = orsResponse.data.features[0]; // The polygon
+
+// --------------------------------------------------------------------
+// STEP 3: Calculate centroid using Turf.js
+// --------------------------------------------------------------------
+const centroid = turf.centroid(isochrone.geometry);
+const centroidCoords = centroid.geometry.coordinates; // [lng, lat]
+
+// --------------------------------------------------------------------
+// STEP 4: Merge original center + centroid into GeoJSON
+// --------------------------------------------------------------------
+isochrone.properties = {
+  ...isochrone.properties,
+  original_center: [longitude, latitude],
+  centroid: centroidCoords,
+  radius_miles,
+  zone_name: name,
+};
+
+// --------------------------------------------------------------------
+// STEP 5: Update zone in DB
+// --------------------------------------------------------------------
+const updatedZone = await db
+  .update(zones)
+  .set({
+    name,
+    supplier_id,
+    latitude,
+    longitude,
+    radius_miles,
+    address,
+    geojson: isochrone, // now includes merged properties
+  })
+  .where(eq(zones.id, id))
+  .returning();
+
+if (!updatedZone || updatedZone.length === 0) {
+  return res.status(404).json({ message: "Zone not found" });
+}
+
+res.json({ message: "Zone updated successfully (Isochrone-based)", zone: updatedZone });
+```
+
+} catch (error: any) {
+console.error("Error updating zone with ORS isochrone:", error.response?.data || error);
+res.status(500).json({
+message: "Error updating zone (Isochrone failed)",
+error: error.response?.data || error.message,
+});
+}
 };
 
 // Delete Zone
