@@ -425,23 +425,54 @@ function getZonesContainingPoint(lng: number, lat: number, allZones: any[]) {
   return matches;
 }
 
-// -------------------- Dynamic Zone Center Calculation --------------------
+// -------------------- Enhanced Zone Center Calculation --------------------
 function getZoneLogicalCenter(zone: any): [number, number] {
   console.log(`[Zone Center] Calculating logical center for: ${zone.name}`);
   
   try {
-    // Always use the centroid from the zone's GeoJSON polygon
+    // Parse the GeoJSON if it's a string
+    const geojsonData = typeof zone.geojson === "string" ? JSON.parse(zone.geojson) : zone.geojson;
+    
+    // Priority 1: Use original_center from properties (highest priority)
+    if (geojsonData.properties?.original_center) {
+      const [lng, lat] = geojsonData.properties.original_center.map(parseFloat);
+      if (isValidCoordinate(lat, lng)) {
+        console.log(`[Zone Center] ${zone.name}: Using ORIGINAL center from properties (${lat.toFixed(6)}, ${lng.toFixed(6)})`);
+        return [lng, lat];
+      }
+    }
+    
+    // Priority 2: Use center from properties
+    if (geojsonData.properties?.center) {
+      const [lng, lat] = geojsonData.properties.center.map(parseFloat);
+      if (isValidCoordinate(lat, lng)) {
+        console.log(`[Zone Center] ${zone.name}: Using center from properties (${lat.toFixed(6)}, ${lng.toFixed(6)})`);
+        return [lng, lat];
+      }
+    }
+    
+    // Priority 3: Use centroid from properties
+    if (geojsonData.properties?.centroid) {
+      const [lng, lat] = geojsonData.properties.centroid.map(parseFloat);
+      if (isValidCoordinate(lat, lng)) {
+        console.log(`[Zone Center] ${zone.name}: Using centroid from properties (${lat.toFixed(6)}, ${lng.toFixed(6)})`);
+        return [lng, lat];
+      }
+    }
+    
+    // Priority 4: Calculate centroid from polygon geometry (existing fallback)
+    console.log(`[Zone Center] ${zone.name}: No properties center found, calculating centroid from polygon`);
     const poly = getPolygonFromIsochrone(zone.geojson);
     const center = turf.centroid(poly);
     const [centerLng, centerLat] = center.geometry.coordinates;
     
-    console.log(`[Zone Center] ${zone.name}: centroid at (${centerLat.toFixed(6)}, ${centerLng.toFixed(6)})`);
+    console.log(`[Zone Center] ${zone.name}: Calculated centroid at (${centerLat.toFixed(6)}, ${centerLng.toFixed(6)})`);
     
     return [centerLng, centerLat];
   } catch (error: any) {
     console.error(`[Zone Center] Error calculating center for ${zone.name}:`, error.message);
     
-    // Fallback: try to extract coordinates from the GeoJSON directly
+    // Final fallback: try to extract coordinates from the GeoJSON directly
     try {
       const geojsonData = typeof zone.geojson === "string" ? JSON.parse(zone.geojson) : zone.geojson;
       let coordinates;
@@ -453,18 +484,53 @@ function getZoneLogicalCenter(zone: any): [number, number] {
       }
       
       if (coordinates && coordinates[0] && coordinates[0].length > 0) {
-        // Use the first coordinate as fallback
+        // Use the first coordinate as ultimate fallback
         const [lng, lat] = coordinates[0][0];
-        console.log(`[Zone Center] Fallback: using first coordinate (${lat.toFixed(6)}, ${lng.toFixed(6)})`);
+        console.log(`[Zone Center] Ultimate fallback: using first coordinate (${lat.toFixed(6)}, ${lng.toFixed(6)})`);
         return [lng, lat];
       }
     } catch (fallbackError) {
-      console.error(`[Zone Center] Fallback also failed for ${zone.name}`);
+      console.error(`[Zone Center] All fallbacks failed for ${zone.name}`);
     }
     
-    // Ultimate fallback: return a default coordinate (should rarely happen)
+    // Should rarely happen - return a default coordinate
     console.warn(`[Zone Center] Using default fallback coordinate for ${zone.name}`);
-    return [0, 0]; // This will be caught by distance validation
+    return [12.2546072, 41.7951163]; // FCO airport as default
+  }
+}
+
+// -------------------- Enhanced Zone Information Logging --------------------
+function logZoneDetails(zone: any) {
+  console.log(`\n[Zone Details] ${zone.name}:`);
+  
+  try {
+    const geojsonData = typeof zone.geojson === "string" ? JSON.parse(zone.geojson) : zone.geojson;
+    
+    if (geojsonData.properties) {
+      console.log(`  Properties available:`);
+      if (geojsonData.properties.original_center) {
+        console.log(`    original_center: ${geojsonData.properties.original_center}`);
+      }
+      if (geojsonData.properties.center) {
+        console.log(`    center: ${geojsonData.properties.center}`);
+      }
+      if (geojsonData.properties.centroid) {
+        console.log(`    centroid: ${geojsonData.properties.centroid}`);
+      }
+      if (geojsonData.properties.zone_name) {
+        console.log(`    zone_name: ${geojsonData.properties.zone_name}`);
+      }
+      if (geojsonData.properties.radius_miles) {
+        console.log(`    radius_miles: ${geojsonData.properties.radius_miles}`);
+      }
+    }
+    
+    // Log the calculated center
+    const [lng, lat] = getZoneLogicalCenter(zone);
+    console.log(`  Selected center: (${lat.toFixed(6)}, ${lng.toFixed(6)})`);
+    
+  } catch (error) {
+    console.error(`[Zone Details] Error logging details for ${zone.name}:`, error);
   }
 }
 
@@ -473,10 +539,25 @@ async function calculateEffectiveDistance(
   pickupLng: number, 
   pickupLat: number, 
   zone: any
-): Promise<{ distance: number; isRoadDistance: boolean; fallbackReason?: string }> {
+): Promise<{ distance: number; isRoadDistance: boolean; fallbackReason?: string; centerSource: string }> {
+  
   console.log(`\n[Effective Distance] Calculating ROAD distance to logical center of: ${zone.name}`);
   
+  // Log zone details for debugging
+  logZoneDetails(zone);
+  
   const [zoneLng, zoneLat] = getZoneLogicalCenter(zone);
+  
+  // Determine center source for logging
+  let centerSource = "calculated";
+  try {
+    const geojsonData = typeof zone.geojson === "string" ? JSON.parse(zone.geojson) : zone.geojson;
+    if (geojsonData.properties?.original_center) centerSource = "original_center";
+    else if (geojsonData.properties?.center) centerSource = "center";
+    else if (geojsonData.properties?.centroid) centerSource = "centroid";
+  } catch (error) {
+    centerSource = "calculated";
+  }
   
   // Validate zone coordinates
   if (!isValidCoordinate(zoneLat, zoneLng)) {
@@ -496,12 +577,13 @@ async function calculateEffectiveDistance(
     return { 
       distance: straightLineDistance, 
       isRoadDistance: false, 
-      fallbackReason: 'Invalid zone coordinates' 
+      fallbackReason: 'Invalid zone coordinates',
+      centerSource: 'calculated_fallback'
     };
   }
   
   console.log(`[Coordinates] Pickup: (${pickupLat.toFixed(6)}, ${pickupLng.toFixed(6)})`);
-  console.log(`[Coordinates] Zone ${zone.name}: (${zoneLat.toFixed(6)}, ${zoneLng.toFixed(6)})`);
+  console.log(`[Coordinates] Zone ${zone.name} (${centerSource}): (${zoneLat.toFixed(6)}, ${zoneLng.toFixed(6)})`);
   
   // Calculate straight-line distance first (for reference only)
   const straightLineDistance = turf.distance(
@@ -516,11 +598,12 @@ async function calculateEffectiveDistance(
   const distanceResult = await calculateRobustDistance(pickupLat, pickupLng, zoneLat, zoneLng);
   
   if (distanceResult.distance !== null && distanceResult.distance !== undefined) {
-    console.log(`[Effective Distance] ✅ Using ROAD distance: ${distanceResult.distance} miles`);
+    console.log(`[Effective Distance] ✅ Using ROAD distance: ${distanceResult.distance} miles (center source: ${centerSource})`);
     
     return { 
       distance: distanceResult.distance, 
-      isRoadDistance: !distanceResult.estimated 
+      isRoadDistance: !distanceResult.estimated,
+      centerSource
     };
   }
   
@@ -532,7 +615,8 @@ async function calculateEffectiveDistance(
   return { 
     distance: estimatedRoadDistance, 
     isRoadDistance: false, 
-    fallbackReason: 'Road API failed' 
+    fallbackReason: 'Road API failed',
+    centerSource
   };
 }
 
@@ -931,9 +1015,9 @@ export const fetchFromDatabase = async (
           console.log(`[Zone Optimization] Fallback reason: ${effectiveDistanceResult.fallbackReason}`);
         }
         
-        // Get zone radius (convert km to miles)
+        // NOTE: radius_km is already in miles (despite the column name)
         const zoneRadiusMiles = Math.max(1, (Number(zone.radius_km) || 10));
-        console.log(`[Zone Optimization] Zone radius: ${zoneRadiusMiles.toFixed(2)} miles`);
+        console.log(`[Zone Optimization] Zone radius: ${zoneRadiusMiles.toFixed(2)} miles (from radius_km column)`);
         
         // Calculate available coverage within zone
         const availableMilesInZone = Math.max(0, zoneRadiusMiles - effectiveDistance);
@@ -977,7 +1061,13 @@ export const fetchFromDatabase = async (
               zoneRadiusMiles,
               totalTripDistance,
               isRoadDistance: effectiveDistanceResult.isRoadDistance,
-              fallbackReason: effectiveDistanceResult.fallbackReason
+              fallbackReason: effectiveDistanceResult.fallbackReason,
+              centerSource: effectiveDistanceResult.centerSource,
+              zoneCenter: {
+                lat: zoneRadiusMiles, // This will be updated with actual coordinates
+                lng: effectiveDistance,
+                source: effectiveDistanceResult.centerSource
+              }
             }
           };
           console.log(`  ✅ NEW BEST: score ${combinedScore.toFixed(2)}`);
@@ -1184,15 +1274,22 @@ export const fetchFromDatabase = async (
     // Log optimization summary
     const zonesUsed = new Set(finalVehicles.map(v => v.zoneName));
     const roadDistanceCount = finalVehicles.filter(v => v.optimizationDetails?.isRoadDistance).length;
+    const centerSources = finalVehicles.reduce((acc: any, v) => {
+      const source = v.optimizationDetails?.centerSource || 'unknown';
+      acc[source] = (acc[source] || 0) + 1;
+      return acc;
+    }, {});
     
     console.log(`[Zone Optimization] Summary:`);
     console.log(`  Using ${zonesUsed.size} optimal zones:`, Array.from(zonesUsed));
     console.log(`  Road distance used for ${roadDistanceCount}/${finalVehicles.length} vehicles`);
+    console.log(`  Center sources:`, centerSources);
     
     // Log pricing comparison
     finalVehicles.forEach(vehicle => {
       const distanceType = vehicle.optimizationDetails?.isRoadDistance ? 'ROAD' : 'ESTIMATED';
-      console.log(`[Final] ${vehicle.vehicalType} - ${vehicle.brand}: ${vehicle.price} ${targetCurrency} (Zone: ${vehicle.zoneName}, ${distanceType})`);
+      const centerSource = vehicle.optimizationDetails?.centerSource || 'unknown';
+      console.log(`[Final] ${vehicle.vehicalType} - ${vehicle.brand}: ${vehicle.price} ${targetCurrency} (Zone: ${vehicle.zoneName}, ${distanceType}, Center: ${centerSource})`);
     });
 
     return { 
