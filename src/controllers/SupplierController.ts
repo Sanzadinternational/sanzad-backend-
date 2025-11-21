@@ -1631,7 +1631,7 @@ export const CreateZone = async (req: Request, res: Response, next: NextFunction
     }
 
     // --------------------------------------------------------------------
-    // STEP 1: Convert miles → meters (ORS uses meters)
+    // STEP 1: Convert miles → meters
     // --------------------------------------------------------------------
     const radius_meters = radius_miles * 1609.34;
 
@@ -1642,7 +1642,7 @@ export const CreateZone = async (req: Request, res: Response, next: NextFunction
       "https://api.openrouteservice.org/v2/isochrones/driving-car",
       {
         locations: [[longitude, latitude]],  // ORS expects [lng, lat]
-        range: [radius_meters],              // driving distance
+        range: [radius_meters],
         range_type: "distance"
       },
       {
@@ -1660,7 +1660,30 @@ export const CreateZone = async (req: Request, res: Response, next: NextFunction
     const isochrone = orsResponse.data.features[0]; // The polygon
 
     // --------------------------------------------------------------------
-    // STEP 3: Save real isochrone polygon to DB
+    // STEP 3: Calculate centroid using Turf.js
+    // --------------------------------------------------------------------
+    const centroid = turf.centroid(isochrone.geometry);
+    const centroidCoords = centroid.geometry.coordinates; // [lng, lat]
+
+    // --------------------------------------------------------------------
+    // STEP 4: Merge original center + centroid into GeoJSON
+    // --------------------------------------------------------------------
+    isochrone.properties = {
+      ...isochrone.properties,
+
+      // Add the real user-defined origin point
+      original_center: [longitude, latitude],
+
+      // Add computed centroid
+      centroid: centroidCoords,
+
+      // Include radius + name if useful
+      radius_miles,
+      zone_name: name
+    };
+
+    // --------------------------------------------------------------------
+    // STEP 5: Save polygon with metadata inside the GeoJSON itself
     // --------------------------------------------------------------------
     const newZone = await db
       .insert(zones)
@@ -1669,9 +1692,9 @@ export const CreateZone = async (req: Request, res: Response, next: NextFunction
         supplier_id,
         latitude,
         longitude,
-        radius_miles,  // keep original radius for reference
+        radius_miles,
         address,
-        geojson: isochrone,  // save actual polygon instead of circle
+        geojson: isochrone, // now includes merged properties
       })
       .returning();
 
