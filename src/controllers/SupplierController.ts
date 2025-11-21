@@ -1733,7 +1733,7 @@ try {
 const { id } = req.params;
 const { name, supplier_id, latitude, longitude, address, radius_miles } = req.body;
 
-```
+
 if (!latitude || !longitude || !radius_miles) {
   return res.status(400).json({ message: "Missing required zone parameters." });
 }
@@ -1806,7 +1806,7 @@ if (!updatedZone || updatedZone.length === 0) {
 }
 
 res.json({ message: "Zone updated successfully (Isochrone-based)", zone: updatedZone });
-```
+
 
 } catch (error: any) {
 console.error("Error updating zone with ORS isochrone:", error.response?.data || error);
