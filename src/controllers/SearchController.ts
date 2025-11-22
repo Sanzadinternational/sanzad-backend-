@@ -262,6 +262,7 @@ function isLikelyUrbanArea(coords: any): boolean {
 }
 
 // -------------------- Enhanced Road Distance Helper --------------------
+// -------------------- Enhanced Road Distance Helper --------------------
 export async function getRoadDistance(fromLat: number, fromLng: number, toLat: number, toLng: number) {
   console.log(`[Distance] Getting ROAD distance from (${fromLat}, ${fromLng}) to (${toLat}, ${toLng})`);
   
@@ -324,16 +325,35 @@ export async function getRoadDistance(fromLat: number, fromLng: number, toLat: n
       return { distance: null, duration: null, error: "Missing distance/duration" };
     }
     
-    // Parse distance - handle different formats
+    // Parse distance - handle ALL possible units including feet
     let distance: number;
+    
     if (distanceText.includes('mi')) {
+      // Miles format: "0.1 mi" or "1.5 mi"
       distance = parseFloat(distanceText.replace(" mi", "").replace(",", ""));
     } else if (distanceText.includes('km')) {
+      // Kilometers format: "0.2 km" or "1.2 km"  
       const km = parseFloat(distanceText.replace(" km", "").replace(",", ""));
       distance = km * 0.621371; // Convert km to miles
+    } else if (distanceText.includes('ft')) {
+      // Feet format: "500 ft" or "1,500 ft"
+      const feet = parseFloat(distanceText.replace(" ft", "").replace(",", ""));
+      distance = feet / 5280; // Convert feet to miles
+      console.log(`[Distance] Converted ${feet} ft to ${distance.toFixed(4)} miles`);
+    } else if (distanceText.includes('m')) {
+      // Meters format: "100 m" or "1,000 m" (though less common with imperial units)
+      const meters = parseFloat(distanceText.replace(" m", "").replace(",", ""));
+      distance = meters * 0.000621371; // Convert meters to miles
+      console.log(`[Distance] Converted ${meters} m to ${distance.toFixed(4)} miles`);
     } else {
-      console.error(`[Distance] Unknown distance unit: ${distanceText}`);
-      return { distance: null, duration: null, error: "Unknown distance unit" };
+      console.error(`[Distance] Unknown distance unit: "${distanceText}"`);
+      return { distance: null, duration: null, error: `Unknown distance unit: ${distanceText}` };
+    }
+    
+    // Validate the parsed distance
+    if (isNaN(distance) || distance < 0) {
+      console.error(`[Distance] Invalid parsed distance: ${distance} from "${distanceText}"`);
+      return { distance: null, duration: null, error: "Invalid distance value" };
     }
     
     console.log(`[Distance] Road distance: ${distance} miles (${distanceMeters} meters), Duration: ${durationText}`);
@@ -355,7 +375,6 @@ export async function getRoadDistance(fromLat: number, fromLng: number, toLat: n
     return { distance: null, duration: null, error: error?.message || "Unknown error" };
   }
 }
-
 // -------------------- Robust Distance Calculator with Dynamic Validation --------------------
 async function calculateRobustDistance(fromLat: number, fromLng: number, toLat: number, toLng: number) {
   console.log(`[Robust Distance] Calculating distance between (${fromLat}, ${fromLng}) and (${toLat}, ${toLng})`);
