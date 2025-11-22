@@ -71,75 +71,194 @@ function parseCoordinate(coordString: string): { lat: number; lng: number } | nu
   }
 }
 
-// -------------------- Distance Validation Helper --------------------
-function validateDistanceResult(apiDistance: number, straightLineDistance: number, fromCoords: any, toCoords: any): { isValid: boolean; reason?: string; suggestedDistance?: number } {
+// -------------------- Intelligent Distance Validation --------------------
+function validateDistanceResult(
+  apiDistance: number, 
+  straightLineDistance: number, 
+  fromCoords: any, 
+  toCoords: any
+): { isValid: boolean; reason?: string; suggestedDistance?: number } {
+  
   // Handle zero distance
   if (straightLineDistance === 0) {
     return { isValid: true, suggestedDistance: 0 };
   }
   
-  // Calculate the ratio between API distance and straight-line distance
   const ratio = apiDistance / straightLineDistance;
+  console.log(`[Validation] Distance analysis: API=${apiDistance.toFixed(2)}mi, Straight-line=${straightLineDistance.toFixed(2)}mi, Ratio=${ratio.toFixed(2)}x`);
   
-  console.log(`[Validation] Distance validation: API=${apiDistance.toFixed(2)}mi, Straight-line=${straightLineDistance.toFixed(2)}mi, Ratio=${ratio.toFixed(2)}x`);
-  
-  // Reasonable ratio ranges based on distance
-  let maxReasonableRatio: number;
-  
-  if (straightLineDistance < 1) {
-    // Very short distances: allow higher ratio due to road network constraints
-    maxReasonableRatio = 8;
-  } else if (straightLineDistance < 5) {
-    // Short urban distances
-    maxReasonableRatio = 5;
-  } else if (straightLineDistance < 20) {
-    // Medium distances
-    maxReasonableRatio = 3;
-  } else {
-    // Long distances - road should be closer to straight-line
-    maxReasonableRatio = 2;
-  }
-  
-  // Check if ratio is reasonable
-  if (ratio > maxReasonableRatio) {
-    console.warn(`[Validation] Distance ratio ${ratio.toFixed(2)}x exceeds reasonable maximum ${maxReasonableRatio}x`);
-    
-    // Calculate reasonable estimated road distance based on context
-    let suggestedMultiplier: number;
-    
-    if (straightLineDistance < 1) {
-      // Very short urban distances: 1.1x - 1.5x multiplier
-      suggestedMultiplier = 1.3;
-    } else if (straightLineDistance < 5) {
-      // Urban distances: 1.2x - 1.8x multiplier
-      suggestedMultiplier = 1.5;
-    } else {
-      // Longer distances: 1.1x - 1.4x multiplier
-      suggestedMultiplier = 1.2;
-    }
-    
-    const suggestedDistance = straightLineDistance * suggestedMultiplier;
-    
+  // 1. Check for obvious API errors first
+  if (isObviousApiError(apiDistance, straightLineDistance, fromCoords, toCoords)) {
+    console.log(`[Validation] Detected obvious API error, using intelligent fallback`);
+    const suggestedDistance = calculateIntelligentFallback(straightLineDistance, fromCoords, toCoords);
     return {
       isValid: false,
-      reason: `unreasonable_ratio_${ratio.toFixed(2)}x`,
+      reason: 'obvious_api_error',
       suggestedDistance
     };
   }
   
-  // Additional check: absolute distance sanity
-  if (apiDistance > 1000 && straightLineDistance < 10) {
-    console.warn(`[Validation] Absolute distance seems unreasonable: ${apiDistance}mi for ${straightLineDistance.toFixed(2)}mi straight-line`);
-    
+  // 2. Context-aware ratio validation
+  const contextValidation = validateWithContext(ratio, straightLineDistance, fromCoords, toCoords);
+  if (!contextValidation.isValid) {
+    console.log(`[Validation] Context validation failed: ${contextValidation.reason}`);
+    const suggestedDistance = calculateIntelligentFallback(straightLineDistance, fromCoords, toCoords);
     return {
       isValid: false,
-      reason: 'unreasonable_absolute_distance',
-      suggestedDistance: straightLineDistance * 1.5
+      reason: contextValidation.reason,
+      suggestedDistance
+    };
+  }
+  
+  // 3. Additional sanity checks
+  if (isDistancePhysicallyImpossible(apiDistance, straightLineDistance)) {
+    console.log(`[Validation] Physically impossible distance detected`);
+    const suggestedDistance = calculateIntelligentFallback(straightLineDistance, fromCoords, toCoords);
+    return {
+      isValid: false,
+      reason: 'physically_impossible_distance',
+      suggestedDistance
     };
   }
   
   console.log(`[Validation] Distance validated successfully (ratio: ${ratio.toFixed(2)}x)`);
   return { isValid: true };
+}
+
+// -------------------- Context-Aware Validation --------------------
+function validateWithContext(
+  ratio: number, 
+  straightLineDistance: number, 
+  fromCoords: any, 
+  toCoords: any
+): { isValid: boolean; reason?: string } {
+  
+  // Different ratio thresholds based on context
+  let maxReasonableRatio: number;
+  let context: string;
+  
+  if (straightLineDistance < 0.5) {
+    // Very short urban distances - high ratios usually indicate API errors
+    maxReasonableRatio = 15;
+    context = 'very_short_urban';
+  } else if (straightLineDistance < 2) {
+    // Short urban distances
+    maxReasonableRatio = 10;
+    context = 'short_urban';
+  } else if (straightLineDistance < 10) {
+    // Medium distances - allow for urban detours
+    maxReasonableRatio = 6;
+    context = 'medium_distance';
+  } else if (straightLineDistance < 50) {
+    // Longer distances - highways are more direct
+    maxReasonableRatio = 4;
+    context = 'long_distance';
+  } else {
+    // Very long distances - should be relatively direct
+    maxReasonableRatio = 2.5;
+    context = 'very_long_distance';
+  }
+  
+  console.log(`[Validation Context] ${context}: max ratio ${maxReasonableRatio}x for ${straightLineDistance.toFixed(2)}mi`);
+  
+  if (ratio > maxReasonableRatio) {
+    return {
+      isValid: false,
+      reason: `excessive_ratio_${context}_${ratio.toFixed(1)}x`
+    };
+  }
+  
+  return { isValid: true };
+}
+
+// -------------------- Obvious API Error Detection --------------------
+function isObviousApiError(
+  apiDistance: number, 
+  straightLineDistance: number, 
+  fromCoords: any, 
+  toCoords: any
+): boolean {
+  
+  // 1. Check if API distance is physically impossible
+  if (apiDistance > 1000 && straightLineDistance < 10) {
+    console.log(`[API Error Detection] Impossible: ${apiDistance}mi for ${straightLineDistance.toFixed(2)}mi straight-line`);
+    return true;
+  }
+  
+  // 2. Check for common API error patterns (like your 11.1 miles for 0.59 miles)
+  if (straightLineDistance < 1 && apiDistance > 10) {
+    console.log(`[API Error Detection] Urban anomaly: ${straightLineDistance.toFixed(2)}mi → ${apiDistance}mi`);
+    return true;
+  }
+  
+  // 3. Check if coordinates are very close but API returns highway routing
+  if (straightLineDistance < 2 && apiDistance > 20) {
+    const isUrbanArea = isLikelyUrbanArea(fromCoords);
+    if (isUrbanArea) {
+      console.log(`[API Error Detection] Urban close coordinates with highway routing`);
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+// -------------------- Intelligent Fallback Calculation --------------------
+function calculateIntelligentFallback(straightLineDistance: number, fromCoords: any, toCoords: any): number {
+  // Dynamic multipliers based on distance and context
+  let multiplier: number;
+  
+  if (straightLineDistance < 0.1) {
+    multiplier = 1.1; // Very short distances - minimal detours
+  } else if (straightLineDistance < 0.5) {
+    multiplier = 1.3; // Short urban distances
+  } else if (straightLineDistance < 2) {
+    multiplier = 1.5; // Medium urban distances
+  } else if (straightLineDistance < 10) {
+    multiplier = 1.4; // Suburban distances
+  } else if (straightLineDistance < 50) {
+    multiplier = 1.2; // Highway distances
+  } else {
+    multiplier = 1.1; // Very long distances
+  }
+  
+  const estimatedDistance = straightLineDistance * multiplier;
+  console.log(`[Intelligent Fallback] ${straightLineDistance.toFixed(2)}mi × ${multiplier} = ${estimatedDistance.toFixed(2)}mi`);
+  
+  return estimatedDistance;
+}
+
+// -------------------- Physical Reality Checks --------------------
+function isDistancePhysicallyImpossible(apiDistance: number, straightLineDistance: number): boolean {
+  // No road should be more than 100x straight-line distance in normal circumstances
+  if (apiDistance / straightLineDistance > 100) {
+    return true;
+  }
+  
+  // Distances over 5000 miles for short trips are impossible
+  if (straightLineDistance < 100 && apiDistance > 5000) {
+    return true;
+  }
+  
+  return false;
+}
+
+// -------------------- Urban Area Detection --------------------
+function isLikelyUrbanArea(coords: any): boolean {
+  // Simple heuristic based on coordinate density in Europe
+  // Rome coordinates: ~41.9 lat, 12.5 lng
+  const romeArea = {
+    minLat: 41.7, maxLat: 42.1,
+    minLng: 12.2, maxLng: 12.7
+  };
+  
+  if (coords.lat >= romeArea.minLat && coords.lat <= romeArea.maxLat &&
+      coords.lng >= romeArea.minLng && coords.lng <= romeArea.maxLng) {
+    return true;
+  }
+  
+  // Add other urban area checks as needed
+  return false;
 }
 
 // -------------------- Enhanced Road Distance Helper --------------------
@@ -237,48 +356,6 @@ export async function getRoadDistance(fromLat: number, fromLng: number, toLat: n
   }
 }
 
-// -------------------- Enhanced Directions API (Primary Method) --------------------
-async function getDistanceUsingDirections(fromLat: number, fromLng: number, toLat: number, toLng: number) {
-  try {
-    const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${fromLat},${fromLng}&destination=${toLat},${toLng}&units=imperial&key=${GOOGLE_MAPS_API_KEY}`;
-    console.log(`[Directions] API URL: ${url.replace(GOOGLE_MAPS_API_KEY, 'HIDDEN')}`);
-    
-    const response = await axios.get(url, { timeout: 10000 });
-    
-    if (response.data.status !== "OK") {
-      console.error(`[Directions] API Error: ${response.data.status}`, response.data.error_message);
-      return null;
-    }
-    
-    const route = response.data.routes[0];
-    
-    if (!route) {
-      console.error("[Directions] No route found");
-      return null;
-    }
-
-    const leg = route.legs[0];
-    const distanceMeters = leg.distance.value;
-    const distance = distanceMeters / 1609.34; // meters to miles
-    const duration = leg.duration.text;
-    
-    console.log(`[Directions] Distance: ${distance.toFixed(2)} miles (${distanceMeters} meters), Duration: ${duration}`);
-    console.log(`[Directions] Route summary: ${route.summary}`);
-    
-    return { 
-      distance, 
-      duration,
-      distanceMeters,
-      summary: route.summary,
-      steps: leg.steps.length,
-      success: true
-    };
-  } catch (error) {
-    console.error("[Directions] Error:", error?.response?.data || error);
-    return null;
-  }
-}
-
 // -------------------- Robust Distance Calculator with Dynamic Validation --------------------
 async function calculateRobustDistance(fromLat: number, fromLng: number, toLat: number, toLng: number) {
   console.log(`[Robust Distance] Calculating distance between (${fromLat}, ${fromLng}) and (${toLat}, ${toLng})`);
@@ -292,58 +369,28 @@ async function calculateRobustDistance(fromLat: number, fromLng: number, toLat: 
   
   console.log(`[Robust Distance] Straight-line reference distance: ${straightLineDistance.toFixed(2)} miles`);
   
-  // For very close distances, use optimized calculation to avoid API issues
-  if (straightLineDistance < 0.1) { // Less than 0.1 miles
-    console.log(`[Robust Distance] Very close distance (< 0.1mi), using minimal multiplier`);
-    const estimatedRoadDistance = straightLineDistance * 1.1;
+  // For very close distances in urban areas, use optimized calculation
+  if (straightLineDistance < 0.5 && isLikelyUrbanArea({ lat: fromLat, lng: fromLng })) {
+    console.log(`[Robust Distance] Very close urban distance, using urban optimization`);
+    const estimatedRoadDistance = calculateIntelligentFallback(straightLineDistance, { lat: fromLat, lng: fromLng }, { lat: toLat, lng: toLng });
     
-    console.log(`[Robust Distance] Using close-distance optimization: ${estimatedRoadDistance.toFixed(2)} miles`);
+    console.log(`[Robust Distance] Urban optimization: ${straightLineDistance.toFixed(2)}mi → ${estimatedRoadDistance.toFixed(2)}mi`);
     
     return {
       distance: estimatedRoadDistance,
-      duration: `${Math.max(2, Math.round(estimatedRoadDistance * 4))} mins`, // Minimum 2 mins
+      duration: `${Math.max(5, Math.round(estimatedRoadDistance * 8))} mins`, // Urban traffic
       straightLineDistance,
       estimated: true,
-      reason: 'very_close_distance_optimization'
+      reason: 'urban_close_distance_optimization'
     };
   }
   
-  // Try Directions API first (more accurate)
-  console.log(`[Robust Distance] Trying Directions API...`);
-  const directionsResult = await getDistanceUsingDirections(fromLat, fromLng, toLat, toLng);
-  
-  if (directionsResult && directionsResult.success) {
-    // Validate Directions API result
-    const validation = validateDistanceResult(
-      directionsResult.distance, 
-      straightLineDistance, 
-      { lat: fromLat, lng: fromLng }, 
-      { lat: toLat, lng: toLng }
-    );
-    
-    if (validation.isValid) {
-      console.log(`[Robust Distance] Using validated Directions API result: ${directionsResult.distance} miles`);
-      return { ...directionsResult, straightLineDistance };
-    } else {
-      console.warn(`[Robust Distance] Directions API result failed validation: ${validation.reason}`);
-      console.log(`[Robust Distance] Using suggested distance: ${validation.suggestedDistance} miles`);
-      
-      return {
-        distance: validation.suggestedDistance || directionsResult.distance,
-        duration: directionsResult.duration,
-        straightLineDistance,
-        estimated: true,
-        reason: `directions_validation_fallback_${validation.reason}`
-      };
-    }
-  }
-  
-  // Fallback to Distance Matrix API
-  console.log(`[Robust Distance] Directions API failed, trying Distance Matrix...`);
+  // Use Distance Matrix API for all distances
+  console.log(`[Robust Distance] Getting road distance from Distance Matrix API...`);
   const distanceMatrixResult = await getRoadDistance(fromLat, fromLng, toLat, toLng);
   
   if (distanceMatrixResult.distance !== null) {
-    // Validate Distance Matrix result
+    // Use intelligent validation
     const validation = validateDistanceResult(
       distanceMatrixResult.distance, 
       straightLineDistance, 
@@ -356,7 +403,7 @@ async function calculateRobustDistance(fromLat: number, fromLng: number, toLat: 
       return { ...distanceMatrixResult, straightLineDistance };
     } else {
       console.warn(`[Robust Distance] Distance Matrix result failed validation: ${validation.reason}`);
-      console.log(`[Robust Distance] Using suggested distance: ${validation.suggestedDistance} miles`);
+      console.log(`[Robust Distance] Using intelligent fallback: ${validation.suggestedDistance} miles`);
       
       return {
         distance: validation.suggestedDistance || distanceMatrixResult.distance,
@@ -368,31 +415,22 @@ async function calculateRobustDistance(fromLat: number, fromLng: number, toLat: 
     }
   }
   
-  // Final fallback: straight-line distance with dynamic multiplier
-  console.log(`[Robust Distance] All APIs failed, using dynamic straight-line multiplier`);
+  // Final fallback: intelligent calculation
+  console.log(`[Robust Distance] Distance Matrix API failed, using intelligent fallback`);
+  const estimatedRoadDistance = calculateIntelligentFallback(
+    straightLineDistance, 
+    { lat: fromLat, lng: fromLng }, 
+    { lat: toLat, lng: toLng }
+  );
   
-  // Dynamic multiplier based on distance
-  let dynamicMultiplier: number;
-  if (straightLineDistance < 1) {
-    dynamicMultiplier = 1.3; // Urban short distance
-  } else if (straightLineDistance < 5) {
-    dynamicMultiplier = 1.4; // Urban medium distance
-  } else if (straightLineDistance < 20) {
-    dynamicMultiplier = 1.2; // Suburban/long distance
-  } else {
-    dynamicMultiplier = 1.1; // Highway distance
-  }
-  
-  const estimatedRoadDistance = straightLineDistance * dynamicMultiplier;
-  
-  console.log(`[Robust Distance] Straight-line: ${straightLineDistance.toFixed(2)} miles -> Estimated road (${dynamicMultiplier}x): ${estimatedRoadDistance.toFixed(2)} miles`);
+  console.log(`[Robust Distance] Intelligent fallback: ${straightLineDistance.toFixed(2)}mi → ${estimatedRoadDistance.toFixed(2)}mi`);
   
   return {
     distance: estimatedRoadDistance,
-    duration: `${Math.round(estimatedRoadDistance * 2.5)} mins`, // Dynamic time estimate
+    duration: `${Math.round(estimatedRoadDistance * 2.5)} mins`,
     straightLineDistance,
     estimated: true,
-    reason: 'all_apis_failed_fallback'
+    reason: 'distance_matrix_failed_intelligent_fallback'
   };
 }
 
@@ -1516,9 +1554,8 @@ export const DebugDistance = async (req: Request, res: Response) => {
   const { lat: fromLat, lng: fromLng } = fromCoords;
   const { lat: toLat, lng: toLng } = toCoords;
 
-  // Test both APIs
+  // Test Distance Matrix API
   const distanceMatrixResult = await getRoadDistance(fromLat, fromLng, toLat, toLng);
-  const directionsResult = await getDistanceUsingDirections(fromLat, fromLng, toLat, toLng);
   const robustResult = await calculateRobustDistance(fromLat, fromLng, toLat, toLng);
 
   res.json({
@@ -1527,7 +1564,6 @@ export const DebugDistance = async (req: Request, res: Response) => {
       to: { lat: toLat, lng: toLng } 
     },
     distanceMatrix: distanceMatrixResult,
-    directions: directionsResult,
     robust: robustResult
   });
 };
