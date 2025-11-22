@@ -1118,13 +1118,13 @@ export const Search = async (req: Request, res: Response, next: NextFunction) =>
     console.log(`[Search] Found ${validApiDetails.length} valid API configurations`);
 
     // Fetch data from third-party APIs
-    const apiData = await fetchFromThirdPartyApis(validApiDetails, dropoffLocation, pickupLocation, targetCurrency);
+    // const apiData = await fetchFromThirdPartyApis(validApiDetails, dropoffLocation, pickupLocation, targetCurrency);
 
     // Database data - using place IDs for distance calculation
     const DatabaseData = await fetchFromDatabase(pickupLocation, dropoffLocation, targetCurrency, time, date, returnDate, returnTime);
     
     // Merge data
-    const mergedData = [ ...apiData.flat(), ...DatabaseData.vehicles];
+    const mergedData = [...DatabaseData.vehicles];
     console.log(`[Search] Data merge complete - API: ${apiData.length}, Database: ${DatabaseData.vehicles.length}, Total: ${mergedData.length}`);
 
     console.log(`[Search] Search request completed successfully with place ID distance calculation`);
