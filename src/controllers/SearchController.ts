@@ -16,59 +16,42 @@ const GOOGLE_MAPS_API_KEY = "AIzaSyAjXkEFU-hA_DSnHYaEjU3_fceVwQra0LI";
 // currency cache
 const currencyCache: Record<string, Record<string, number>> = {};
 
+// -------------------- Place ID to Coordinates Conversion --------------------
+async function getCoordinatesFromPlaceId(placeId: string): Promise<{ lat: number; lng: number } | null> {
+  console.log(`[Place ID] Converting place ID to coordinates: ${placeId}`);
+  
+  try {
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?place_id=${placeId}&key=${GOOGLE_MAPS_API_KEY}`;
+    console.log(`[Place ID] Geocoding API URL: ${url.replace(GOOGLE_MAPS_API_KEY, 'HIDDEN')}`);
+    
+    const response = await axios.get(url, { timeout: 10000 });
+    
+    if (response.data.status !== "OK") {
+      console.error(`[Place ID] Geocoding API error: ${response.data.status}`, response.data.error_message);
+      return null;
+    }
+    
+    const result = response.data.results[0];
+    if (!result || !result.geometry || !result.geometry.location) {
+      console.error(`[Place ID] No geometry data found for place ID: ${placeId}`);
+      return null;
+    }
+    
+    const { lat, lng } = result.geometry.location;
+    console.log(`[Place ID] Successfully converted place ID to coordinates: (${lat}, ${lng})`);
+    
+    return { lat, lng };
+  } catch (error: any) {
+    console.error(`[Place ID] Error converting place ID to coordinates:`, error?.message);
+    return null;
+  }
+}
+
 // -------------------- Enhanced Coordinate Validation --------------------
 function isValidCoordinate(lat: number, lng: number): boolean {
   return !isNaN(lat) && !isNaN(lng) && 
          lat >= -90 && lat <= 90 && 
          lng >= -180 && lng <= 180;
-}
-
-function parseCoordinate(coordString: string): { lat: number; lng: number } | null {
-  try {
-    console.log(`[Coordinate] Parsing: "${coordString}"`);
-    
-    // Clean the string - remove extra spaces, brackets, etc.
-    const cleanString = coordString.replace(/[\[\]\(\)]/g, '').trim();
-    const parts = cleanString.split(/[,;\s]+/).map(part => {
-      const cleaned = part.trim();
-      return cleaned ? parseFloat(cleaned) : NaN;
-    }).filter(part => !isNaN(part));
-    
-    if (parts.length !== 2) {
-      console.error(`[Coordinate] Invalid coordinate format: ${coordString} -> ${parts.length} valid parts`);
-      return null;
-    }
-    
-    const [first, second] = parts;
-    
-    // Determine coordinate order based on typical ranges
-    let lat, lng;
-    if (Math.abs(first) <= 90 && Math.abs(second) <= 180) {
-      // Standard format: lat,lng
-      lat = first;
-      lng = second;
-      console.log(`[Coordinate] Standard format: lat=${lat}, lng=${lng}`);
-    } else if (Math.abs(second) <= 90 && Math.abs(first) <= 180) {
-      // Swapped: lng,lat
-      lat = second;
-      lng = first;
-      console.log(`[Coordinate] Swapped coordinates detected: ${coordString} -> (${lat}, ${lng})`);
-    } else {
-      console.error(`[Coordinate] Invalid coordinate values: ${coordString}`);
-      return null;
-    }
-    
-    if (!isValidCoordinate(lat, lng)) {
-      console.error(`[Coordinate] Invalid coordinate range: (${lat}, ${lng}) from ${coordString}`);
-      return null;
-    }
-    
-    console.log(`[Coordinate] Successfully parsed: ${coordString} -> (${lat}, ${lng})`);
-    return { lat, lng };
-  } catch (error) {
-    console.error(`[Coordinate] Error parsing coordinate: ${coordString}`, error);
-    return null;
-  }
 }
 
 // -------------------- Intelligent Distance Validation --------------------
@@ -340,8 +323,6 @@ export async function getRoadDistance(fromLat: number, fromLng: number, toLat: n
     
     if (!distanceText || !durationText) {
       console.error("[Distance] Distance or duration not found in response");
-      // console.error("[Distance] Available distance:`, element.distance);
-      // console.error("[Distance] Available duration:`, element.duration);
       return { distance: null, duration: null, error: "Missing distance/duration" };
     }
     
@@ -1111,36 +1092,33 @@ function formatPrice(price: number): number {
     return Math.round(price * 100) / 100;
 }
 
-// -------------------- Main fetchFromDatabase with Dynamic Distance Validation --------------------
+// -------------------- Main fetchFromDatabase with Place ID Support --------------------
 export const fetchFromDatabase = async (
-  pickupLocation: string,
-  dropoffLocation: string,
+  pickupLocation: string,  // Now expects place ID
+  dropoffLocation: string, // Now expects place ID
   targetCurrency: string,
   time: string,
   date: string,
   returnDate?: string,
   returnTime?: string
 ): Promise<{ vehicles: any[]; distance: any; estimatedTime: string }> => {
-  console.log(`[Database] Starting database fetch with DYNAMIC DISTANCE VALIDATION`);
-  console.log(`[Database] Pickup: "${pickupLocation}", Dropoff: "${dropoffLocation}"`);
+  console.log(`[Database] Starting database fetch with PLACE ID SUPPORT`);
+  console.log(`[Database] Pickup Place ID: "${pickupLocation}", Dropoff Place ID: "${dropoffLocation}"`);
 
-  // Parse coordinates with enhanced validation
-  console.log(`[Database] Parsing coordinates...`);
-  const fromCoords = parseCoordinate(pickupLocation);
-  const toCoords = parseCoordinate(dropoffLocation);
-  
-  // Debug coordinate parsing
-  await debugCoordinateIssues(pickupLocation, dropoffLocation, fromCoords, toCoords);
+  // Convert place IDs to coordinates
+  console.log(`[Database] Converting place IDs to coordinates...`);
+  const fromCoords = await getCoordinatesFromPlaceId(pickupLocation);
+  const toCoords = await getCoordinatesFromPlaceId(dropoffLocation);
   
   if (!fromCoords || !toCoords) {
-    console.error("[Database] Invalid coordinates provided");
-    throw new Error("Invalid pickup or dropoff coordinates");
+    console.error("[Database] Failed to convert place IDs to coordinates");
+    throw new Error("Invalid pickup or dropoff place IDs");
   }
 
   const { lat: fromLat, lng: fromLng } = fromCoords;
   const { lat: toLat, lng: toLng } = toCoords;
 
-  console.log(`[Database] Final coordinates - From: (${fromLat}, ${fromLng}) To: (${toLat}, ${toLng})`);
+  console.log(`[Database] Converted coordinates - From: (${fromLat}, ${fromLng}) To: (${toLat}, ${toLng})`);
 
   try {
     // 1) Load all isochrone zones
@@ -1238,7 +1216,7 @@ export const fetchFromDatabase = async (
     console.log(`[Database] Loaded ${vehicleTypes.length} vehicle types, ${margins.length} margins, ${surgeCharges.length} surge charges`);
 
     // 7) Calculate optimal pricing for each vehicle across overlapping zones WITH VALIDATION
-    console.log(`[Zone Optimization] Calculating optimal pricing across ${overlappingZones.length} overlapping zones WITH DYNAMIC VALIDATION`);
+    console.log(`[Zone Optimization] Calculating optimal pricing across ${overlappingZones.length} overlapping zones WITH PLACE ID SUPPORT`);
     
     const vehicleGroups = new Map();
     
@@ -1582,41 +1560,41 @@ export const fetchFromDatabase = async (
   }
 };
 
-// -------------------- Test Endpoint for Coordinate Validation --------------------
-export const TestCoordinates = async (req: Request, res: Response) => {
-  const { coordinates } = req.body;
+// -------------------- Test Endpoint for Place ID Validation --------------------
+export const TestPlaceId = async (req: Request, res: Response) => {
+  const { placeId } = req.body;
   
-  console.log(`[Test] Testing coordinate parsing: "${coordinates}"`);
+  console.log(`[Test] Testing place ID conversion: "${placeId}"`);
   
-  const parsed = parseCoordinate(coordinates);
+  const coordinates = await getCoordinatesFromPlaceId(placeId);
   
-  if (!parsed) {
+  if (!coordinates) {
     return res.status(400).json({ 
       success: false, 
-      error: "Failed to parse coordinates",
-      input: coordinates 
+      error: "Failed to convert place ID to coordinates",
+      input: placeId 
     });
   }
   
   res.json({
     success: true,
-    input: coordinates,
-    parsed: parsed
+    placeId: placeId,
+    coordinates: coordinates
   });
 };
 
-// -------------------- Debug Endpoint for Distance Testing --------------------
-export const DebugDistance = async (req: Request, res: Response) => {
-  const { pickup, dropoff } = req.body;
+// -------------------- Debug Endpoint for Distance Testing with Place IDs --------------------
+export const DebugDistanceWithPlaceIds = async (req: Request, res: Response) => {
+  const { pickupPlaceId, dropoffPlaceId } = req.body;
   
-  console.log(`[Debug] Testing distance calculation`);
-  console.log(`[Debug] Pickup: ${pickup}, Dropoff: ${dropoff}`);
+  console.log(`[Debug] Testing distance calculation with place IDs`);
+  console.log(`[Debug] Pickup Place ID: ${pickupPlaceId}, Dropoff Place ID: ${dropoffPlaceId}`);
   
-  const fromCoords = parseCoordinate(pickup);
-  const toCoords = parseCoordinate(dropoff);
+  const fromCoords = await getCoordinatesFromPlaceId(pickupPlaceId);
+  const toCoords = await getCoordinatesFromPlaceId(dropoffPlaceId);
   
   if (!fromCoords || !toCoords) {
-    return res.status(400).json({ error: "Invalid coordinates" });
+    return res.status(400).json({ error: "Invalid place IDs" });
   }
 
   const { lat: fromLat, lng: fromLng } = fromCoords;
@@ -1627,6 +1605,10 @@ export const DebugDistance = async (req: Request, res: Response) => {
   const robustResult = await calculateRobustDistance(fromLat, fromLng, toLat, toLng);
 
   res.json({
+    placeIds: { 
+      pickup: pickupPlaceId, 
+      dropoff: dropoffPlaceId 
+    },
     coordinates: { 
       from: { lat: fromLat, lng: fromLng }, 
       to: { lat: toLat, lng: toLng } 
@@ -1638,7 +1620,7 @@ export const DebugDistance = async (req: Request, res: Response) => {
 
 // -------------------- Search controller --------------------
 export const Search = async (req: Request, res: Response, next: NextFunction) => {
-  console.log(`[Search] Starting search request`);
+  console.log(`[Search] Starting search request with PLACE ID SUPPORT`);
   console.log(`[Search] Request body:`, JSON.stringify(req.body, null, 2));
 
   const { date, dropoff, dropoffLocation, pax, pickup, pickupLocation, targetCurrency, time, returnDate, returnTime } = req.body;
@@ -1661,14 +1643,14 @@ export const Search = async (req: Request, res: Response, next: NextFunction) =>
     // Fetch data from third-party APIs
     const apiData = await fetchFromThirdPartyApis(validApiDetails, dropoffLocation, pickupLocation, targetCurrency);
 
-    // Database data
+    // Database data - now using place IDs directly
     const DatabaseData = await fetchFromDatabase(pickupLocation, dropoffLocation, targetCurrency, time, date, returnDate, returnTime);
     
     // Merge data
     const mergedData = [ ...apiData.flat(), ...DatabaseData.vehicles];
     console.log(`[Search] Data merge complete - API: ${apiData.length}, Database: ${DatabaseData.vehicles.length}, Total: ${mergedData.length}`);
 
-    console.log(`[Search] Search request completed successfully`);
+    console.log(`[Search] Search request completed successfully with place ID support`);
     res.json({ 
       success: true, 
       data: mergedData, 
