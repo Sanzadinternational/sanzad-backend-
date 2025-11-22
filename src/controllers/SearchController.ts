@@ -200,12 +200,12 @@ async function calculateRobustDistanceWithPlaceIds(pickupPlaceId: string, dropof
   console.log(`[Robust Distance] Calculating distance using place IDs`);
   console.log(`[Robust Distance] Pickup Place ID: ${pickupPlaceId}, Dropoff Place ID: ${dropoffPlaceId}`);
   
-  // Convert place IDs to coordinates for straight-line distance calculation
+  // Convert place IDs to coordinates for straight-line distance calculation and zone finding
   const pickupCoords = await getCoordinatesFromPlaceId(pickupPlaceId);
   const dropoffCoords = await getCoordinatesFromPlaceId(dropoffPlaceId);
   
   if (!pickupCoords || !dropoffCoords) {
-    console.error("[Robust Distance] Failed to convert place IDs to coordinates for straight-line calculation");
+    console.error("[Robust Distance] Failed to convert place IDs to coordinates");
     return { distance: null, duration: null, error: "Failed to convert place IDs to coordinates" };
   }
 
@@ -753,7 +753,7 @@ function logZoneDetails(zone: any) {
   }
 }
 
-// -------------------- Enhanced Effective Distance Calculation with Dynamic Validation --------------------
+// -------------------- Enhanced Effective Distance Calculation --------------------
 async function calculateEffectiveDistance(
   pickupLng: number, 
   pickupLat: number, 
@@ -804,15 +804,13 @@ async function calculateEffectiveDistance(
   console.log(`[Coordinates] Pickup: (${pickupLat.toFixed(6)}, ${pickupLng.toFixed(6)})`);
   console.log(`[Coordinates] Zone ${zone.name} (${centerSource}): (${zoneLat.toFixed(6)}, ${zoneLng.toFixed(6)})`);
   
-  // Use coordinates for zone distance calculation (existing logic)
+  // Use straight-line distance for zone calculations (more efficient for many zones)
   const straightLineDistance = turf.distance(
     turf.point([pickupLng, pickupLat]),
     turf.point([zoneLng, zoneLat]),
     { units: 'miles' }
   );
   
-  // For zone calculations, we use straight-line distance as it's more efficient
-  // and the zone optimization logic is designed around this
   console.log(`[Effective Distance] Using straight-line distance for zone calculation: ${straightLineDistance.toFixed(2)} miles`);
   
   return { 
@@ -826,7 +824,7 @@ async function calculateEffectiveDistance(
   };
 }
 
-// -------------------- Zone Priority Logic (Generic) --------------------
+// -------------------- Zone Priority Logic --------------------
 function calculateZonePriority(zone: any, effectiveDistance: number, totalTripDistance: number): number {
   // Higher priority = better
   let priority = 0;
@@ -834,11 +832,10 @@ function calculateZonePriority(zone: any, effectiveDistance: number, totalTripDi
   // 1. Distance-based priority - closer zones get higher priority
   const distancePriority = Math.max(0, 1 - (effectiveDistance / 50)); // Normalize to 0-1 (50 mile max)
   
-  // 2. Zone type priority based on name patterns (optional, can be removed if not needed)
+  // 2. Zone type priority based on name patterns
   const zoneName = zone.name.toLowerCase();
   let typePriority = 1;
   
-  // Generic type detection (can be customized or removed)
   if (zoneName.includes('airport') && effectiveDistance < 5) {
     typePriority = 2; // Airport zones preferred for nearby airport pickups
   } else if ((zoneName.includes('city') || zoneName.includes('central') || zoneName.includes('downtown')) && effectiveDistance < 3) {
@@ -853,6 +850,153 @@ function calculateZonePriority(zone: any, effectiveDistance: number, totalTripDi
   
   return priority;
 }
+
+// -------------------- Price Formatting --------------------
+function formatPrice(price: number): number {
+    return Math.round(price * 100) / 100;
+}
+
+// -------------------- Vehicle comparison helpers --------------------
+function areVehiclesSimilar(vehicle1: any, vehicle2: any): boolean {
+  const isSimilar = (
+    vehicle1.vehicalType === vehicle2.vehicalType &&
+    vehicle1.brand === vehicle2.brand &&
+    vehicle1.passengers === vehicle2.passengers &&
+    vehicle1.mediumBag === vehicle2.mediumBag &&
+    vehicle1.SmallBag === vehicle2.SmallBag &&
+    vehicle1.supplierId === vehicle2.supplierId
+  );
+  
+  console.log(`[Vehicle Comparison] Vehicles similar: ${isSimilar}`, {
+    vehicle1: `${vehicle1.vehicalType} - ${vehicle1.brand} - ${vehicle1.passengers}p - ${vehicle1.supplierId}`,
+    vehicle2: `${vehicle2.vehicalType} - ${vehicle2.brand} - ${vehicle2.passengers}p - ${vehicle2.supplierId}`
+  });
+  
+  return isSimilar;
+}
+
+function optimizeSupplierVehicles(vehicles: any[]): any[] {
+  console.log(`[Optimization] Optimizing ${vehicles.length} vehicles for same supplier`);
+  
+  const vehicleGroups = new Map();
+  
+  // Group vehicles by supplier and characteristics
+  vehicles.forEach(vehicle => {
+    const key = `${vehicle.supplierId}_${vehicle.vehicalType}_${vehicle.brand}_${vehicle.passengers}_${vehicle.mediumBag}_${vehicle.SmallBag}`;
+    
+    if (!vehicleGroups.has(key)) {
+      vehicleGroups.set(key, []);
+    }
+    vehicleGroups.get(key).push(vehicle);
+  });
+  
+  const optimizedVehicles: any[] = [];
+  
+  // For each group, keep the one with lowest price
+  vehicleGroups.forEach((groupVehicles, key) => {
+    if (groupVehicles.length === 1) {
+      // Unique vehicle, always keep it
+      console.log(`[Optimization] Keeping unique vehicle: ${groupVehicles[0].vehicalType} from supplier ${groupVehicles[0].supplierId}`);
+      optimizedVehicles.push(groupVehicles[0]);
+    } else {
+      // Multiple similar vehicles from same supplier, keep the cheapest one
+      const cheapestVehicle = groupVehicles.reduce((cheapest, current) => 
+        current.price < cheapest.price ? current : cheapest
+      );
+      
+      console.log(`[Optimization] Found ${groupVehicles.length} similar vehicles from supplier ${cheapestVehicle.supplierId}`);
+      console.log(`[Optimization] Keeping cheapest: ${cheapestVehicle.vehicalType} at price ${cheapestVehicle.price} (had ${groupVehicles.length} options)`);
+      
+      // Log all prices for transparency
+      groupVehicles.forEach((v: any, i: number) => {
+        console.log(`[Optimization] Option ${i + 1}: ${v.price} ${v.currency} from zone ${v.zoneName}`);
+      });
+      
+      optimizedVehicles.push(cheapestVehicle);
+    }
+  });
+  
+  console.log(`[Optimization] Reduced from ${vehicles.length} to ${optimizedVehicles.length} vehicles for supplier`);
+  return optimizedVehicles;
+}
+
+// -------------------- Token / third-party API fetch --------------------
+export const getBearerToken = async (url: string, userId: string, password: string): Promise<string> => {
+  console.log(`[Auth] Getting bearer token for URL: ${url}, User: ${userId}`);
+  
+  try {
+    const response = await axios.post('https://sandbox.iway.io/transnextgen/v3/auth/login', {
+      user_id: userId,
+      password,
+    });
+    const token = response.data?.result?.token;
+    
+    if (!token) {
+      console.error("[Auth] Invalid token response while fetching bearer token");
+      throw new Error("Token not found in the response.");
+    }
+    
+    console.log(`[Auth] Successfully obtained bearer token`);
+    return token;
+  } catch (error: any) {
+    console.error("[Auth] Error in getBearerToken:", {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+    });
+    throw new Error("Failed to retrieve Bearer token.");
+  }
+};
+
+export const fetchFromThirdPartyApis = async (
+  validApiDetails: { url: string; username: string; password: string; supplier_id: string }[],
+  dropoffLocation: string,
+  pickupLocation: string,
+  targetCurrency: string
+): Promise<any[]> => {
+  console.log(`[Third Party API] Fetching from ${validApiDetails.length} third-party APIs`);
+  console.log(`[Third Party API] Pickup: ${pickupLocation}, Dropoff: ${dropoffLocation}, Currency: ${targetCurrency}`);
+
+  const results = await Promise.all(
+    validApiDetails.map(async ({ url, username, password, supplier_id }) => {
+      console.log(`[Third Party API] Processing API: ${url}, Supplier: ${supplier_id}`);
+      
+      try {
+        const token = await getBearerToken(url, username, password);
+        const apiUrl = `${url}?user_id=${username}&lang=en&currency=${targetCurrency}&start_place_point=${pickupLocation}&finish_place_point=${dropoffLocation}`;
+        
+        console.log(`[Third Party API] Making request to: ${apiUrl}`);
+        const response = await axios.get(apiUrl, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const vehicles = (response.data?.result || []).map((item: any) => ({
+          vehicalType: item.car_class?.title || "Unknown",
+          brand: item.car_class?.models?.[0] || "Unknown",
+          price: item.price || 0,
+          currency: item.currency || "USD",
+          passengers: item.car_class?.capacity || 0,
+          mediumBag: item.car_class?.luggage_capacity || 0,
+          source: "api",
+          SmallBag: 0,
+          supplierId: supplier_id,
+        }));
+
+        console.log(`[Third Party API] Successfully fetched ${vehicles.length} vehicles from ${url}`);
+        return vehicles;
+      } catch (error: any) {
+        console.error(`[Third Party API] Error fetching data from ${url}:`, error?.message || error);
+        return [{ source: url, error: error?.message || "unknown" }];
+      }
+    })
+  );
+
+  const allVehicles = results.flat();
+  console.log(`[Third Party API] Total vehicles from all third-party APIs: ${allVehicles.length}`);
+  return allVehicles;
+};
 
 // -------------------- Main fetchFromDatabase with Place ID Distance Calculation --------------------
 export const fetchFromDatabase = async (
@@ -1081,11 +1225,207 @@ export const fetchFromDatabase = async (
       }
     }
 
-    // ... rest of the pricing and vehicle processing logic remains the same
-    // [The rest of the function remains unchanged from your original code]
+    console.log(`[Zone Optimization] Final optimized vehicles: ${optimizedVehicles.length}`);
+
+    // 7) Apply final pricing with fees, margins, etc. to optimized vehicles
+    console.log(`[Database] Applying final pricing to ${optimizedVehicles.length} optimized vehicles`);
+    const allVehiclesWithPricing = await Promise.all(
+      optimizedVehicles.map(async (vehicle, index) => {
+        console.log(`[Pricing] Processing optimized vehicle ${index + 1}: ${vehicle.VehicleType} from zone ${vehicle.selected_zone.name}`);
+        
+        // Start with the optimized base price
+        let totalPrice = vehicle.optimizedPrice || Number(vehicle.price) || 0;
+        console.log(`[Pricing] Starting with optimized price: ${totalPrice.toFixed(2)}`);
+
+        // Add fixed fees
+        const fees = {
+          vehicleTax: Number(vehicle.vehicleTax) || 0,
+          parking: Number(vehicle.parking) || 0,
+          tollTax: Number(vehicle.tollTax) || 0,
+          driverCharge: Number(vehicle.driverCharge) || 0,
+          driverTips: Number(vehicle.driverTips) || 0,
+        };
+
+        Object.entries(fees).forEach(([feeName, feeAmount]) => {
+          if (feeAmount > 0) {
+            totalPrice += feeAmount;
+            console.log(`[Pricing] Added ${feeName}: ${feeAmount}, New total: ${totalPrice.toFixed(2)}`);
+          }
+        });
+
+        // Night time
+        const [hour] = time.split(":").map(Number);
+        const isNightTime = (hour >= 22 || hour < 6);
+        if (isNightTime && vehicle.NightTime_Price) {
+          totalPrice += Number(vehicle.NightTime_Price);
+          console.log(`[Pricing] Added night time charge: ${vehicle.NightTime_Price}, New total: ${totalPrice.toFixed(2)}`);
+        }
+
+        // Surge
+        const vehicleSurge = surgeCharges.find((s: any) => s.vehicle_id === vehicle.vehicle_id && s.supplier_id === vehicle.SupplierId);
+        if (vehicleSurge && vehicleSurge.SurgeChargePrice) {
+          totalPrice += Number(vehicleSurge.SurgeChargePrice);
+          console.log(`[Pricing] Added surge charge: ${vehicleSurge.SurgeChargePrice}, New total: ${totalPrice.toFixed(2)}`);
+        }
+
+        // Apply supplier margin
+        const margin = supplierMargins.get(vehicle.SupplierId) || 0;
+        if (margin > 0) {
+          const marginAmount = totalPrice * (Number(margin) / 100);
+          totalPrice += marginAmount;
+          console.log(`[Pricing] Added supplier margin (${margin}%): ${marginAmount.toFixed(2)}, New total: ${totalPrice.toFixed(2)}`);
+        }
+
+        // Return trip price (if any)
+        let returnPrice = 0;
+        const isReturnTrip = !!returnDate && !!returnTime;
+        
+        if (isReturnTrip) {
+          console.log(`[Pricing] Calculating return trip pricing`);
+          
+          // For return trip, use the same optimization logic
+          const effectiveDistance = vehicle.priceDetails.effectiveDistance;
+          const basePrice = Number(vehicle.price) || 0;
+          const extraPricePerMile = Number(vehicle.extra_price_per_mile) || 0;
+          const zoneRadiusMiles = vehicle.priceDetails.zoneRadiusMiles;
+          
+          const availableMilesInZone = Math.max(0, zoneRadiusMiles - effectiveDistance);
+          const extraMiles = Math.max(0, totalTripDistance - availableMilesInZone);
+          returnPrice = basePrice + (extraMiles * extraPricePerMile);
+          
+          console.log(`[Pricing] Return trip base calculation: ${basePrice} + (${extraMiles} × ${extraPricePerMile}) = ${returnPrice}`);
+
+          const returnFees = {
+            vehicleTax: Number(vehicle.vehicleTax) || 0,
+            parking: Number(vehicle.parking) || 0,
+            tollTax: Number(vehicle.tollTax) || 0,
+            driverCharge: Number(vehicle.driverCharge) || 0,
+            driverTips: Number(vehicle.driverTips) || 0,
+          };
+
+          Object.entries(returnFees).forEach(([feeName, feeAmount]) => {
+            if (feeAmount > 0) {
+              returnPrice += feeAmount;
+              console.log(`[Pricing] Added return ${feeName}: ${feeAmount}, Return total: ${returnPrice.toFixed(2)}`);
+            }
+          });
+
+          const [returnHour] = returnTime.split(":").map(Number);
+          const isReturnNightTime = (returnHour >= 22 || returnHour < 6);
+          if (isReturnNightTime && vehicle.NightTime_Price) {
+            returnPrice += Number(vehicle.NightTime_Price);
+            console.log(`[Pricing] Added return night time charge: ${vehicle.NightTime_Price}, Return total: ${returnPrice.toFixed(2)}`);
+          }
+
+          const returnSurge = surgeCharges.find((s: any) =>
+            s.vehicle_id === vehicle.vehicle_id &&
+            s.supplier_id === vehicle.SupplierId &&
+            s.From <= returnDate &&
+            s.To >= returnDate
+          );
+          if (returnSurge && returnSurge.SurgeChargePrice) {
+            returnPrice += Number(returnSurge.SurgeChargePrice);
+            console.log(`[Pricing] Added return surge charge: ${returnSurge.SurgeChargePrice}, Return total: ${returnPrice.toFixed(2)}`);
+          }
+
+          // Apply margin on return price
+          if (margin > 0) {
+            const returnMarginAmount = returnPrice * (Number(margin) / 100);
+            returnPrice += returnMarginAmount;
+            console.log(`[Pricing] Added return supplier margin (${margin}%): ${returnMarginAmount.toFixed(2)}, Return total: ${returnPrice.toFixed(2)}`);
+          }
+        }
+
+        totalPrice += returnPrice;
+        totalPrice = formatPrice(totalPrice);
+        console.log(`[Pricing] Final price before currency conversion: ${totalPrice} ${vehicle.Currency || "USD"}`);
+
+        // Currency convert
+        const convertedPrice = await convertCurrency(totalPrice, vehicle.Currency || "USD", targetCurrency);
+        const finalPrice = formatPrice(convertedPrice);
+        console.log(`[Pricing] Final converted price: ${finalPrice} ${targetCurrency}`);
+
+        // Vehicle image lookup
+        const image = vehicleTypes.find((type: any) =>
+          String(type.VehicleType || "").toLowerCase().trim() === String(vehicle.VehicleType || "").toLowerCase().trim()
+        ) || { vehicleImage: "default-image-url-or-path" };
+
+        console.log(`[Pricing] Completed pricing for optimized vehicle ${index + 1} from zone ${vehicle.selected_zone.name}`);
+        
+        return {
+          vehicleId: vehicle.vehicle_id,
+          vehicleImage: image.vehicleImage,
+          vehicalType: vehicle.VehicleType,
+          brand: vehicle.VehicleBrand,
+          vehicleName: vehicle.name,
+          parking: vehicle.parking,
+          vehicleTax: vehicle.vehicleTax,
+          tollTax: vehicle.tollTax,
+          driverTips: vehicle.driverTips,
+          driverCharge: vehicle.driverCharge,
+          extraPricePerKm: vehicle.extra_price_per_mile,
+          price: finalPrice,
+          nightTime: vehicle.NightTime,
+          passengers: vehicle.Passengers,
+          currency: targetCurrency,
+          mediumBag: vehicle.MediumBag,
+          SmallBag: vehicle.SmallBag,
+          nightTimePrice: vehicle.NightTime_Price,
+          transferInfo: vehicle.Transfer_info,
+          supplierId: vehicle.SupplierId,
+          zoneId: vehicle.selected_zone.id,
+          zoneName: vehicle.selected_zone.name,
+          originalPrice: Number(vehicle.price) || 0,
+          optimizedPrice: vehicle.optimizedPrice,
+          isFromOverlappingZone: overlappingZones.length > 1,
+          optimizationDetails: vehicle.priceDetails,
+          // Additional fields from your vehicle schema
+          serviceType: vehicle.ServiceType,
+          vehicleModel: vehicle.VehicleModel,
+          doors: vehicle.Doors,
+          seats: vehicle.Seats,
+          cargo: vehicle.Cargo,
+          extraSpace: vehicle.ExtraSpace
+        };
+      })
+    );
+
+    // 8) Remove duplicate vehicles (same type from same supplier)
+    console.log(`[Database] Removing duplicate vehicles from same supplier`);
+    const uniqueVehiclesMap = new Map();
+    
+    allVehiclesWithPricing.forEach(vehicle => {
+      const key = `${vehicle.vehicalType}_${vehicle.brand}_${vehicle.passengers}_${vehicle.supplierId}`;
+      
+      if (!uniqueVehiclesMap.has(key) || vehicle.price < uniqueVehiclesMap.get(key).price) {
+        uniqueVehiclesMap.set(key, vehicle);
+      }
+    });
+    
+    const finalVehicles = Array.from(uniqueVehiclesMap.values());
+    console.log(`[Database] Final unique vehicles: ${finalVehicles.length}`);
+
+    // Log optimization summary
+    const zonesUsed = new Set(finalVehicles.map(v => v.zoneName));
+    const centerSources = finalVehicles.reduce((acc: any, v) => {
+      const source = v.optimizationDetails?.centerSource || 'unknown';
+      acc[source] = (acc[source] || 0) + 1;
+      return acc;
+    }, {});
+    
+    console.log(`[Zone Optimization] Summary:`);
+    console.log(`  Using ${zonesUsed.size} optimal zones:`, Array.from(zonesUsed));
+    console.log(`  Center sources:`, centerSources);
+    console.log(`  Total trip distance (place IDs): ${totalTripDistance} miles`);
+    
+    // Log pricing comparison
+    finalVehicles.forEach(vehicle => {
+      const centerSource = vehicle.optimizationDetails?.centerSource || 'unknown';
+      console.log(`[Final] ${vehicle.vehicalType} - ${vehicle.brand}: ${vehicle.price} ${targetCurrency} (Zone: ${vehicle.zoneName}, Center: ${centerSource})`);
+    });
 
     return { 
-      vehicles: optimizedVehicles, 
+      vehicles: finalVehicles, 
       distance: totalTripDistance, 
       estimatedTime: duration
     };
@@ -1093,6 +1433,64 @@ export const fetchFromDatabase = async (
     console.error("[Database] Error in zone optimization:", error?.message || error);
     throw new Error("Failed to optimize zones and vehicle pricing.");
   }
+};
+
+// -------------------- Test Endpoint for Place ID Validation --------------------
+export const TestPlaceId = async (req: Request, res: Response) => {
+  const { placeId } = req.body;
+  
+  console.log(`[Test] Testing place ID conversion: "${placeId}"`);
+  
+  const coordinates = await getCoordinatesFromPlaceId(placeId);
+  
+  if (!coordinates) {
+    return res.status(400).json({ 
+      success: false, 
+      error: "Failed to convert place ID to coordinates",
+      input: placeId 
+    });
+  }
+  
+  res.json({
+    success: true,
+    placeId: placeId,
+    coordinates: coordinates
+  });
+};
+
+// -------------------- Debug Endpoint for Distance Testing with Place IDs --------------------
+export const DebugDistanceWithPlaceIds = async (req: Request, res: Response) => {
+  const { pickupPlaceId, dropoffPlaceId } = req.body;
+  
+  console.log(`[Debug] Testing distance calculation with place IDs`);
+  console.log(`[Debug] Pickup Place ID: ${pickupPlaceId}, Dropoff Place ID: ${dropoffPlaceId}`);
+  
+  const fromCoords = await getCoordinatesFromPlaceId(pickupPlaceId);
+  const toCoords = await getCoordinatesFromPlaceId(dropoffPlaceId);
+  
+  if (!fromCoords || !toCoords) {
+    return res.status(400).json({ error: "Invalid place IDs" });
+  }
+
+  const { lat: fromLat, lng: fromLng } = fromCoords;
+  const { lat: toLat, lng: toLng } = toCoords;
+
+  // Test Distance Matrix API with place IDs
+  const distanceMatrixResult = await getRoadDistanceWithPlaceIds(pickupPlaceId, dropoffPlaceId);
+  const robustResult = await calculateRobustDistanceWithPlaceIds(pickupPlaceId, dropoffPlaceId);
+
+  res.json({
+    placeIds: { 
+      pickup: pickupPlaceId, 
+      dropoff: dropoffPlaceId 
+    },
+    coordinates: { 
+      from: { lat: fromLat, lng: fromLng }, 
+      to: { lat: toLat, lng: toLng } 
+    },
+    distanceMatrix: distanceMatrixResult,
+    robust: robustResult
+  });
 };
 
 // -------------------- Search controller --------------------
@@ -1118,13 +1516,13 @@ export const Search = async (req: Request, res: Response, next: NextFunction) =>
     console.log(`[Search] Found ${validApiDetails.length} valid API configurations`);
 
     // Fetch data from third-party APIs
-    // const apiData = await fetchFromThirdPartyApis(validApiDetails, dropoffLocation, pickupLocation, targetCurrency);
+    const apiData = await fetchFromThirdPartyApis(validApiDetails, dropoffLocation, pickupLocation, targetCurrency);
 
     // Database data - using place IDs for distance calculation
     const DatabaseData = await fetchFromDatabase(pickupLocation, dropoffLocation, targetCurrency, time, date, returnDate, returnTime);
     
     // Merge data
-    const mergedData = [...DatabaseData.vehicles];
+    const mergedData = [ ...apiData.flat(), ...DatabaseData.vehicles];
     console.log(`[Search] Data merge complete - API: ${apiData.length}, Database: ${DatabaseData.vehicles.length}, Total: ${mergedData.length}`);
 
     console.log(`[Search] Search request completed successfully with place ID distance calculation`);
