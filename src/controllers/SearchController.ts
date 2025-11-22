@@ -340,8 +340,8 @@ export async function getRoadDistance(fromLat: number, fromLng: number, toLat: n
     
     if (!distanceText || !durationText) {
       console.error("[Distance] Distance or duration not found in response");
-      console.error("[Distance] Available distance:`, element.distance);
-      console.error("[Distance] Available duration:`, element.duration);
+      // console.error("[Distance] Available distance:`, element.distance);
+      // console.error("[Distance] Available duration:`, element.duration);
       return { distance: null, duration: null, error: "Missing distance/duration" };
     }
     
