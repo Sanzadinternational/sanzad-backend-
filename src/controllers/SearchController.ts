@@ -71,6 +71,77 @@ function parseCoordinate(coordString: string): { lat: number; lng: number } | nu
   }
 }
 
+// -------------------- Distance Validation Helper --------------------
+function validateDistanceResult(apiDistance: number, straightLineDistance: number, fromCoords: any, toCoords: any): { isValid: boolean; reason?: string; suggestedDistance?: number } {
+  // Handle zero distance
+  if (straightLineDistance === 0) {
+    return { isValid: true, suggestedDistance: 0 };
+  }
+  
+  // Calculate the ratio between API distance and straight-line distance
+  const ratio = apiDistance / straightLineDistance;
+  
+  console.log(`[Validation] Distance validation: API=${apiDistance.toFixed(2)}mi, Straight-line=${straightLineDistance.toFixed(2)}mi, Ratio=${ratio.toFixed(2)}x`);
+  
+  // Reasonable ratio ranges based on distance
+  let maxReasonableRatio: number;
+  
+  if (straightLineDistance < 1) {
+    // Very short distances: allow higher ratio due to road network constraints
+    maxReasonableRatio = 8;
+  } else if (straightLineDistance < 5) {
+    // Short urban distances
+    maxReasonableRatio = 5;
+  } else if (straightLineDistance < 20) {
+    // Medium distances
+    maxReasonableRatio = 3;
+  } else {
+    // Long distances - road should be closer to straight-line
+    maxReasonableRatio = 2;
+  }
+  
+  // Check if ratio is reasonable
+  if (ratio > maxReasonableRatio) {
+    console.warn(`[Validation] Distance ratio ${ratio.toFixed(2)}x exceeds reasonable maximum ${maxReasonableRatio}x`);
+    
+    // Calculate reasonable estimated road distance based on context
+    let suggestedMultiplier: number;
+    
+    if (straightLineDistance < 1) {
+      // Very short urban distances: 1.1x - 1.5x multiplier
+      suggestedMultiplier = 1.3;
+    } else if (straightLineDistance < 5) {
+      // Urban distances: 1.2x - 1.8x multiplier
+      suggestedMultiplier = 1.5;
+    } else {
+      // Longer distances: 1.1x - 1.4x multiplier
+      suggestedMultiplier = 1.2;
+    }
+    
+    const suggestedDistance = straightLineDistance * suggestedMultiplier;
+    
+    return {
+      isValid: false,
+      reason: `unreasonable_ratio_${ratio.toFixed(2)}x`,
+      suggestedDistance
+    };
+  }
+  
+  // Additional check: absolute distance sanity
+  if (apiDistance > 1000 && straightLineDistance < 10) {
+    console.warn(`[Validation] Absolute distance seems unreasonable: ${apiDistance}mi for ${straightLineDistance.toFixed(2)}mi straight-line`);
+    
+    return {
+      isValid: false,
+      reason: 'unreasonable_absolute_distance',
+      suggestedDistance: straightLineDistance * 1.5
+    };
+  }
+  
+  console.log(`[Validation] Distance validated successfully (ratio: ${ratio.toFixed(2)}x)`);
+  return { isValid: true };
+}
+
 // -------------------- Enhanced Road Distance Helper --------------------
 export async function getRoadDistance(fromLat: number, fromLng: number, toLat: number, toLng: number) {
   console.log(`[Distance] Getting ROAD distance from (${fromLat}, ${fromLng}) to (${toLat}, ${toLng})`);
@@ -208,17 +279,63 @@ async function getDistanceUsingDirections(fromLat: number, fromLng: number, toLa
   }
 }
 
-// -------------------- Robust Distance Calculator --------------------
+// -------------------- Robust Distance Calculator with Dynamic Validation --------------------
 async function calculateRobustDistance(fromLat: number, fromLng: number, toLat: number, toLng: number) {
   console.log(`[Robust Distance] Calculating distance between (${fromLat}, ${fromLng}) and (${toLat}, ${toLng})`);
+  
+  // Always calculate straight-line distance first for validation reference
+  const straightLineDistance = turf.distance(
+    turf.point([fromLng, fromLat]),
+    turf.point([toLng, toLat]),
+    { units: 'miles' }
+  );
+  
+  console.log(`[Robust Distance] Straight-line reference distance: ${straightLineDistance.toFixed(2)} miles`);
+  
+  // For very close distances, use optimized calculation to avoid API issues
+  if (straightLineDistance < 0.1) { // Less than 0.1 miles
+    console.log(`[Robust Distance] Very close distance (< 0.1mi), using minimal multiplier`);
+    const estimatedRoadDistance = straightLineDistance * 1.1;
+    
+    console.log(`[Robust Distance] Using close-distance optimization: ${estimatedRoadDistance.toFixed(2)} miles`);
+    
+    return {
+      distance: estimatedRoadDistance,
+      duration: `${Math.max(2, Math.round(estimatedRoadDistance * 4))} mins`, // Minimum 2 mins
+      straightLineDistance,
+      estimated: true,
+      reason: 'very_close_distance_optimization'
+    };
+  }
   
   // Try Directions API first (more accurate)
   console.log(`[Robust Distance] Trying Directions API...`);
   const directionsResult = await getDistanceUsingDirections(fromLat, fromLng, toLat, toLng);
   
   if (directionsResult && directionsResult.success) {
-    console.log(`[Robust Distance] Using Directions API result: ${directionsResult.distance} miles`);
-    return directionsResult;
+    // Validate Directions API result
+    const validation = validateDistanceResult(
+      directionsResult.distance, 
+      straightLineDistance, 
+      { lat: fromLat, lng: fromLng }, 
+      { lat: toLat, lng: toLng }
+    );
+    
+    if (validation.isValid) {
+      console.log(`[Robust Distance] Using validated Directions API result: ${directionsResult.distance} miles`);
+      return { ...directionsResult, straightLineDistance };
+    } else {
+      console.warn(`[Robust Distance] Directions API result failed validation: ${validation.reason}`);
+      console.log(`[Robust Distance] Using suggested distance: ${validation.suggestedDistance} miles`);
+      
+      return {
+        distance: validation.suggestedDistance || directionsResult.distance,
+        duration: directionsResult.duration,
+        straightLineDistance,
+        estimated: true,
+        reason: `directions_validation_fallback_${validation.reason}`
+      };
+    }
   }
   
   // Fallback to Distance Matrix API
@@ -226,27 +343,56 @@ async function calculateRobustDistance(fromLat: number, fromLng: number, toLat: 
   const distanceMatrixResult = await getRoadDistance(fromLat, fromLng, toLat, toLng);
   
   if (distanceMatrixResult.distance !== null) {
-    console.log(`[Robust Distance] Using Distance Matrix result: ${distanceMatrixResult.distance} miles`);
-    return distanceMatrixResult;
+    // Validate Distance Matrix result
+    const validation = validateDistanceResult(
+      distanceMatrixResult.distance, 
+      straightLineDistance, 
+      { lat: fromLat, lng: fromLng }, 
+      { lat: toLat, lng: toLng }
+    );
+    
+    if (validation.isValid) {
+      console.log(`[Robust Distance] Using validated Distance Matrix result: ${distanceMatrixResult.distance} miles`);
+      return { ...distanceMatrixResult, straightLineDistance };
+    } else {
+      console.warn(`[Robust Distance] Distance Matrix result failed validation: ${validation.reason}`);
+      console.log(`[Robust Distance] Using suggested distance: ${validation.suggestedDistance} miles`);
+      
+      return {
+        distance: validation.suggestedDistance || distanceMatrixResult.distance,
+        duration: distanceMatrixResult.duration,
+        straightLineDistance,
+        estimated: true,
+        reason: `distance_matrix_validation_fallback_${validation.reason}`
+      };
+    }
   }
   
-  // Final fallback: straight-line distance with realistic multiplier
-  console.log(`[Robust Distance] All APIs failed, using straight-line distance with multiplier`);
-  const straightLineDistance = turf.distance(
-    turf.point([fromLng, fromLat]),
-    turf.point([toLng, toLat]),
-    { units: 'miles' }
-  );
+  // Final fallback: straight-line distance with dynamic multiplier
+  console.log(`[Robust Distance] All APIs failed, using dynamic straight-line multiplier`);
   
-  // Apply realistic road distance multiplier (1.3x for urban, 1.1x for highway)
-  const estimatedRoadDistance = straightLineDistance * 1.3;
-  console.log(`[Robust Distance] Straight-line: ${straightLineDistance.toFixed(2)} miles -> Estimated road: ${estimatedRoadDistance.toFixed(2)} miles`);
+  // Dynamic multiplier based on distance
+  let dynamicMultiplier: number;
+  if (straightLineDistance < 1) {
+    dynamicMultiplier = 1.3; // Urban short distance
+  } else if (straightLineDistance < 5) {
+    dynamicMultiplier = 1.4; // Urban medium distance
+  } else if (straightLineDistance < 20) {
+    dynamicMultiplier = 1.2; // Suburban/long distance
+  } else {
+    dynamicMultiplier = 1.1; // Highway distance
+  }
+  
+  const estimatedRoadDistance = straightLineDistance * dynamicMultiplier;
+  
+  console.log(`[Robust Distance] Straight-line: ${straightLineDistance.toFixed(2)} miles -> Estimated road (${dynamicMultiplier}x): ${estimatedRoadDistance.toFixed(2)} miles`);
   
   return {
     distance: estimatedRoadDistance,
-    duration: `${Math.round(estimatedRoadDistance * 2)} mins`, // Rough estimate: 2 mins per mile
+    duration: `${Math.round(estimatedRoadDistance * 2.5)} mins`, // Dynamic time estimate
     straightLineDistance,
-    estimated: true
+    estimated: true,
+    reason: 'all_apis_failed_fallback'
   };
 }
 
@@ -534,14 +680,14 @@ function logZoneDetails(zone: any) {
   }
 }
 
-// -------------------- Enhanced Effective Distance Calculation USING ROAD DISTANCE --------------------
+// -------------------- Enhanced Effective Distance Calculation with Dynamic Validation --------------------
 async function calculateEffectiveDistance(
   pickupLng: number, 
   pickupLat: number, 
   zone: any
-): Promise<{ distance: number; isRoadDistance: boolean; fallbackReason?: string; centerSource: string }> {
+): Promise<{ distance: number; isRoadDistance: boolean; fallbackReason?: string; centerSource: string; validationDetails?: any }> {
   
-  console.log(`\n[Effective Distance] Calculating ROAD distance to logical center of: ${zone.name}`);
+  console.log(`\n[Effective Distance] Calculating distance to logical center of: ${zone.name}`);
   
   // Log zone details for debugging
   logZoneDetails(zone);
@@ -577,7 +723,7 @@ async function calculateEffectiveDistance(
     return { 
       distance: straightLineDistance, 
       isRoadDistance: false, 
-      fallbackReason: 'Invalid zone coordinates',
+      fallbackReason: 'invalid_zone_coordinates',
       centerSource: 'calculated_fallback'
     };
   }
@@ -585,37 +731,39 @@ async function calculateEffectiveDistance(
   console.log(`[Coordinates] Pickup: (${pickupLat.toFixed(6)}, ${pickupLng.toFixed(6)})`);
   console.log(`[Coordinates] Zone ${zone.name} (${centerSource}): (${zoneLat.toFixed(6)}, ${zoneLng.toFixed(6)})`);
   
-  // Calculate straight-line distance first (for reference only)
+  // Use robust distance calculator with dynamic validation
+  const distanceResult = await calculateRobustDistance(pickupLat, pickupLng, zoneLat, zoneLng);
+  
+  if (distanceResult.distance !== null && distanceResult.distance !== undefined) {
+    console.log(`[Effective Distance] ✅ Using validated distance: ${distanceResult.distance.toFixed(2)} miles (center source: ${centerSource})`);
+    
+    return { 
+      distance: distanceResult.distance, 
+      isRoadDistance: !distanceResult.estimated,
+      fallbackReason: distanceResult.reason,
+      centerSource,
+      validationDetails: {
+        straightLineDistance: distanceResult.straightLineDistance,
+        ratio: distanceResult.distance / distanceResult.straightLineDistance,
+        estimationReason: distanceResult.reason
+      }
+    };
+  }
+  
+  // This should rarely happen since calculateRobustDistance always returns a value
+  console.log(`[Effective Distance] ❌ Unexpected error in distance calculation, using conservative fallback`);
   const straightLineDistance = turf.distance(
     turf.point([pickupLng, pickupLat]),
     turf.point([zoneLng, zoneLat]),
     { units: 'miles' }
   );
   
-  console.log(`[Effective Distance] Straight-line reference: ${straightLineDistance.toFixed(2)} miles`);
-  
-  // Use robust distance calculator that prefers road distance
-  const distanceResult = await calculateRobustDistance(pickupLat, pickupLng, zoneLat, zoneLng);
-  
-  if (distanceResult.distance !== null && distanceResult.distance !== undefined) {
-    console.log(`[Effective Distance] ✅ Using ROAD distance: ${distanceResult.distance} miles (center source: ${centerSource})`);
-    
-    return { 
-      distance: distanceResult.distance, 
-      isRoadDistance: !distanceResult.estimated,
-      centerSource
-    };
-  }
-  
-  // Fallback to straight-line distance with realistic multiplier
-  console.log(`[Effective Distance] ❌ Road distance failed, using straight-line with multiplier`);
-  const estimatedRoadDistance = straightLineDistance * 1.3;
-  console.log(`[Effective Distance] Straight-line: ${straightLineDistance.toFixed(2)} miles -> Estimated road: ${estimatedRoadDistance.toFixed(2)} miles`);
+  const fallbackDistance = straightLineDistance * 1.5; // Conservative multiplier
   
   return { 
-    distance: estimatedRoadDistance, 
+    distance: fallbackDistance, 
     isRoadDistance: false, 
-    fallbackReason: 'Road API failed',
+    fallbackReason: 'unexpected_calculation_error',
     centerSource
   };
 }
@@ -699,7 +847,14 @@ async function debugDistanceComparison(
   console.log(`  Pickup→Dropoff: ${toDropoff.distance} miles`);
   console.log(`  Pickup→Zone: ${toZoneCenter.distance} miles`);
   if (straightLineToZone > 0) {
-    console.log(`  Road/Straight-line ratio: ${(toZoneCenter.distance / straightLineToZone).toFixed(2)}x`);
+    const ratio = toZoneCenter.distance / straightLineToZone;
+    console.log(`  Road/Straight-line ratio: ${ratio.toFixed(2)}x`);
+    
+    // Validation check
+    const validation = validateDistanceResult(toZoneCenter.distance, straightLineToZone, 
+      { lat: pickupLat, lng: pickupLng }, { lat: zoneLat, lng: zoneLng });
+    
+    console.log(`  Validation: ${validation.isValid ? 'PASS' : 'FAIL'} - ${validation.reason || 'Valid'}`);
   }
 }
 
@@ -850,7 +1005,7 @@ function formatPrice(price: number): number {
     return Math.round(price * 100) / 100;
 }
 
-// -------------------- Main fetchFromDatabase with ROAD DISTANCE --------------------
+// -------------------- Main fetchFromDatabase with Dynamic Distance Validation --------------------
 export const fetchFromDatabase = async (
   pickupLocation: string,
   dropoffLocation: string,
@@ -860,7 +1015,7 @@ export const fetchFromDatabase = async (
   returnDate?: string,
   returnTime?: string
 ): Promise<{ vehicles: any[]; distance: any; estimatedTime: string }> => {
-  console.log(`[Database] Starting database fetch with ROAD DISTANCE calculation`);
+  console.log(`[Database] Starting database fetch with DYNAMIC DISTANCE VALIDATION`);
   console.log(`[Database] Pickup: "${pickupLocation}", Dropoff: "${dropoffLocation}"`);
 
   // Parse coordinates with enhanced validation
@@ -897,8 +1052,8 @@ export const fetchFromDatabase = async (
       throw new Error("No zones found for the selected pickup location.");
     }
 
-    // 3) Calculate ROAD distance from pickup to dropoff
-    console.log(`[Database] Calculating ROAD distance from pickup to dropoff`);
+    // 3) Calculate ROAD distance from pickup to dropoff with validation
+    console.log(`[Database] Calculating validated ROAD distance from pickup to dropoff`);
     const distanceResult = await calculateRobustDistance(fromLat, fromLng, toLat, toLng);
     
     if (distanceResult.distance === null) {
@@ -909,10 +1064,13 @@ export const fetchFromDatabase = async (
     const totalTripDistance = distanceResult.distance;
     const duration = distanceResult.duration;
     
-    console.log(`[Database] Total trip ROAD distance: ${totalTripDistance} miles, Duration: ${duration}`);
+    console.log(`[Database] Total trip VALIDATED distance: ${totalTripDistance} miles, Duration: ${duration}`);
+    if (distanceResult.reason) {
+      console.log(`[Database] Distance calculation reason: ${distanceResult.reason}`);
+    }
 
     // 4) Debug distance comparison for zones
-    for (const zone of overlappingZones.slice(0, 3)) { // Limit to first 3 zones to avoid too many API calls
+    for (const zone of overlappingZones.slice(0, 2)) { // Limit to first 2 zones to avoid too many API calls
       await debugDistanceComparison(fromLat, fromLng, toLat, toLng, zone);
     }
 
@@ -973,8 +1131,8 @@ export const fetchFromDatabase = async (
     const surgeCharges = surgeChargesResult.rows as any[];
     console.log(`[Database] Loaded ${vehicleTypes.length} vehicle types, ${margins.length} margins, ${surgeCharges.length} surge charges`);
 
-    // 7) Calculate optimal pricing for each vehicle across overlapping zones USING ROAD DISTANCE
-    console.log(`[Zone Optimization] Calculating optimal pricing across ${overlappingZones.length} overlapping zones USING ROAD DISTANCE`);
+    // 7) Calculate optimal pricing for each vehicle across overlapping zones WITH VALIDATION
+    console.log(`[Zone Optimization] Calculating optimal pricing across ${overlappingZones.length} overlapping zones WITH DYNAMIC VALIDATION`);
     
     const vehicleGroups = new Map();
     
@@ -1006,13 +1164,19 @@ export const fetchFromDatabase = async (
         
         console.log(`[Zone Optimization] Calculating price for zone: ${zone.name}`);
         
-        // Calculate ROAD distance from pickup location to zone center
+        // Calculate VALIDATED distance from pickup location to zone center
         const effectiveDistanceResult = await calculateEffectiveDistance(fromLng, fromLat, zone);
         const effectiveDistance = effectiveDistanceResult.distance;
         
-        console.log(`[Zone Optimization] ${effectiveDistanceResult.isRoadDistance ? 'ROAD' : 'ESTIMATED'} distance from pickup to zone center: ${effectiveDistance.toFixed(2)} miles`);
+        const distanceType = effectiveDistanceResult.isRoadDistance ? 'VALIDATED ROAD' : 'ESTIMATED';
+        console.log(`[Zone Optimization] ${distanceType} distance from pickup to zone center: ${effectiveDistance.toFixed(2)} miles`);
+        
         if (effectiveDistanceResult.fallbackReason) {
           console.log(`[Zone Optimization] Fallback reason: ${effectiveDistanceResult.fallbackReason}`);
+        }
+        
+        if (effectiveDistanceResult.validationDetails) {
+          console.log(`[Zone Optimization] Validation details:`, effectiveDistanceResult.validationDetails);
         }
         
         // NOTE: radius_km is already in miles (despite the column name)
@@ -1063,6 +1227,7 @@ export const fetchFromDatabase = async (
               isRoadDistance: effectiveDistanceResult.isRoadDistance,
               fallbackReason: effectiveDistanceResult.fallbackReason,
               centerSource: effectiveDistanceResult.centerSource,
+              validationDetails: effectiveDistanceResult.validationDetails,
               zoneCenter: {
                 lat: zoneRadiusMiles, // This will be updated with actual coordinates
                 lng: effectiveDistance,
@@ -1280,16 +1445,24 @@ export const fetchFromDatabase = async (
       return acc;
     }, {});
     
+    const validationResults = finalVehicles.reduce((acc: any, v) => {
+      const reason = v.optimizationDetails?.fallbackReason || 'validated_road';
+      acc[reason] = (acc[reason] || 0) + 1;
+      return acc;
+    }, {});
+    
     console.log(`[Zone Optimization] Summary:`);
     console.log(`  Using ${zonesUsed.size} optimal zones:`, Array.from(zonesUsed));
     console.log(`  Road distance used for ${roadDistanceCount}/${finalVehicles.length} vehicles`);
     console.log(`  Center sources:`, centerSources);
+    console.log(`  Validation results:`, validationResults);
     
     // Log pricing comparison
     finalVehicles.forEach(vehicle => {
-      const distanceType = vehicle.optimizationDetails?.isRoadDistance ? 'ROAD' : 'ESTIMATED';
+      const distanceType = vehicle.optimizationDetails?.isRoadDistance ? 'VALIDATED ROAD' : 'ESTIMATED';
       const centerSource = vehicle.optimizationDetails?.centerSource || 'unknown';
-      console.log(`[Final] ${vehicle.vehicalType} - ${vehicle.brand}: ${vehicle.price} ${targetCurrency} (Zone: ${vehicle.zoneName}, ${distanceType}, Center: ${centerSource})`);
+      const validationReason = vehicle.optimizationDetails?.fallbackReason || 'validated';
+      console.log(`[Final] ${vehicle.vehicalType} - ${vehicle.brand}: ${vehicle.price} ${targetCurrency} (Zone: ${vehicle.zoneName}, ${distanceType}, Center: ${centerSource}, Validation: ${validationReason})`);
     });
 
     return { 
