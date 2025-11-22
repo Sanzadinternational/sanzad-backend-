@@ -262,7 +262,165 @@ function isLikelyUrbanArea(coords: any): boolean {
 }
 
 // -------------------- Enhanced Road Distance Helper --------------------
-// -------------------- Enhanced Road Distance Helper --------------------
+export async function getRoadDistance(fromLat: number, fromLng: number, toLat: number, toLng: number) {
+  console.log(`[Distance] Getting ROAD distance from (${fromLat}, ${fromLng}) to (${toLat}, ${toLng})`);
+  
+  // Validate coordinates
+  if (!isValidCoordinate(fromLat, fromLng) || !isValidCoordinate(toLat, toLng)) {
+    console.error(`[Distance] Invalid coordinates: From(${fromLat}, ${fromLng}) To(${toLat}, ${toLng})`);
+    return { distance: null, duration: null, error: "Invalid coordinates" };
+  }
+
+  // Check for same coordinates
+  if (fromLat === toLat && fromLng === toLng) {
+    console.log(`[Distance] Same coordinates, distance is 0`);
+    return { 
+      distance: 0, 
+      duration: "0 mins", 
+      distanceMeters: 0
+    };
+  }
+
+  try {
+    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${fromLat},${fromLng}&destinations=${toLat},${toLng}&units=imperial&key=${GOOGLE_MAPS_API_KEY}`;
+    console.log(`[Distance] API URL: ${url.replace(GOOGLE_MAPS_API_KEY, 'HIDDEN')}`);
+    
+    const response = await axios.get(url, { timeout: 10000 });
+    
+    // Log the complete API response for debugging
+    console.log(`[Distance] === COMPLETE API RESPONSE ===`);
+    console.log(`[Distance] API Status: ${response.data.status}`);
+    console.log(`[Distance] Full Response:`, JSON.stringify(response.data, null, 2));
+    console.log(`[Distance] === END API RESPONSE ===`);
+    
+    // Handle API errors
+    if (response.data.status === "OVER_QUERY_LIMIT") {
+      console.error("[Distance] Google Maps API quota exceeded");
+      return { distance: null, duration: null, error: "API quota exceeded" };
+    }
+    
+    if (response.data.status === "REQUEST_DENIED") {
+      console.error("[Distance] Google Maps API request denied:", response.data.error_message);
+      return { distance: null, duration: null, error: "API request denied" };
+    }
+    
+    if (response.data.status === "INVALID_REQUEST") {
+      console.error("[Distance] Google Maps API invalid request:", response.data.error_message);
+      return { distance: null, duration: null, error: "Invalid request parameters" };
+    }
+    
+    if (response.data.status === "UNKNOWN_ERROR") {
+      console.error("[Distance] Google Maps API unknown error");
+      return { distance: null, duration: null, error: "Google Maps API unknown error" };
+    }
+    
+    const element = response.data.rows[0]?.elements[0];
+    
+    if (!element) {
+      console.error("[Distance] No route elements found in response");
+      console.error("[Distance] Available rows:", response.data.rows);
+      return { distance: null, duration: null, error: "No route elements" };
+    }
+
+    console.log(`[Distance] Element Status: ${element.status}`);
+    console.log(`[Distance] Element Details:`, JSON.stringify(element, null, 2));
+    
+    if (element.status !== "OK") {
+      console.error(`[Distance] Route error: ${element.status}`, element);
+      return { distance: null, duration: null, error: `Route error: ${element.status}` };
+    }
+
+    const distanceText = element.distance?.text;
+    const durationText = element.duration?.text;
+    const distanceMeters = element.distance?.value; // Distance in meters
+    
+    console.log(`[Distance] Raw distance text: "${distanceText}"`);
+    console.log(`[Distance] Raw duration text: "${durationText}"`);
+    console.log(`[Distance] Distance in meters: ${distanceMeters}`);
+    
+    if (!distanceText || !durationText) {
+      console.error("[Distance] Distance or duration not found in response");
+      console.error("[Distance] Available distance:`, element.distance);
+      console.error("[Distance] Available duration:`, element.duration);
+      return { distance: null, duration: null, error: "Missing distance/duration" };
+    }
+    
+    // Parse distance - handle ALL possible units including feet
+    let distance: number;
+    let originalUnit = 'unknown';
+    
+    if (distanceText.includes('mi')) {
+      // Miles format: "0.1 mi" or "1.5 mi"
+      distance = parseFloat(distanceText.replace(" mi", "").replace(",", ""));
+      originalUnit = 'miles';
+    } else if (distanceText.includes('km')) {
+      // Kilometers format: "0.2 km" or "1.2 km"  
+      const km = parseFloat(distanceText.replace(" km", "").replace(",", ""));
+      distance = km * 0.621371; // Convert km to miles
+      originalUnit = 'kilometers';
+    } else if (distanceText.includes('ft')) {
+      // Feet format: "500 ft" or "1,500 ft"
+      const feet = parseFloat(distanceText.replace(" ft", "").replace(",", ""));
+      distance = feet / 5280; // Convert feet to miles
+      originalUnit = 'feet';
+      console.log(`[Distance] Converted ${feet} ft to ${distance.toFixed(4)} miles`);
+    } else if (distanceText.includes('m')) {
+      // Meters format: "100 m" or "1,000 m" (though less common with imperial units)
+      const meters = parseFloat(distanceText.replace(" m", "").replace(",", ""));
+      distance = meters * 0.000621371; // Convert meters to miles
+      originalUnit = 'meters';
+      console.log(`[Distance] Converted ${meters} m to ${distance.toFixed(4)} miles`);
+    } else {
+      console.error(`[Distance] Unknown distance unit: "${distanceText}"`);
+      console.error(`[Distance] Full distance object:`, element.distance);
+      return { distance: null, duration: null, error: `Unknown distance unit: ${distanceText}` };
+    }
+    
+    // Validate the parsed distance
+    if (isNaN(distance) || distance < 0) {
+      console.error(`[Distance] Invalid parsed distance: ${distance} from "${distanceText}"`);
+      console.error(`[Distance] Original unit: ${originalUnit}`);
+      return { distance: null, duration: null, error: "Invalid distance value" };
+    }
+    
+    console.log(`[Distance] ✅ SUCCESS - Road distance: ${distance} miles (original: "${distanceText}" as ${originalUnit}), Duration: "${durationText}"`);
+    
+    return {
+      distance,
+      duration: durationText,
+      distanceMeters,
+      success: true,
+      originalDistanceText: distanceText,
+      originalUnit: originalUnit
+    };
+  } catch (error: any) {
+    console.error("[Distance] ❌ ERROR fetching road distance:");
+    console.error("[Distance] Error message:", error?.message);
+    console.error("[Distance] Error code:", error?.code);
+    console.error("[Distance] Error response data:", error?.response?.data);
+    console.error("[Distance] Error response status:", error?.response?.status);
+    console.error("[Distance] Full error:", error);
+    
+    if (error.code === 'ECONNABORTED') {
+      console.error("[Distance] Request timeout");
+      return { distance: null, duration: null, error: "Request timeout" };
+    }
+    
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      console.error("[Distance] Server responded with error status:", error.response.status);
+      return { distance: null, duration: null, error: `Server error: ${error.response.status}` };
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error("[Distance] No response received from server");
+      return { distance: null, duration: null, error: "No response from Google Maps API" };
+    }
+    
+    return { distance: null, duration: null, error: error?.message || "Unknown error" };
+  }
+}
+
 // -------------------- Robust Distance Calculator with Dynamic Validation --------------------
 async function calculateRobustDistance(fromLat: number, fromLng: number, toLat: number, toLng: number) {
   console.log(`[Robust Distance] Calculating distance between (${fromLat}, ${fromLng}) and (${toLat}, ${toLng})`);
@@ -343,87 +501,7 @@ async function calculateRobustDistance(fromLat: number, fromLng: number, toLat: 
     reason: 'distance_matrix_failed_intelligent_fallback'
   };
 }
-// -------------------- Robust Distance Calculator with Dynamic Validation --------------------
-// -------------------- Robust Distance Calculator with Dynamic Validation --------------------
-async function calculateRobustDistance(fromLat: number, fromLng: number, toLat: number, toLng: number) {
-  console.log(`[Robust Distance] Calculating distance between (${fromLat}, ${fromLng}) and (${toLat}, ${toLng})`);
-  
-  // Always calculate straight-line distance first for validation reference
-  const straightLineDistance = turf.distance(
-    turf.point([fromLng, fromLat]),
-    turf.point([toLng, toLat]),
-    { units: 'miles' }
-  );
-  
-  console.log(`[Robust Distance] Straight-line reference distance: ${straightLineDistance.toFixed(2)} miles`);
-  
-  // For very close distances in urban areas, use optimized calculation
-  if (straightLineDistance < 0.5 && isLikelyUrbanArea({ lat: fromLat, lng: fromLng })) {
-    console.log(`[Robust Distance] Very close urban distance, using urban optimization`);
-    const estimatedRoadDistance = calculateIntelligentFallback(straightLineDistance, { lat: fromLat, lng: fromLng }, { lat: toLat, lng: toLng });
-    
-    console.log(`[Robust Distance] Urban optimization: ${straightLineDistance.toFixed(2)}mi → ${estimatedRoadDistance.toFixed(2)}mi`);
-    
-    return {
-      distance: estimatedRoadDistance,
-      duration: `${Math.max(5, Math.round(estimatedRoadDistance * 8))} mins`, // Urban traffic
-      straightLineDistance,
-      estimated: true,
-      reason: 'urban_close_distance_optimization'
-    };
-  }
-  
-  // Use Distance Matrix API for all distances
-  console.log(`[Robust Distance] Getting road distance from Distance Matrix API...`);
-  const distanceMatrixResult = await getRoadDistance(fromLat, fromLng, toLat, toLng);
-  
-  // Log the complete distance matrix result
-  console.log(`[Robust Distance] Distance Matrix Result:`, JSON.stringify(distanceMatrixResult, null, 2));
-  
-  if (distanceMatrixResult.distance !== null) {
-    // Use intelligent validation
-    const validation = validateDistanceResult(
-      distanceMatrixResult.distance, 
-      straightLineDistance, 
-      { lat: fromLat, lng: fromLng }, 
-      { lat: toLat, lng: toLng }
-    );
-    
-    if (validation.isValid) {
-      console.log(`[Robust Distance] ✅ Using validated Distance Matrix result: ${distanceMatrixResult.distance} miles`);
-      return { ...distanceMatrixResult, straightLineDistance };
-    } else {
-      console.warn(`[Robust Distance] ⚠️ Distance Matrix result failed validation: ${validation.reason}`);
-      console.log(`[Robust Distance] Using intelligent fallback: ${validation.suggestedDistance} miles`);
-      
-      return {
-        distance: validation.suggestedDistance || distanceMatrixResult.distance,
-        duration: distanceMatrixResult.duration,
-        straightLineDistance,
-        estimated: true,
-        reason: `distance_matrix_validation_fallback_${validation.reason}`
-      };
-    }
-  }
-  
-  // Final fallback: intelligent calculation
-  console.log(`[Robust Distance] ❌ Distance Matrix API failed, using intelligent fallback`);
-  const estimatedRoadDistance = calculateIntelligentFallback(
-    straightLineDistance, 
-    { lat: fromLat, lng: fromLng }, 
-    { lat: toLat, lng: toLng }
-  );
-  
-  console.log(`[Robust Distance] Intelligent fallback: ${straightLineDistance.toFixed(2)}mi → ${estimatedRoadDistance.toFixed(2)}mi`);
-  
-  return {
-    distance: estimatedRoadDistance,
-    duration: `${Math.round(estimatedRoadDistance * 2.5)} mins`,
-    straightLineDistance,
-    estimated: true,
-    reason: 'distance_matrix_failed_intelligent_fallback'
-  };
-}
+
 // -------------------- Currency helpers --------------------
 export const getExchangeRate = async (from: string, to: string): Promise<number> => {
   console.log(`[Currency] Getting exchange rate from ${from} to ${to}`);
