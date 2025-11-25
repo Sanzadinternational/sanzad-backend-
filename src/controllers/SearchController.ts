@@ -11,7 +11,7 @@ import { zones, transfers_Vehicle } from "../db/schema/SupplierSchema";
 import { Create_Vehicles } from "../db/schema/SupplierSchema";
 
 // Use env var for API key
-const GOOGLE_MAPS_API_KEY = "AIzaSyAjXkEFU-hA_DSnHYaEjU3_fceVwQra0LI";
+const GOOGLE_MAPS_API_KEY = "AIzaSyC9vmFHkCL1BZUjf1rTNytSfbKhmDG3OyE";
 
 // currency cache
 const currencyCache: Record<string, Record<string, number>> = {};
