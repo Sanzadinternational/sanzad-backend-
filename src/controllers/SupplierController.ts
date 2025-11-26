@@ -1624,7 +1624,7 @@ const ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImY1MjR
 
 export const CreateZone = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, supplier_id, address, latitude, longitude, radius_miles } = req.body;
+    const { name, supplier_id, address, latitude, longitude, radius_miles, place_id } = req.body;
 
     if (!latitude || !longitude || !radius_miles) {
       return res.status(400).json({ message: "Missing required zone parameters." });
@@ -1666,7 +1666,7 @@ export const CreateZone = async (req: Request, res: Response, next: NextFunction
     const centroidCoords = centroid.geometry.coordinates; // [lng, lat]
 
     // --------------------------------------------------------------------
-    // STEP 4: Merge original center + centroid into GeoJSON
+    // STEP 4: Merge original center + centroid into GeoJSON with place_id
     // --------------------------------------------------------------------
     isochrone.properties = {
       ...isochrone.properties,
@@ -1679,11 +1679,19 @@ export const CreateZone = async (req: Request, res: Response, next: NextFunction
 
       // Include radius + name if useful
       radius_miles,
-      zone_name: name
+      zone_name: name,
+
+      // Add Google Places place_id and address
+      place_id: place_id || null,
+      address: address || null,
+
+      // Add original coordinates
+      latitude: parseFloat(latitude),
+      longitude: parseFloat(longitude)
     };
 
     // --------------------------------------------------------------------
-    // STEP 5: Save polygon with metadata inside the GeoJSON itself
+    // STEP 5: Save polygon with metadata inside the GeoJSON
     // --------------------------------------------------------------------
     const newZone = await db
       .insert(zones)
@@ -1694,7 +1702,7 @@ export const CreateZone = async (req: Request, res: Response, next: NextFunction
         longitude,
         radius_miles,
         address,
-        geojson: isochrone, // now includes merged properties
+        geojson: isochrone, // now includes place_id in properties
       })
       .returning();
 
@@ -1711,7 +1719,6 @@ export const CreateZone = async (req: Request, res: Response, next: NextFunction
     });
   }
 };
-
 // Get Zone by ID
 export const getZoneById = async (req: Request, res: Response) => {
     try {
